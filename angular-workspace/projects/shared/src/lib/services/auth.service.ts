@@ -47,6 +47,15 @@ export class AuthService {
       throw new Error(error.message);
     }
   }
+  async resetPassword(newPassword: string): Promise<void> {
+  const { error } = await this.supabase.instance.auth.updateUser({
+    password: newPassword
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
 
   async logout(): Promise<void> {
     const { error } = await this.supabase.instance.auth.signOut();
@@ -89,4 +98,6 @@ export class AuthService {
 
     return !!data;
   }
+
+  
 }

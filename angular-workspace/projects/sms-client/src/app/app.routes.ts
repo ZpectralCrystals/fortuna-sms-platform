@@ -12,12 +12,14 @@ import { HistoryPageComponent } from './dashboard/pages/history-page.component';
 import { RechargesPageComponent } from './dashboard/pages/recharges-page.component';
 import { SendSmsPageComponent } from './dashboard/pages/send-sms-page.component';
 import { TemplatesPageComponent } from './dashboard/pages/templates-page.component';
+import { ResetPasswordPageComponent } from './auth/reset-password-page.component';
 
 export const smsClientRoutes: Routes = [
   { path: '', component: HomePageComponent },
   { path: 'login', component: LoginPageComponent },
   { path: 'register', component: RegisterPageComponent },
   { path: 'forgot-password', component: ForgotPasswordPageComponent },
+  { path: 'reset-password', component: ResetPasswordPageComponent },
   {
     path: 'dashboard',
     component: DashboardLayoutComponent,
