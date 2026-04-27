@@ -40,6 +40,10 @@ export class AuthService {
     });
 
     if (error) {
+      if (error.message.toLowerCase().includes('rate limit')) {
+        throw new Error('Has solicitado demasiados correos en poco tiempo. Intenta nuevamente en unos minutos.');
+      }
+
       throw new Error(error.message);
     }
   }
