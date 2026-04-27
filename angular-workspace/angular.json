@@ -1,0 +1,109 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "sms-client": {
+      "projectType": "application",
+      "root": "projects/sms-client",
+      "sourceRoot": "projects/sms-client/src",
+      "prefix": "sms",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/sms-client",
+            "index": "projects/sms-client/src/index.html",
+            "browser": "projects/sms-client/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "projects/sms-client/tsconfig.app.json",
+            "assets": [],
+            "styles": ["projects/sms-client/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "sms-client:build:production"
+            },
+            "development": {
+              "buildTarget": "sms-client:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "backoffice-admin": {
+      "projectType": "application",
+      "root": "projects/backoffice-admin",
+      "sourceRoot": "projects/backoffice-admin/src",
+      "prefix": "bo",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/backoffice-admin",
+            "index": "projects/backoffice-admin/src/index.html",
+            "browser": "projects/backoffice-admin/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "projects/backoffice-admin/tsconfig.app.json",
+            "assets": [],
+            "styles": ["projects/backoffice-admin/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "backoffice-admin:build:production"
+            },
+            "development": {
+              "buildTarget": "backoffice-admin:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}

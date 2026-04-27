@@ -1,0 +1,41 @@
+# Sistema
+.DS_Store
+
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+**/dist/
+.angular/
+**/.angular/
+.cache/
+coverage/
+
+# Variables y secretos
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Temporales pesados
+docs/qa_tmp/
+docs/**/node_modules/
+
+# Proyectos antiguos solo como referencia local
+sms/
+backoffice/
+
+# Reportes y evidencias pesadas no versionadas por ahora
+docs/01-reportes-qa/
+docs/02-evidencias/
+docs/03-presentaciones/
+docs/04-temporales/
