@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { AboutPageComponent } from './public/about-page.component';
+import { BlogPageComponent } from './public/blog-page.component';
+import { BlogPostPageComponent } from './public/blog-post-page.component';
 import { ClientAuthGuard } from './guards/client-auth.guard';
 import { ForgotPasswordPageComponent } from './auth/forgot-password-page.component';
 import { LoginPageComponent } from './auth/login-page.component';
@@ -24,6 +26,8 @@ export const smsClientRoutes: Routes = [
   { path: 'forgot-password', component: ForgotPasswordPageComponent },
   { path: 'reset-password', component: ResetPasswordPageComponent },
   { path: 'about', component: AboutPageComponent },
+  { path: 'blog', component: BlogPageComponent },
+  { path: 'blog/:slug', component: BlogPostPageComponent },
   { path: 'privacy', component: PrivacyPageComponent },
   { path: 'terms', component: TermsPageComponent },
   {

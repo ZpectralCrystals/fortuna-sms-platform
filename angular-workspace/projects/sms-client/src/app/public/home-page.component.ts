@@ -341,9 +341,8 @@ interface PlanItem {
             <section>
               <h3>Empresa</h3>
               <ul>
-                <!-- TODO: activar /blog cuando exista ruta publica en Angular. -->
                 <li><a routerLink="/about">Sobre nosotros</a></li>
-                <li><span class="footer__plain">Blog</span></li>
+                <li><a routerLink="/blog">Blog</a></li>
                 <li><a routerLink="/privacy">Privacidad</a></li>
                 <li><a routerLink="/terms">Términos de servicio</a></li>
               </ul>

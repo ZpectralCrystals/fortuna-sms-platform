@@ -181,6 +181,74 @@ import { RouterLink } from '@angular/router';
           <p>Sin contratos. Sin costos ocultos. Paga solo por lo que usas.</p>
         </section>
       </section>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer__grid">
+            <section>
+              <a class="brand brand--footer" routerLink="/">
+                <span class="brand__mark" aria-hidden="true">SMS</span>
+                <span>
+                  <span class="brand__name">SMS Fortuna</span>
+                  <span class="brand__tag">Comunicación masiva</span>
+                </span>
+              </a>
+              <p>La solución más confiable para enviar SMS desde tu aplicación o plataforma web. El mejor precio del Perú.</p>
+              <div class="socials" aria-label="Redes sociales">
+                <a href="#" aria-label="Twitter">X</a>
+                <a href="#" aria-label="GitHub">GH</a>
+                <a href="#" aria-label="LinkedIn">in</a>
+              </div>
+            </section>
+
+            <section>
+              <h3>Producto</h3>
+              <ul>
+                <li><a href="#precios">Precios</a></li>
+                <li><a routerLink="/dashboard/api-keys">Documentación API</a></li>
+                <li><a href="#features">Integraciones</a></li>
+              </ul>
+            </section>
+
+            <section>
+              <h3>Empresa</h3>
+              <ul>
+                <li><a routerLink="/about">Sobre nosotros</a></li>
+                <li><a routerLink="/blog">Blog</a></li>
+                <li><a routerLink="/privacy">Privacidad</a></li>
+                <li><a routerLink="/terms">Términos de servicio</a></li>
+              </ul>
+            </section>
+
+            <section>
+              <h3>Contacto</h3>
+              <ul class="contact-list">
+                <li><span aria-hidden="true">✉</span><a href="mailto:admin@fortuna.com.pe">admin&#64;fortuna.com.pe</a></li>
+                <li>
+                  <span aria-hidden="true">☎</span>
+                  <a
+                    href="https://wa.me/51982165728?text=Hola%2C%20me%20interesa%20conocer%20m%C3%A1s%20sobre%20Fortuna%20SMS."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    +51 982 165 728
+                  </a>
+                </li>
+                <li><span aria-hidden="true">⌖</span><span>Lima, Perú</span></li>
+              </ul>
+            </section>
+          </div>
+
+          <div class="footer__bottom">
+            <p>© {{ currentYear }} SMS Fortuna. Todos los derechos reservados. Fortuna Fintech SAC.</p>
+            <nav aria-label="Legal">
+              <a routerLink="/privacy">Política de privacidad</a>
+              <a routerLink="/terms">Términos de uso</a>
+              <a routerLink="/privacy">Cookies</a>
+            </nav>
+          </div>
+        </div>
+      </footer>
     </main>
   `,
   styles: [`
@@ -207,6 +275,11 @@ import { RouterLink } from '@angular/router';
 
     .wide-container,
     .content-container {
+      width: min(100% - 32px, 1180px);
+      margin: 0 auto;
+    }
+
+    .container {
       width: min(100% - 32px, 1180px);
       margin: 0 auto;
     }
@@ -586,6 +659,148 @@ import { RouterLink } from '@angular/router';
       color: #4b5563;
     }
 
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand__mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border: 2px solid currentColor;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .brand__name,
+    .brand__tag {
+      display: block;
+    }
+
+    .brand__name {
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .brand__tag {
+      color: #dbeafe;
+      font-size: 12px;
+    }
+
+    .footer {
+      background: #111827;
+      color: #d1d5db;
+      padding: 48px 0 32px;
+    }
+
+    .footer__grid {
+      display: grid;
+      grid-template-columns: 1.4fr 0.8fr 0.8fr 1fr;
+      gap: 32px;
+      padding-bottom: 48px;
+    }
+
+    .brand--footer {
+      color: #3b82f6;
+      margin-bottom: 16px;
+    }
+
+    .brand--footer .brand__name {
+      color: #ffffff;
+      font-size: 20px;
+    }
+
+    .brand--footer .brand__tag {
+      color: #9ca3af;
+    }
+
+    .footer p {
+      color: #9ca3af;
+    }
+
+    .footer h3 {
+      margin-bottom: 16px;
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .footer ul {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .footer a:hover {
+      color: #3b82f6;
+    }
+
+    .footer__plain {
+      color: #9ca3af;
+    }
+
+    .socials {
+      display: flex;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .socials a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      background: #1f2937;
+      color: #d1d5db;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .contact-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .contact-list span[aria-hidden="true"] {
+      color: #3b82f6;
+      font-weight: 900;
+    }
+
+    .footer__bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      border-top: 1px solid #1f2937;
+      padding-top: 30px;
+      font-size: 14px;
+    }
+
+    .footer__bottom nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 22px;
+    }
+
+    @media (max-width: 1050px) {
+      .footer__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     @media (max-width: 800px) {
       .services-grid,
       .tech-grid {
@@ -621,7 +836,17 @@ import { RouterLink } from '@angular/router';
       .image-card img {
         height: 300px;
       }
+
+      .footer__grid {
+        grid-template-columns: 1fr;
+      }
+
+      .footer__bottom {
+        flex-direction: column;
+      }
     }
   `]
 })
-export class AboutPageComponent { }
+export class AboutPageComponent {
+  readonly currentYear = new Date().getFullYear();
+}
