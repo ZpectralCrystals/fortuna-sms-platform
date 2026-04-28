@@ -9,10 +9,12 @@ import { AnalyticsPageComponent } from './dashboard/pages/analytics-page.compone
 import { ApiKeysPageComponent } from './dashboard/pages/api-keys-page.component';
 import { DashboardOverviewPageComponent } from './dashboard/pages/dashboard-overview-page.component';
 import { HistoryPageComponent } from './dashboard/pages/history-page.component';
+import { PrivacyPageComponent } from './public/privacy-page.component';
 import { RechargesPageComponent } from './dashboard/pages/recharges-page.component';
 import { SendSmsPageComponent } from './dashboard/pages/send-sms-page.component';
 import { TemplatesPageComponent } from './dashboard/pages/templates-page.component';
 import { ResetPasswordPageComponent } from './auth/reset-password-page.component';
+import { TermsPageComponent } from './public/terms-page.component';
 
 export const smsClientRoutes: Routes = [
   { path: '', component: HomePageComponent },
@@ -20,6 +22,8 @@ export const smsClientRoutes: Routes = [
   { path: 'register', component: RegisterPageComponent },
   { path: 'forgot-password', component: ForgotPasswordPageComponent },
   { path: 'reset-password', component: ResetPasswordPageComponent },
+  { path: 'privacy', component: PrivacyPageComponent },
+  { path: 'terms', component: TermsPageComponent },
   {
     path: 'dashboard',
     component: DashboardLayoutComponent,

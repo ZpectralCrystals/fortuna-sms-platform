@@ -71,5 +71,32 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 
 ### Pendientes detectados
 
-- Crear rutas o páginas públicas reales para `/privacy` y `/terms` si se requiere contenido legal navegable.
+- Rutas legales `/privacy` y `/terms` resueltas en la sección "Migración páginas legales".
 - Crear rutas públicas para `/about` y `/blog` antes de activar esos links.
+
+## Migración páginas legales
+
+### Archivos React revisados
+
+- `sms/src/pages/Privacy.tsx`
+- `sms/src/pages/Terms.tsx`
+
+### Archivos Angular creados
+
+- `projects/sms-client/src/app/public/privacy-page.component.ts`
+- `projects/sms-client/src/app/public/terms-page.component.ts`
+
+### Rutas agregadas
+
+- `/privacy`
+- `/terms`
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes detectados
+
+- Ninguno para esta migración. Las páginas legales ya quedan disponibles desde los links de la Landing.
