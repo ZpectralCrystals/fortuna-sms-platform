@@ -178,3 +178,50 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Crear o validar RPC `increment_blog_post_views`.
 - Implementar servicio Angular de blog cuando exista esquema estable.
 - Activar búsqueda, categorías, slug real, post detail, artículos relacionados y metadatos SEO dinámicos.
+
+## Migración Dashboard cliente base
+
+### Archivos React revisados
+
+- `sms/src/layouts/DashboardLayout.tsx`
+- `sms/src/pages/Dashboard.tsx`
+
+### Archivos Angular modificados
+
+- `projects/sms-client/src/app/layouts/dashboard-layout.component.ts`
+- `projects/sms-client/src/app/dashboard/pages/dashboard-overview-page.component.ts`
+
+### Qué se migró
+
+- Layout privado base con sidebar, header móvil, navegación, tarjeta de saldo, panel de usuario y logout.
+- Vista principal `/dashboard` con encabezado, CTA “Enviar SMS”, tarjetas KPI, paneles de gráficos y sección “Mensajes recientes”.
+- Lectura segura de perfil básico y mensajes desde Supabase si las tablas responden.
+- Estado vacío original para mensajes recientes: “Aún no has enviado ningún SMS”.
+
+### Qué NO se migró todavía
+
+- Send SMS.
+- History.
+- Analytics.
+- Templates.
+- API Keys.
+- Recharges.
+- Lógica real de envío, historial, analytics o recargas.
+
+### Dependencias Supabase detectadas
+
+- Tabla `profiles` para `full_name`, `company_name`, `razon_social` y `credits`.
+- Tabla `sms_messages` para KPIs, gráficos y mensajes recientes.
+- Sesión actual de Supabase para filtrar por usuario autenticado.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Conectar las páginas privadas restantes cuando toque su migración.
+- Validar visual 1:1 con sesión cliente real y datos reales de `sms_messages`.
+- Reemplazar gráficos CSS por componente compartido solo durante refactor futuro, si aplica.
