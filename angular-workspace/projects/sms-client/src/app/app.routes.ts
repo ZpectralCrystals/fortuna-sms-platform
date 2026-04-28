@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AboutPageComponent } from './public/about-page.component';
 import { ClientAuthGuard } from './guards/client-auth.guard';
 import { ForgotPasswordPageComponent } from './auth/forgot-password-page.component';
 import { LoginPageComponent } from './auth/login-page.component';
@@ -22,6 +23,7 @@ export const smsClientRoutes: Routes = [
   { path: 'register', component: RegisterPageComponent },
   { path: 'forgot-password', component: ForgotPasswordPageComponent },
   { path: 'reset-password', component: ResetPasswordPageComponent },
+  { path: 'about', component: AboutPageComponent },
   { path: 'privacy', component: PrivacyPageComponent },
   { path: 'terms', component: TermsPageComponent },
   {

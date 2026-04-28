@@ -72,7 +72,8 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 ### Pendientes detectados
 
 - Rutas legales `/privacy` y `/terms` resueltas en la sección "Migración páginas legales".
-- Crear rutas públicas para `/about` y `/blog` antes de activar esos links.
+- Ruta pública `/about` resuelta en la sección "Migración página About".
+- Crear ruta pública para `/blog` antes de activar ese link.
 
 ## Migración páginas legales
 
@@ -100,3 +101,34 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 ### Pendientes detectados
 
 - Ninguno para esta migración. Las páginas legales ya quedan disponibles desde los links de la Landing.
+
+## Migración página About
+
+### Archivo React revisado
+
+- `sms/src/pages/About.tsx`
+
+### Archivo Angular creado
+
+- `projects/sms-client/src/app/public/about-page.component.ts`
+
+### Ruta agregada
+
+- `/about`
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes detectados
+
+- Ninguno para About.
+
+### Corrección visual de About
+
+- Se corrigió `/about` para respetar el diseño React/Bolt 1:1.
+- Se restauró el hero con `fortuna-background.jpg`, overlay azul, mismas secciones, mismas tarjetas, misma imagen tecnológica y CTA final.
+- El asset se ubicó en `projects/sms-client/src/assets/fortuna-background.jpg` y se sirve como `assets/fortuna-background.jpg`.
+- Se mantuvo la navegación pública hacia `/`, `/register` y el link desde la Landing.

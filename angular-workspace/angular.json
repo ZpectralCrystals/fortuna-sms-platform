@@ -17,7 +17,13 @@
             "browser": "projects/sms-client/src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "projects/sms-client/tsconfig.app.json",
-            "assets": [],
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/sms-client/src/assets",
+                "output": "assets"
+              }
+            ],
             "styles": ["projects/sms-client/src/styles.css"],
             "scripts": []
           },
