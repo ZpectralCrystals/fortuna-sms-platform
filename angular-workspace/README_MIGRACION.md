@@ -333,6 +333,61 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Confirmar navegación visual de todas las rutas protegidas con sesión admin real.
 - Confirmar logout desde sesión admin real.
 
+## Migración Dashboard backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Dashboard.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/dashboard-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Encabezado `Panel de Control` con botones `Historial de Compras` y `Comprar SMS`.
+- Tarjetas KPI para inventario, ingresos, recargas pendientes y usuarios.
+- Panel `Resumen del Sistema`.
+- Panel `Estadísticas de Mensajería`.
+- Sección expandible `Historial de Compras de SMS` con header gradiente slate, estado vacío, tabla y footer totalizador.
+- Modal `Comprar SMS` con cálculo automático de cantidad, resumen azul, botones y estado `Procesando...`.
+
+### Qué lecturas quedaron conectadas
+
+- RPC `get_dashboard_stats` para métricas del dashboard.
+- Tabla `inventory_purchases` con relación `admin:admins(full_name, email)` para historial.
+- Sesión actual de Supabase para obtener el ID del admin que ejecuta la compra.
+- Si falla la lectura de historial de compras por tabla, relación o RLS pendiente, se muestra estado vacío seguro y no error técnico visible.
+
+### Qué RPCs usa
+
+- `get_dashboard_stats` para lectura de métricas.
+- `add_sms_to_inventory` como única escritura permitida para agregar SMS al inventario.
+
+### Qué reglas de seguridad se aplicaron
+
+- No hay inserts directos en `inventory_purchases`.
+- No hay updates directos en inventario.
+- No se modifica `profiles.credits`.
+- No se modifican usuarios/clientes.
+- No se llaman Edge Functions.
+- Si no existe sesión/admin actual, el submit del modal se bloquea con mensaje controlado.
+- Si la RPC falla, se muestra error controlado sin romper la pantalla.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes si aplica
+
+- Se intentó abrir `/dashboard`; el navegador mostró login por sesión/admin no validada en el entorno actual.
+- Validar visual final en `/dashboard` con sesión admin real.
+- Validar carga real de KPIs/historial contra Supabase dev.
+- Probar RPC `add_sms_to_inventory` con admin real y confirmar refresh de stats/historial.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
