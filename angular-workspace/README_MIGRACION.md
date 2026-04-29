@@ -479,3 +479,58 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 
 - Validar CRUD con sesión cliente real y tabla `templates` disponible en Supabase dev.
 - Conectar `Usar plantilla` a `/dashboard/send` en fase posterior, sin inventar precarga ahora.
+
+## Migración API Keys cliente
+
+### Archivo React revisado
+
+- `sms/src/pages/ApiKeys.tsx`
+
+### Archivo Angular modificado
+
+- `projects/sms-client/src/app/dashboard/pages/api-keys-page.component.ts`
+
+### Qué se migró visualmente
+
+- Encabezado `API Keys`, subtítulo `Administra tus claves de API para integración` y botón `Nueva API Key`.
+- Caja informativa `Integración API` con texto explicativo y bloque de ejemplo de uso.
+- Panel `Tus API Keys`, estado vacío `No tienes API keys aún` y botón `Crear primera API Key`.
+- Listado de keys existentes con nombre, estado `Activa` / `Inactiva`, key enmascarada, mostrar/ocultar, copiar, fecha de creación, último uso y botón eliminar.
+- Modal `Crear nueva API Key` con campo `Nombre de la API Key`, placeholder `Ej: Producción, Testing, App Móvil`, texto de ayuda y botones `Cancelar`, `Crear`.
+
+### Qué NO se conectó por seguridad
+
+- No se generan API keys reales en frontend.
+- No se usa `Math.random()`.
+- No se insertan API keys en Supabase.
+- No se guardan keys en texto plano.
+- El botón `Crear` muestra: `La generación segura de API keys se conectará en la siguiente fase.`
+- El botón eliminar queda con confirmación y mensaje temporal de revocación segura pendiente; no elimina ni revoca registros.
+- No se llaman Edge Functions.
+
+### Riesgos detectados del React original
+
+- Generaba API keys en frontend con `Math.random()`.
+- Insertaba API keys en tabla `api_keys` desde cliente.
+- Guardaba la key completa en texto plano.
+- Eliminaba API keys desde cliente sin filtro explícito por `user_id`.
+
+### Dependencias Supabase detectadas
+
+- Sesión actual de Supabase Auth.
+- Tabla `api_keys`.
+- Campos usados para listado: `id`, `user_id`, `name`, `key`, `is_active`, `created_at`, `last_used_at`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales para generación segura de API keys
+
+- Crear backend seguro o Edge Function para generar keys con CSPRNG.
+- Guardar solo hash o representación segura de la key.
+- Mostrar la key completa solo una vez al crearla.
+- Implementar revocación segura filtrada por usuario y con auditoría.
+- Definir política RLS de `api_keys` antes de activar creación/revocación real.
