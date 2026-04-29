@@ -269,6 +269,70 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Pendiente probar login con admin real y confirmar redirección a `/dashboard` porque no se proporcionaron credenciales.
 - Pendiente probar usuario no admin y confirmar logout con mensaje de error porque no se proporcionaron credenciales.
 
+## Migración visual Layout backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/components/Layout.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/layouts/admin-layout.component.ts`
+
+### Qué se migró visualmente
+
+- Fondo general `bg-slate-50`.
+- Sidebar oscuro `bg-slate-900`.
+- Sidebar fijo en desktop y menú responsive básico en móvil.
+- Logo con icono de mensaje azul.
+- Título `SMS Fortuna` y subtítulo `Backoffice`.
+- Navegación lateral con estados activos.
+- Header superior blanco y sticky.
+- Título dinámico según ruta actual.
+- Área de contenido con padding y `router-outlet`.
+- Bloque inferior de sidebar con nombre/correo admin.
+- Botón `Cerrar sesión`.
+
+### Rutas mapeadas
+
+- `Dashboard` → `/dashboard`
+- `Usuarios` → `/users`
+- `Recargas` → `/recharges`
+- `Cuentas` → `/accounts`
+- `Mensajes` → `/messages`
+- `API Keys` → `/api-keys`
+- `Alertas SMS` → `/alerts`
+- `Facturas` → `/invoices`
+- `Marketing` → `/marketing`
+- `Sincronización` → `/sync`
+- `Kit Integración` → `/integration-kit`
+
+### Qué lógica se conservó
+
+- Componente `standalone: true`.
+- Navegación con Angular Router, `RouterLink` y `RouterLinkActive`.
+- `router-outlet` para páginas internas.
+- Logout con `AuthService.logout()`.
+- Redirección de logout a `/login`.
+- Estado `loading` y `errorMessage`.
+- Menú móvil con `mobileMenuOpen`.
+- Lectura de email desde sesión Supabase si está disponible, con fallback `Administrador Principal` / `admin@fortuna.com.pe`.
+- No se tocaron login, Supabase config, environments, guards, páginas internas ni `sms-client`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes si aplica
+
+- Se abrió `http://127.0.0.1:4201/login` y el login carga correctamente.
+- Se probó abrir `/dashboard` sin sesión admin y el guard redirige a `/login`.
+- Probar login con admin real y confirmar entrada a `/dashboard` porque no se proporcionaron credenciales.
+- Confirmar navegación visual de todas las rutas protegidas con sesión admin real.
+- Confirmar logout desde sesión admin real.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
