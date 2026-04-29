@@ -358,6 +358,7 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - RPC `get_dashboard_stats` para métricas del dashboard.
 - Tabla `inventory_purchases` con relación `admin:admins(full_name, email)` para historial.
 - Sesión actual de Supabase para obtener el ID del admin que ejecuta la compra.
+- Si falla `get_dashboard_stats` porque Supabase dev aún no tiene el esquema/RPC operativo, se muestran métricas en cero sin error técnico visible.
 - Si falla la lectura de historial de compras por tabla, relación o RLS pendiente, se muestra estado vacío seguro y no error técnico visible.
 
 ### Qué RPCs usa

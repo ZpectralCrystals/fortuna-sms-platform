@@ -1191,8 +1191,7 @@ export class DashboardPageComponent implements OnInit {
         totalRevenue: Number.parseFloat(String(statsData.users?.total_revenue ?? 0))
       };
     } catch (error) {
-      console.error('Error loading stats:', error);
-      this.errorMessage = 'No se pudieron cargar las métricas del dashboard.';
+      console.warn('Error loading stats:', error);
     }
   }
 
