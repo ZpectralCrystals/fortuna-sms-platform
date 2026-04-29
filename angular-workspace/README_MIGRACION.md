@@ -435,3 +435,47 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 
 - Validar visual 1:1 con sesión cliente real y datos reales de `sms_messages`.
 - Sustituir gráficos HTML/CSS/SVG por librería de charts Angular solo en refactor futuro, si se decide instalar una dependencia.
+
+## Migración Templates cliente
+
+### Archivo React revisado
+
+- `sms/src/pages/Templates.tsx`
+
+### Archivo Angular modificado
+
+- `projects/sms-client/src/app/dashboard/pages/templates-page.component.ts`
+
+### Qué se migró
+
+- Encabezado `Plantillas de Mensajes`, subtítulo `Crea y administra plantillas reutilizables` y botón `Nueva Plantilla`.
+- Estado vacío con icono, texto `No tienes plantillas aún` y botón `Crear primera plantilla`.
+- Cards de plantillas con nombre, categoría, contenido, cantidad de caracteres, fecha, botones editar/eliminar y botón `Usar plantilla`.
+- Modal `Nueva Plantilla` / `Editar Plantilla` con campos `Nombre de la plantilla`, `Categoría`, `Contenido`, contador de caracteres, consejo de variables `{nombre}`, `{codigo}` y botones `Cancelar`, `Crear`, `Actualizar`, `Guardando...`.
+- Categorías `marketing`, `transactional`, `notification` con etiquetas `Marketing`, `Transaccional`, `Notificación`.
+- Botón `Usar plantilla` queda visual y muestra mensaje temporal discreto; no navega ni precarga envío todavía.
+
+### Qué CRUD quedó conectado
+
+- Lectura de plantillas del usuario actual desde `templates`.
+- Creación de plantillas con `user_id`, `name`, `content`, `category`, `variables`.
+- Edición de `name`, `content`, `category` filtrando por `id` y `user_id`.
+- Eliminación filtrando por `id` y `user_id`, con confirmación previa.
+- Si la tabla no existe o falla la lectura, se muestra estado vacío sin error técnico.
+
+### Dependencias Supabase detectadas
+
+- Sesión actual de Supabase Auth.
+- Tabla `templates`.
+- Campos usados: `id`, `user_id`, `name`, `content`, `category`, `variables`, `created_at`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Validar CRUD con sesión cliente real y tabla `templates` disponible en Supabase dev.
+- Conectar `Usar plantilla` a `/dashboard/send` en fase posterior, sin inventar precarga ahora.
