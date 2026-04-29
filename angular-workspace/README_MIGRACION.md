@@ -309,3 +309,91 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 ### Pendientes si aplica
 
 - Probar login real y credenciales incorrectas con credenciales cliente disponibles.
+
+## Migración History cliente
+
+### Archivo React revisado
+
+- `sms/src/pages/History.tsx`
+
+### Archivo Angular modificado
+
+- `projects/sms-client/src/app/dashboard/pages/history-page.component.ts`
+
+### Qué se migró
+
+- Encabezado `Historial de SMS` y acción `Exportar CSV`.
+- Buscador por número o mensaje.
+- Filtro por estado: todos, entregados, enviados, pendientes y fallidos.
+- Listado visual de mensajes con icono de estado, chip de estado, fecha, hora de entrega, error y costo.
+- Estado de carga y estado vacío `No se encontraron mensajes`.
+- Exportación CSV local de los mensajes filtrados.
+
+### Datos reales o estado vacío
+
+- La pantalla lee `sms_messages` de Supabase usando sesión actual si la tabla responde.
+- Si no hay sesión, tabla o lectura falla, muestra estado vacío sin error técnico al usuario.
+- No modifica datos.
+
+### Dependencias Supabase detectadas
+
+- Sesión actual de Supabase.
+- Tabla `sms_messages`.
+- Campos usados: `id`, `user_id`, `to_phone`, `message`, `status`, `cost`, `created_at`, `delivered_at`, `error_message`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Probar visual 1:1 con sesión cliente y mensajes reales.
+- Ajustar paginación solo si el React original evoluciona o si el volumen real lo exige.
+
+## Migración visual Register cliente
+
+### Archivo React revisado
+
+- `sms/src/pages/Register.tsx`
+
+### Archivos Angular modificados
+
+- `projects/sms-client/src/app/auth/register-page.component.ts`
+- `projects/shared/src/lib/models/auth.model.ts`
+- `projects/shared/src/lib/services/auth.service.ts`
+
+### Qué se migró
+
+- Se corrigió la migración para respetar el formulario React/Bolt 1:1.
+- Fondo degradado azul/cyan.
+- Card blanca centrada con borde redondeado y sombra.
+- Marca `SMS Fortuna`, icono de mensaje y subtítulo `Comunicación masiva`.
+- Título `Crea tu cuenta`, link `Inicia sesión`, caja promocional `Obtén 10 SMS gratis al registrarte`, botón y links legales.
+- Campos en el mismo orden del React original: `Nombre completo`, `Razón Social`, `RUC`, `Teléfono celular`, `Correo electrónico`, `Contraseña` y `Confirmar contraseña`.
+- Estados visuales de error y éxito.
+
+### Qué lógica se conservó
+
+- `fullName`, `companyName`, `ruc`, `phone`, `email`, `password`, `confirmPassword`, `loading`, `errorMessage`, `successMessage` y `submit()`.
+- `AuthService.register()`.
+- Validación local de RUC de 11 dígitos, teléfono celular Perú, contraseña mínima de 6 caracteres y confirmación de contraseña.
+- Links internos a `/login`, `/terms` y `/privacy`.
+
+### Campos guardados actualmente
+
+- `email` y `password` se envían a Supabase Auth.
+- `fullName`, `companyName`, `ruc` y `phone` se envían como metadata de registro (`full_name`, `company_name`, `razon_social`, `ruc`, `phone`).
+- Si el trigger de `profiles` consume esos metadatos y existen columnas compatibles, quedan disponibles para el profile.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes si aplica
+
+- Confirmar si `profiles.phone` existe en Supabase dev. Si no existe, crear migración SQL queda pendiente para una fase posterior.
+- Probar creación real de usuario y profile con credenciales de prueba autorizadas.

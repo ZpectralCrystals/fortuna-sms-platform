@@ -23,8 +23,11 @@ export class AuthService {
       password: request.password,
       options: {
         data: {
+          full_name: request.fullName ?? null,
           razon_social: request.companyName ?? null,
-          ruc: request.ruc ?? null
+          company_name: request.companyName ?? null,
+          ruc: request.ruc ?? null,
+          phone: request.phone ?? null
         }
       }
     });
