@@ -397,3 +397,41 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 
 - Confirmar si `profiles.phone` existe en Supabase dev. Si no existe, crear migración SQL queda pendiente para una fase posterior.
 - Probar creación real de usuario y profile con credenciales de prueba autorizadas.
+
+## Migración Analytics cliente
+
+### Archivo React revisado
+
+- `sms/src/pages/Analytics.tsx`
+
+### Archivo Angular modificado
+
+- `projects/sms-client/src/app/dashboard/pages/analytics-page.component.ts`
+
+### Qué se migró
+
+- Encabezado `Panel de Análisis` y subtítulo `Métricas y estadísticas detalladas de tus envíos`.
+- Cuatro tarjetas KPI: `Total Enviados`, `Tasa de Entrega`, `SMS Fallidos` y `Gasto Total`.
+- Estado de carga con spinner.
+- Lectura segura de mensajes del usuario actual.
+- Cálculo de `total`, `delivered`, `failed`, `pending`, `sent`, `totalCost`, `deliveryRate`, data diaria de 30 días, distribución por estado y tendencia mensual de 6 meses.
+- Tres paneles de gráficos con estructura React/Bolt: `Envíos últimos 30 días`, `Distribución por Estado` y `Tendencia últimos 6 meses`.
+- Gráficos representados con HTML/CSS/SVG simple porque Angular no tiene librería de charts instalada y no se instalaron dependencias nuevas.
+- Estado vacío seguro sin errores técnicos cuando no hay mensajes, sesión o tabla disponible.
+
+### Dependencias Supabase detectadas
+
+- Sesión actual de Supabase Auth.
+- Tabla `sms_messages`.
+- Campos usados: `id`, `user_id`, `status`, `cost`, `created_at`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Validar visual 1:1 con sesión cliente real y datos reales de `sms_messages`.
+- Sustituir gráficos HTML/CSS/SVG por librería de charts Angular solo en refactor futuro, si se decide instalar una dependencia.
