@@ -604,3 +604,29 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Crear backend o Edge Function segura para registrar solicitud y notificar backoffice.
 - Validar comprobante antes de acreditar SMS.
 - Acreditar `profiles.credits` y actualizar `profiles.total_spent` solo desde backend seguro.
+
+## Mejora visual recuperación de contraseña
+
+### Archivos Angular modificados
+
+- `projects/sms-client/src/app/auth/forgot-password-page.component.ts`
+- `projects/sms-client/src/app/auth/reset-password-page.component.ts`
+
+### Criterio visual
+
+- No existía una pantalla React/Vite 1:1 bien diseñada para recuperación o cambio de contraseña.
+- Se alinearon ambas pantallas con la línea visual de Login/Register: fondo degradado azul/cyan, card blanca centrada, marca `SMS Fortuna`, icono de mensaje, subtítulo `Comunicación masiva`, inputs, botones y alertas compatibles.
+
+### Lógica conservada
+
+- `AuthService.forgotPassword()` queda sin cambios.
+- `AuthService.resetPassword()` queda sin cambios.
+- Se mantienen validaciones actuales de correo, contraseña mínima de 6 caracteres y confirmación de contraseña.
+- Se mantiene redirección a `/login` después de reset exitoso.
+- Se mantienen rutas `/forgot-password` y `/reset-password`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
