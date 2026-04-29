@@ -10,69 +10,271 @@ import { AuthService } from '../../../../shared/src/lib/services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <main class="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <section class="w-full max-w-md rounded-2xl bg-white p-8 shadow">
-        <h1 class="text-2xl font-bold text-slate-900">Ingresar</h1>
-        <p class="mt-2 text-sm text-slate-600">
-          Accede a tu cuenta de SMS Fortuna.
-        </p>
-
-        <form class="mt-6 space-y-4" (ngSubmit)="submit()">
-          <div>
-            <label class="block text-sm font-medium text-slate-700">
-              Correo electrónico
-            </label>
-            <input
-              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
-              type="email"
-              name="email"
-              [(ngModel)]="email"
-              required
-              autocomplete="email"
-              placeholder="cliente@test.com"
-            />
+    <main class="login-page">
+      <section class="login-card">
+        <div class="login-card__intro">
+          <div class="brand">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+            </svg>
+            <div>
+              <span>SMS Fortuna</span>
+              <small>Comunicación masiva</small>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-700">
-              Contraseña
-            </label>
-            <input
-              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
-              type="password"
-              name="password"
-              [(ngModel)]="password"
-              required
-              autocomplete="current-password"
-              placeholder="Tu contraseña"
-            />
-          </div>
-
-          <p *ngIf="errorMessage" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {{ errorMessage }}
+          <h1>Inicia sesión</h1>
+          <p>
+            ¿No tienes cuenta?
+            <a routerLink="/register">Regístrate gratis</a>
           </p>
+        </div>
 
-          <button
-            class="w-full rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white disabled:opacity-60"
-            type="submit"
-            [disabled]="loading"
-          >
-            {{ loading ? 'Ingresando...' : 'Ingresar' }}
+        <form class="login-form" (ngSubmit)="submit()">
+          <div *ngIf="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </div>
+
+          <div class="fields">
+            <label>
+              <span>Correo electrónico</span>
+              <input
+                type="email"
+                name="email"
+                [(ngModel)]="email"
+                required
+                autocomplete="email"
+                placeholder="tu@empresa.com"
+              />
+            </label>
+
+            <label>
+              <span>Contraseña</span>
+              <input
+                type="password"
+                name="password"
+                [(ngModel)]="password"
+                required
+                autocomplete="current-password"
+                placeholder="••••••••"
+              />
+            </label>
+          </div>
+
+          <div class="form-links">
+            <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <button type="submit" [disabled]="loading">
+            {{ loading ? 'Iniciando sesión...' : 'Iniciar sesión' }}
           </button>
         </form>
-
-        <div class="mt-4 flex items-center justify-between text-sm">
-          <a class="text-slate-700 underline" routerLink="/forgot-password">
-            Recuperar contraseña
-          </a>
-
-          <a class="text-slate-700 underline" routerLink="/register">
-            Crear cuenta
-          </a>
-        </div>
       </section>
     </main>
-  `
+  `,
+  styles: [`
+    :host {
+      display: block;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .login-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+      padding: 0 16px;
+    }
+
+    .login-card {
+      display: grid;
+      width: 100%;
+      max-width: 448px;
+      gap: 32px;
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+    }
+
+    .login-card__intro {
+      text-align: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .brand svg {
+      width: 40px;
+      height: 40px;
+      color: #2563eb;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2.5;
+      flex: 0 0 auto;
+    }
+
+    .brand span,
+    .brand small {
+      display: block;
+      text-align: left;
+    }
+
+    .brand span {
+      color: #111827;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .brand small {
+      color: #6b7280;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    h1 {
+      margin: 24px 0 0;
+      color: #111827;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .login-card__intro p {
+      margin: 8px 0 0;
+      color: #4b5563;
+      font-size: 14px;
+    }
+
+    .login-card__intro a,
+    .form-links a {
+      color: #2563eb;
+      font-weight: 500;
+      transition: color 160ms ease;
+    }
+
+    .login-card__intro a:hover,
+    .form-links a:hover {
+      color: #3b82f6;
+    }
+
+    .login-form {
+      display: grid;
+      gap: 24px;
+    }
+
+    .error-message {
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      background: #fef2f2;
+      color: #b91c1c;
+      padding: 12px 16px;
+    }
+
+    .fields {
+      display: grid;
+      gap: 16px;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+    }
+
+    label span {
+      color: #374151;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    input {
+      width: 100%;
+      appearance: none;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      color: #111827;
+      font: inherit;
+      padding: 12px;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    input::placeholder {
+      color: #6b7280;
+    }
+
+    input:focus {
+      border-color: transparent;
+      box-shadow: 0 0 0 2px #3b82f6;
+    }
+
+    .form-links {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+
+    button {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #ffffff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 12px 16px;
+      transition: background 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:focus {
+      box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6;
+      outline: none;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    @media (min-width: 640px) {
+      .login-page {
+        padding: 0 24px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .login-page {
+        padding: 0 32px;
+      }
+    }
+  `]
 })
 export class LoginPageComponent {
   private readonly authService = inject(AuthService);

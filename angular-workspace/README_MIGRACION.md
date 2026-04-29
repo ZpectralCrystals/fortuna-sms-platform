@@ -200,7 +200,7 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 
 ### Qué NO se migró todavía
 
-- Send SMS.
+- Send SMS real/backend.
 - History.
 - Analytics.
 - Templates.
@@ -225,3 +225,87 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Conectar las páginas privadas restantes cuando toque su migración.
 - Validar visual 1:1 con sesión cliente real y datos reales de `sms_messages`.
 - Reemplazar gráficos CSS por componente compartido solo durante refactor futuro, si aplica.
+
+## Migración Send SMS visual
+
+### Archivo React revisado
+
+- `sms/src/pages/SendSMS.tsx`
+
+### Archivo Angular modificado
+
+- `projects/sms-client/src/app/dashboard/pages/send-sms-page.component.ts`
+
+### Qué se migró
+
+- Pantalla `/dashboard/send` con tabs `Individual`, `Múltiple` y `Desde Fichero`.
+- Campos, ejemplos, resumen de envío, cálculo visual estimado de costo, conteo de caracteres y cantidad de SMS.
+- Carga local de `.txt`/`.csv` para modo múltiple y preview local para modo fichero.
+- Validaciones visuales de teléfono, archivo vacío, tamaño máximo y créditos insuficientes.
+- Botón principal seguro: valida localmente y muestra “El envío real se conectará en la siguiente fase.”
+
+### Qué NO se conectó todavía
+
+- No se llama Edge Function `send-sms`.
+- No se insertan registros en `sms_messages`.
+- No se crean ni actualizan campañas.
+- No se descuenta saldo.
+- No se actualiza `profiles.credits`.
+- No se actualiza `profiles.total_spent`.
+- No se migró la lectura real de plantillas.
+
+### Riesgos detectados del flujo original
+
+- El React original llamaba `functions/v1/send-sms` desde frontend.
+- El React original calculaba y descontaba créditos desde cliente.
+- El React original insertaba mensajes y actualizaba perfil desde cliente.
+- El flujo real debe moverse a backend seguro con validación de saldo transaccional.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales para conectar envío SMS
+
+- Diseñar endpoint/backend seguro para envío real.
+- Validar saldo en backend antes de llamar al proveedor.
+- Registrar mensajes y campañas en transacción o flujo idempotente.
+- Descontar créditos solo tras confirmación segura del proveedor.
+- Conectar plantillas reales cuando se migre `/dashboard/templates`.
+
+## Migración visual Login cliente
+
+### Archivo React revisado
+
+- `sms/src/pages/Login.tsx`
+
+### Archivo Angular modificado
+
+- `projects/sms-client/src/app/auth/login-page.component.ts`
+
+### Qué se migró
+
+- Fondo degradado azul/cyan.
+- Card blanca centrada con borde redondeado y sombra.
+- Marca `SMS Fortuna`, icono de mensaje y subtítulo `Comunicación masiva`.
+- Título `Inicia sesión`, link `Regístrate gratis`, campos, botón y link `¿Olvidaste tu contraseña?`.
+- Estado visual de error con caja roja.
+
+### Qué lógica se conservó
+
+- `email`, `password`, `loading`, `errorMessage` y `submit()`.
+- `AuthService.login()`.
+- Redirección exitosa a `/dashboard`.
+- Links internos a `/forgot-password` y `/register`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes si aplica
+
+- Probar login real y credenciales incorrectas con credenciales cliente disponibles.
