@@ -534,3 +534,73 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Mostrar la key completa solo una vez al crearla.
 - Implementar revocación segura filtrada por usuario y con auditoría.
 - Definir política RLS de `api_keys` antes de activar creación/revocación real.
+
+## Migración Recharges cliente
+
+### Archivo React revisado
+
+- `sms/src/pages/Recharges.tsx`
+
+### Archivo Angular modificado
+
+- `projects/sms-client/src/app/dashboard/pages/recharges-page.component.ts`
+
+### Qué se migró visualmente
+
+- Encabezado `Recargas` y subtítulo `Administra tu saldo y recargas de SMS`.
+- Tarjeta de saldo con `Créditos disponibles`, SMS disponibles y `Total gastado`.
+- Caja `Tarifas por Operador (Precio Base)` con tarifas Movistar, Claro, Entel y Bitel.
+- Paquetes S/ 50, S/ 100, S/ 200, S/ 500 y S/ 1000 con SMS, badge `Popular`, base imponible, IGV, total y recarga efectiva.
+- Historial de recargas con título `Historial de recargas`, estado vacío `No hay recargas aún`, listado con ícono por estado, SMS, método, fecha, monto y estado `Completado`, `Fallido`, `Pendiente`.
+- Modal `Confirmar recarga` con paquete, base imponible, IGV, total, métodos Yape, Plin y Transferencia Bancaria.
+- Secciones de QR para Yape/Plin, datos bancarios Interbank, botones de copiar y acción manual de WhatsApp.
+
+### Qué lectura segura quedó conectada
+
+- Lee sesión actual de Supabase Auth.
+- Lee `profiles.credits` y `profiles.total_spent` si existen.
+- Lee historial desde `recharges` filtrando por `user_id` si la tabla existe.
+- Si `profiles` o `recharges` fallan, muestra saldo 0 y estado vacío sin error técnico.
+
+### Qué NO se conectó por seguridad
+
+- No llama `notify-backoffice`.
+- No llama Edge Functions.
+- No inserta en `recharges`.
+- No acredita SMS.
+- No modifica `profiles.credits`.
+- No modifica `profiles.total_spent`.
+- El botón `Confirmar recarga` muestra: `La solicitud automática de recarga se conectará en la siguiente fase. Por ahora envía tu constancia por WhatsApp.`
+- WhatsApp queda como acción manual del usuario con mensaje armado.
+
+### Riesgos detectados del React original
+
+- Insertaba solicitudes de recarga desde frontend.
+- Llamaba Edge Function `notify-backoffice` desde cliente.
+- Dependía de variables públicas de Supabase para notificar backoffice.
+- Mostraba alerta de solicitud creada aunque el flujo real depende de validación manual de comprobante.
+
+### Assets copiados
+
+- `sms/public/whatsapp_image_2026-02-01_at_10.23.01_am.jpeg`
+- Copiado a `projects/sms-client/src/assets/whatsapp_image_2026-02-01_at_10.23.01_am.jpeg`
+- Referenciado como `assets/whatsapp_image_2026-02-01_at_10.23.01_am.jpeg`
+
+### Dependencias Supabase detectadas
+
+- Sesión actual de Supabase Auth.
+- Tabla `profiles`: `credits`, `total_spent`.
+- Tabla `recharges`: `id`, `user_id`, `amount`, `sms_credits`, `status`, `payment_method`, `created_at`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build sms-client`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales para activar recargas
+
+- Diseñar flujo seguro con backoffice para crear y aprobar solicitudes.
+- Crear backend o Edge Function segura para registrar solicitud y notificar backoffice.
+- Validar comprobante antes de acreditar SMS.
+- Acreditar `profiles.credits` y actualizar `profiles.total_spent` solo desde backend seguro.
