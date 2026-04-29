@@ -226,6 +226,49 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Validar visual 1:1 con sesión cliente real y datos reales de `sms_messages`.
 - Reemplazar gráficos CSS por componente compartido solo durante refactor futuro, si aplica.
 
+## Migración visual Login backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/components/Login.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/auth/login-page.component.ts`
+
+### Qué se migró visualmente
+
+- Fondo degradado oscuro `slate`.
+- Card blanca centrada con `rounded-2xl`, padding y sombra equivalente.
+- Icono azul de mensaje con SVG inline equivalente a `MessageSquare`.
+- Título `SMS Fortuna`.
+- Subtítulo `Backoffice - Panel de Administración`.
+- Campos `Email` y `Contraseña` con placeholders originales.
+- Caja de error roja.
+- Botón azul `Ingresar` y estado loading `Ingresando...`.
+
+### Qué lógica se conservó
+
+- Estado `email`, `password`, `loading` y `errorMessage`.
+- Método `submit()`.
+- Login con `AuthService.login()`.
+- Validación admin con `AuthService.isAdmin()`.
+- Logout con `AuthService.logout()` si la cuenta no es admin.
+- Redirección exitosa a `/dashboard`.
+- No se tocaron Supabase config, environments, guards, layout, páginas de backoffice ni `sms-client`.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes si aplica
+
+- Validación visual realizada en `http://127.0.0.1:4201/login`: coincide con el login React/Bolt migrado.
+- Pendiente probar login con admin real y confirmar redirección a `/dashboard` porque no se proporcionaron credenciales.
+- Pendiente probar usuario no admin y confirmar logout con mensaje de error porque no se proporcionaron credenciales.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
