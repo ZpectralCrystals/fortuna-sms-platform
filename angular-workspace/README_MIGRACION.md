@@ -443,6 +443,71 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Definir flujo seguro de activación/desactivación.
 - Validar lectura real de `users` cuando el esquema/RLS esté listo en Supabase dev.
 
+## Migración Recharges backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Recharges.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/recharges-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Tarjeta `Inventario Global Disponible` con colores rojo, amber o verde según inventario.
+- Filtros `Todas`, `Pendientes`, `Aprobadas` y `Rechazadas`.
+- Botón `Nueva Recarga`.
+- Tabla en card blanca con columnas `Usuario`, `Paquete`, `Cantidad`, `Monto`, `Método Pago`, `Fecha`, `Estado`, `Cód. Operación` y `Acciones`.
+- Filas con usuario, paquete, SMS, monto, método, fecha `es-PE`, badge de estado, código de operación y acciones.
+- Estado vacío `No hay recargas para mostrar`.
+- Modal `Nueva Recarga`.
+- Modal `Aprobar Recarga` con validación visual de código de operación.
+
+### Qué lectura segura quedó conectada
+
+- Lectura de `recharges` con relación `user:users(full_name, email, company)` y `package:sms_packages(name)`.
+- Lectura de usuarios activos desde `users`.
+- Lectura de paquetes activos desde `sms_packages`.
+- Lectura de inventario desde `sms_inventory`.
+- Si alguna tabla no existe, falla por RLS o no hay data, se usan fallbacks seguros y no se muestra error técnico visible.
+- Filtros funcionan localmente sobre las recargas cargadas.
+
+### Qué NO se conectó por seguridad
+
+- No se insertan recargas en `recharges`.
+- No se actualiza `recharges`.
+- No se actualiza `users` ni `users.sms_balance`.
+- No se modifica inventario.
+- No se llama RPC `deduct_sms_from_inventory`.
+- No se llaman Edge Functions.
+- `Crear Recarga` solo muestra `La creación segura de recargas se conectará en la siguiente fase.`
+- `Aprobar Recarga` valida código y luego muestra `La aprobación segura de recargas se conectará en la siguiente fase.`
+- `Rechazar` solo muestra `El rechazo seguro de recargas se conectará en la siguiente fase.`
+
+### Riesgos detectados del React original
+
+- El React original aprobaba recargas modificando `recharges`.
+- El React original actualizaba `users.sms_balance`.
+- El React original usaba RPC `deduct_sms_from_inventory`.
+- El React original insertaba nuevas recargas.
+- En Angular esas acciones quedan bloqueadas temporalmente porque el flujo real debe definirse con backend/RPC seguro, inventario y RLS completos.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Se intentó abrir `/recharges`; el guard redirigió a `/login` por sesión/admin no validada en el entorno actual.
+- Validar visual final en `/recharges` con sesión admin real.
+- Definir backend/RPC seguro para creación, aprobación y rechazo.
+- Completar inventario, RLS y relaciones en Supabase dev.
+- Probar lectura real cuando existan tablas y permisos.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
