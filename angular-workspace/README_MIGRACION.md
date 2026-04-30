@@ -508,6 +508,70 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Completar inventario, RLS y relaciones en Supabase dev.
 - Probar lectura real cuando existan tablas y permisos.
 
+## Migración Accounts backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Clients.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/accounts-page.component.ts`
+
+### Qué se migró visualmente
+
+- En React la pantalla se llama `Clients`; en Angular se migró a la ruta `/accounts`.
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Buscador con placeholder `Buscar clientes...`, icono de búsqueda y ancho máximo equivalente `max-w-md`.
+- Grid `grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6`.
+- Cards blancas con borde, sombra suave, hover y click para abrir detalle.
+- Card de cliente con nombre, email, empresa opcional, badge `Activo` / `Inactivo`, bloques `Balance SMS`, `Total Gastado`, `Recargas` y fecha `Desde ...`.
+- Modal de detalle con overlay oscuro, card blanca `max-w-2xl`, cierre con X y click fuera.
+- Modal con datos del cliente, 3 tarjetas resumen, sección `Historial de Recargas`, listado reciente y estado vacío `No hay recargas registradas`.
+- Estado vacío general `No se encontraron clientes`.
+
+### Qué lectura segura quedó conectada
+
+- Se corrigió la fuente de datos de `users` a `profiles` porque `public.users` no existe en Supabase dev.
+- `profiles` es la fuente real actual de clientes registrados.
+- Lectura segura desde `profiles` con columnas reales: `id`, `email`, `full_name`, `razon_social`, `ruc`, `phone`, `role`, `is_active`, `credits`, `total_spent`, `created_at`, `updated_at`.
+- Se excluyen administradores leyendo `admins.auth_user_id` y filtrando perfiles cuyo `id` exista allí.
+- También se excluye el usuario autenticado actual si su `id` aparece en `profiles`, para evitar mostrar el admin logueado en cuentas.
+- Si falla la lectura de `admins`, la pantalla no rompe y usa fallback seguro.
+- `recharges` todavía no existe en Supabase dev; por eso `Historial de Recargas` queda vacío y `totalRecharges` queda en 0.
+- `totalSpent` sale de `profiles.total_spent`.
+- Búsqueda local por `full_name`, `email`, `razon_social` y `ruc`.
+- Si `profiles` falla por tabla, relación, RLS o datos pendientes, se muestra estado vacío seguro sin error técnico visible.
+
+### Qué NO se conectó por seguridad
+
+- No se insertan usuarios.
+- No se actualizan usuarios.
+- No se modifican balances.
+- No se modifican recargas.
+- No se llaman Edge Functions.
+- No se llaman RPCs.
+- La pantalla queda como lectura segura de clientes desde `profiles`.
+
+### Dependencias Supabase detectadas
+
+- Tabla `profiles`: `id`, `email`, `full_name`, `razon_social`, `ruc`, `phone`, `role`, `is_active`, `credits`, `total_spent`, `created_at`, `updated_at`.
+- Tabla `admins`: `auth_user_id`.
+- Tabla `recharges`: no existe todavía; no se usa por ahora.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Se intentó abrir `/accounts`; el entorno actual mostró login por sesión/admin no validada.
+- Validar visual final en `/accounts` con sesión admin real.
+- Validar que aparezcan clientes de `profiles` y que no aparezcan perfiles admin.
+- Definir backend seguro antes de habilitar cualquier modificación futura de clientes, balances o recargas.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
