@@ -389,6 +389,60 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Validar carga real de KPIs/historial contra Supabase dev.
 - Probar RPC `add_sms_to_inventory` con admin real y confirmar refresh de stats/historial.
 
+## Migración Users backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Users.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/users-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Barra superior con buscador `Buscar usuarios...` y botón azul `Agregar Usuario`.
+- Tabla en card blanca con borde `border-slate-200`.
+- Columnas `Usuario`, `Empresa`, `Teléfono`, `Balance SMS`, `Estado` y `Acciones`.
+- Filas con nombre, email, empresa, teléfono, balance SMS con icono, badge `Activo` / `Inactivo` y botón `Desactivar` / `Activar`.
+- Modal `Agregar Nuevo Usuario` con campos `Nombre completo`, `Email`, `Empresa`, `Teléfono` y botones `Cancelar` / `Crear Usuario`.
+
+### Qué lectura segura quedó conectada
+
+- Lectura de tabla `users` con campos `id`, `email`, `full_name`, `company`, `phone`, `sms_balance`, `is_active` y `created_at`.
+- Si la tabla no existe, falla por RLS o no hay data, se usa `users = []` y se muestra estado vacío seguro sin error técnico visible.
+- Búsqueda local por `full_name`, `email` y `company`.
+
+### Qué NO se conectó por seguridad
+
+- No se insertan usuarios en `users`.
+- No se actualiza `users.is_active`.
+- No se crean usuarios en Supabase Auth.
+- No se modifica `profiles`.
+- No se llaman Edge Functions.
+- `Crear Usuario` solo muestra `La creación segura de usuarios se conectará en la siguiente fase.`
+- `Activar` / `Desactivar` solo muestra `La activación de usuarios se conectará en la siguiente fase.`
+
+### Riesgos detectados del React original
+
+- El React original insertaba usuarios directo en `users`.
+- El React original actualizaba `users.is_active` directo.
+- En Angular esas escrituras quedan bloqueadas temporalmente porque el flujo real debe definirse con Supabase Auth + profiles/users.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Se intentó abrir `/users`; el navegador mostró login por sesión/admin no validada en el entorno actual.
+- Definir flujo seguro de creación de usuarios con Supabase Auth + profiles/users.
+- Definir flujo seguro de activación/desactivación.
+- Validar lectura real de `users` cuando el esquema/RLS esté listo en Supabase dev.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
