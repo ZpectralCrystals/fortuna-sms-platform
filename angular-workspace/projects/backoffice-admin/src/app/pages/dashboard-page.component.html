@@ -1,0 +1,334 @@
+<div *ngIf="loading" class="loading-state">
+  <div class="spinner"></div>
+</div>
+
+<div *ngIf="!loading" class="dashboard">
+  <div class="page-header">
+    <h2>Panel de Control</h2>
+    <div class="header-actions">
+      <button
+        type="button"
+        class="action-button history-button"
+        (click)="showPurchaseHistory = !showPurchaseHistory"
+      >
+        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M12 7v5l4 2" />
+        </svg>
+        <span>Historial de Compras</span>
+      </button>
+
+      <button
+        type="button"
+        class="action-button purchase-button"
+        (click)="openPurchaseModal()"
+      >
+        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="8" cy="21" r="1" />
+          <circle cx="19" cy="21" r="1" />
+          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+        </svg>
+        <span>Comprar SMS</span>
+      </button>
+    </div>
+  </div>
+
+  <p *ngIf="successMessage" class="message-box success-box">
+    {{ successMessage }}
+  </p>
+
+  <p *ngIf="errorMessage" class="message-box error-box">
+    {{ errorMessage }}
+  </p>
+
+  <div class="stats-grid">
+    <div
+      *ngFor="let stat of statCards"
+      class="stat-card"
+    >
+      <div class="stat-icon-row">
+        <div class="stat-icon-box" [ngClass]="stat.bgColor">
+          <ng-container [ngSwitch]="stat.icon">
+            <svg *ngSwitchCase="'package'" class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m7.5 4.27 9 5.15" />
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+
+            <svg *ngSwitchCase="'trendingUp'" class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+              <polyline points="16 7 22 7 22 13" />
+            </svg>
+
+            <svg *ngSwitchCase="'creditCard'" class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect width="20" height="14" x="2" y="5" rx="2" />
+              <line x1="2" x2="22" y1="10" y2="10" />
+            </svg>
+
+            <svg *ngSwitchCase="'users'" class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </ng-container>
+        </div>
+      </div>
+
+      <div>
+        <p class="stat-title">{{ stat.title }}</p>
+        <p class="stat-value" [ngClass]="stat.textColor">{{ stat.value }}</p>
+        <p class="stat-subtitle">{{ stat.subtitle }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <section class="summary-card">
+      <h3>Resumen del Sistema</h3>
+      <div class="summary-list">
+        <div class="summary-row bordered">
+          <span>Porcentaje de inventario vendido</span>
+          <strong>{{ inventorySoldPercentage }}</strong>
+        </div>
+        <div class="summary-row bordered">
+          <span>Tasa de usuarios activos</span>
+          <strong>{{ activeUsersRate }}</strong>
+        </div>
+        <div class="summary-row bordered">
+          <span>Promedio SMS por usuario</span>
+          <strong>{{ averageSmsPerUser }}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Recargas por procesar</span>
+          <strong [class.warning-text]="stats.pendingRecharges > 0" [class.green-text]="stats.pendingRecharges === 0">
+            {{ stats.pendingRecharges > 0 ? stats.pendingRecharges + ' pendientes' : 'Todo procesado' }}
+          </strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="summary-card">
+      <h3>Estadísticas de Mensajería</h3>
+      <div class="summary-list">
+        <div class="summary-row bordered">
+          <span>Total de mensajes enviados</span>
+          <strong>{{ formatNumber(stats.totalMessages) }}</strong>
+        </div>
+        <div class="summary-row bordered">
+          <span>Tasa de entrega exitosa</span>
+          <strong>{{ deliveryRate }}</strong>
+        </div>
+        <div class="summary-row bordered">
+          <span>Mensajes entregados</span>
+          <strong class="green-text">{{ formatNumber(stats.deliveredMessages) }}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Mensajes pendientes</span>
+          <strong class="warning-text">{{ formatNumber(stats.totalMessages - stats.sentMessages) }}</strong>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section *ngIf="showPurchaseHistory" class="history-card">
+    <div class="history-header">
+      <h3>
+        <svg class="history-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M12 7v5l4 2" />
+        </svg>
+        <span>Historial de Compras de SMS</span>
+      </h3>
+      <p>Registro completo de todas las compras de inventario realizadas</p>
+    </div>
+
+    <div *ngIf="purchases.length === 0" class="empty-history">
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="8" cy="21" r="1" />
+        <circle cx="19" cy="21" r="1" />
+        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+      </svg>
+      <p class="empty-title">No hay compras registradas</p>
+      <p class="empty-subtitle">Las compras de SMS aparecerán aquí una vez que se realicen</p>
+    </div>
+
+    <div *ngIf="purchases.length > 0" class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cantidad SMS</th>
+            <th>Monto Pagado</th>
+            <th>Costo/SMS</th>
+            <th>N° Operación</th>
+            <th>Comprado por</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let purchase of purchases">
+            <td class="nowrap">
+              <div class="date-cell">{{ formatDate(purchase.created_at) }}</div>
+            </td>
+            <td class="nowrap">
+              <div class="quantity-cell">
+                <svg class="tiny-package-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m7.5 4.27 9 5.15" />
+                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                  <path d="m3.3 7 8.7 5 8.7-5" />
+                  <path d="M12 22V12" />
+                </svg>
+                <span>{{ formatNumber(purchase.quantity) }}</span>
+              </div>
+            </td>
+            <td class="nowrap">
+              <span class="amount-cell">S/ {{ formatCurrency(purchase.amount) }}</span>
+            </td>
+            <td class="nowrap">
+              <span class="cost-cell">S/ {{ formatCurrency(purchase.cost_per_sms) }}</span>
+            </td>
+            <td>
+              <span *ngIf="purchase.operation_number; else noOperation" class="operation-badge">
+                {{ purchase.operation_number }}
+              </span>
+              <ng-template #noOperation>
+                <span class="muted-italic">Sin registro</span>
+              </ng-template>
+            </td>
+            <td>
+              <div *ngIf="purchase.admin; else systemPurchase">
+                <div class="admin-purchase-name">{{ purchase.admin.full_name }}</div>
+                <div class="admin-purchase-email">{{ purchase.admin.email }}</div>
+              </div>
+              <ng-template #systemPurchase>
+                <span class="muted-italic">Sistema</span>
+              </ng-template>
+            </td>
+            <td>
+              <div *ngIf="purchase.notes; else noNotes" class="notes-cell">
+                {{ purchase.notes }}
+              </div>
+              <ng-template #noNotes>
+                <span class="muted-italic">Sin notas</span>
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="purchases.length > 0" class="history-footer">
+      <div class="history-totals">
+        <div>
+          Total de compras registradas: <span>{{ purchases.length }}</span>
+        </div>
+        <div>
+          Total SMS comprados:
+          <span class="blue-text">{{ formatNumber(totalPurchasedSms) }}</span>
+        </div>
+        <div>
+          Total invertido:
+          <span class="green-text">S/ {{ formatCurrency(totalPurchasedAmount) }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="showPurchaseModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Comprar SMS</h3>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closePurchaseModal()"
+          aria-label="Cerrar"
+        >
+          <span>&times;</span>
+        </button>
+      </div>
+
+      <form class="purchase-form" (ngSubmit)="handlePurchase()">
+        <div>
+          <label>Monto pagado (S/)</label>
+          <input
+            type="number"
+            required
+            min="0"
+            step="0.01"
+            name="amount"
+            [(ngModel)]="purchaseForm.amount"
+            (ngModelChange)="onAmountChange($event)"
+            placeholder="500.00"
+          />
+          <p>Precio por SMS al por mayor: S/ 0.04012 (Incluye IGV)</p>
+        </div>
+
+        <div>
+          <label>Cantidad de SMS</label>
+          <input
+            type="number"
+            required
+            min="1"
+            name="quantity"
+            [(ngModel)]="purchaseForm.quantity"
+            readonly
+            class="readonly-input"
+            placeholder="Se calcula automáticamente"
+          />
+          <p>Calculado automáticamente según el monto pagado</p>
+        </div>
+
+        <div>
+          <label>Número de Operación Bancaria</label>
+          <input
+            type="text"
+            name="operationNumber"
+            [(ngModel)]="purchaseForm.operationNumber"
+            placeholder="Ej: OP-123456789"
+          />
+          <p>Número de referencia de la transacción bancaria</p>
+        </div>
+
+        <div>
+          <label>Notas (opcional)</label>
+          <textarea
+            name="notes"
+            [(ngModel)]="purchaseForm.notes"
+            rows="3"
+            placeholder="Proveedor, número de orden, etc."
+          ></textarea>
+        </div>
+
+        <div *ngIf="purchaseForm.quantity && purchaseForm.amount" class="purchase-summary">
+          <div>
+            <p><strong>Cantidad de SMS:</strong> {{ formatNumber(toNumber(purchaseForm.quantity)) }} SMS</p>
+            <p><strong>Costo por SMS:</strong> S/ 0.04012 (Incluye IGV)</p>
+            <p><strong>Total:</strong> S/ {{ formatCurrency(toNumber(purchaseForm.amount)) }}</p>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="closePurchaseModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="submit-button"
+            [disabled]="submitting"
+          >
+            {{ submitting ? 'Procesando...' : 'Agregar al Inventario' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

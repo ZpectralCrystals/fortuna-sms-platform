@@ -1,0 +1,221 @@
+<div *ngIf="loading" class="loading-state">
+  <div class="spinner"></div>
+</div>
+
+<div *ngIf="!loading" class="users-page">
+  <p *ngIf="message" class="message-box">
+    {{ message }}
+  </p>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <svg
+        class="search-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <input
+        type="text"
+        name="searchTerm"
+        [(ngModel)]="searchTerm"
+        placeholder="Buscar usuarios..."
+      />
+    </div>
+
+    <button
+      type="button"
+      class="add-button"
+      (click)="openAddModal()"
+    >
+      <svg
+        class="button-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <line x1="19" x2="19" y1="8" y2="14" />
+        <line x1="22" x2="16" y1="11" y2="11" />
+      </svg>
+      <span>Agregar Usuario</span>
+    </button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Empresa</th>
+            <th>Teléfono</th>
+            <th>Balance SMS</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of filteredUsers">
+            <td>
+              <div>
+                <div class="user-name">{{ user.full_name || '-' }}</div>
+                <div class="user-email">{{ user.email || '-' }}</div>
+              </div>
+            </td>
+            <td class="muted-cell">{{ user.company || '-' }}</td>
+            <td class="muted-cell">{{ user.phone || '-' }}</td>
+            <td>
+              <div class="sms-balance">
+                <svg
+                  class="sms-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>{{ formatNumber(user.sms_balance) }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="status-badge" [class.active]="user.is_active" [class.inactive]="!user.is_active">
+                {{ user.is_active ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td>
+              <button
+                type="button"
+                class="status-button"
+                [class.deactivate]="user.is_active"
+                [class.activate]="!user.is_active"
+                (click)="showActivationNotice()"
+              >
+                <ng-container *ngIf="user.is_active; else activateIcon">
+                  <svg
+                    class="row-button-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                    <line x1="12" x2="12" y1="2" y2="12" />
+                  </svg>
+                  <span>Desactivar</span>
+                </ng-container>
+                <ng-template #activateIcon>
+                  <svg
+                    class="row-button-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 2v10" />
+                    <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+                  </svg>
+                  <span>Activar</span>
+                </ng-template>
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="filteredUsers.length === 0">
+            <td colspan="6" class="empty-cell">
+              No hay usuarios registrados
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="showAddModal" class="modal-backdrop">
+    <div class="modal-card">
+      <h3>Agregar Nuevo Usuario</h3>
+      <form class="modal-form" (ngSubmit)="handleAddUser()">
+        <div>
+          <label>Nombre completo</label>
+          <input
+            type="text"
+            required
+            name="full_name"
+            [(ngModel)]="newUser.full_name"
+          />
+        </div>
+
+        <div>
+          <label>Email</label>
+          <input
+            type="email"
+            required
+            name="email"
+            [(ngModel)]="newUser.email"
+          />
+        </div>
+
+        <div>
+          <label>Empresa</label>
+          <input
+            type="text"
+            name="company"
+            [(ngModel)]="newUser.company"
+          />
+        </div>
+
+        <div>
+          <label>Teléfono</label>
+          <input
+            type="tel"
+            name="phone"
+            [(ngModel)]="newUser.phone"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="closeAddModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="create-button"
+          >
+            Crear Usuario
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
