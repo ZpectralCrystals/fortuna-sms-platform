@@ -39,3 +39,4 @@ docs/01-reportes-qa/
 docs/02-evidencias/
 docs/03-presentaciones/
 docs/04-temporales/
+*.postman_collection.json
