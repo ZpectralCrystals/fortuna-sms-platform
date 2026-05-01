@@ -1,4 +1,3 @@
-export * from './lib/helpers/date.helper';
 export * from './lib/helpers/format.helper';
 export * from './lib/models/api-key.model';
 export * from './lib/models/auth.model';
