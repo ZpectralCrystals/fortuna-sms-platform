@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { formatCurrency, formatDateTime, formatNumber } from '@sms-fortuna/shared';
 
 interface Invoice {
   recharge_id: string;
@@ -547,6 +548,9 @@ export class InvoicesPageComponent implements OnInit {
   selectedMonth: number | null = null;
   availableYears: number[] = [this.selectedYear];
   noticeMessage = '';
+  readonly formatNumber = formatNumber;
+  readonly formatCurrency = formatCurrency;
+  readonly formatDate = formatDateTime;
 
   readonly months: MonthOption[] = [
     { value: 1, name: 'Enero' },
@@ -587,27 +591,5 @@ export class InvoicesPageComponent implements OnInit {
 
   exportToCSV(): void {
     this.noticeMessage = 'La exportación segura de facturas se conectará cuando exista backend y base de datos definidos.';
-  }
-
-  formatNumber(value: number): string {
-    return new Intl.NumberFormat('es-PE').format(value || 0);
-  }
-
-  formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN',
-    }).format(value || 0);
-  }
-
-  formatDate(value: string): string {
-    return new Date(value).toLocaleString('es-PE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
   }
 }
