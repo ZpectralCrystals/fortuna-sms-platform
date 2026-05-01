@@ -1,0 +1,146 @@
+<div *ngIf="loading" class="loading-state">
+  <div class="loading-text">Cargando mensajes...</div>
+</div>
+
+<div *ngIf="!loading" class="messages-page">
+  <div class="page-header">
+    <div class="title-group">
+      <div class="title-icon">
+        <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </div>
+      <div>
+        <h1>Mensajes SMS</h1>
+        <p>Historial completo de mensajes enviados</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-label">Total</div>
+      <div class="stat-value">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card pending">
+      <div class="stat-label">Pendientes</div>
+      <div class="stat-value">{{ stats.pending }}</div>
+    </div>
+    <div class="stat-card sent">
+      <div class="stat-label">Enviados</div>
+      <div class="stat-value">{{ stats.sent }}</div>
+    </div>
+    <div class="stat-card delivered">
+      <div class="stat-label">Entregados</div>
+      <div class="stat-value">{{ stats.delivered }}</div>
+    </div>
+    <div class="stat-card failed">
+      <div class="stat-label">Fallidos</div>
+      <div class="stat-value">{{ stats.failed }}</div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="filters-panel">
+      <div class="filters-row">
+        <div class="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="applyFilters()"
+            placeholder="Buscar por destinatario, mensaje, cliente..."
+          />
+        </div>
+
+        <div class="select-group">
+          <div class="select-wrapper status-select">
+            <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()">
+              <option value="all">Todos los estados</option>
+              <option value="pending">Pendiente</option>
+              <option value="sent">Enviado</option>
+              <option value="delivered">Entregado</option>
+              <option value="failed">Fallido</option>
+            </select>
+          </div>
+
+          <select class="date-select" [(ngModel)]="dateFilter" (ngModelChange)="applyFilters()">
+            <option value="all">Todo el tiempo</option>
+            <option value="today">Hoy</option>
+            <option value="week">Última semana</option>
+            <option value="month">Último mes</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Destinatario</th>
+            <th>Mensaje</th>
+            <th>Estado</th>
+            <th>Enviado</th>
+            <th>Entregado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="filteredMessages.length === 0">
+            <td class="empty-cell" colspan="6">No se encontraron mensajes</td>
+          </tr>
+
+          <tr *ngFor="let item of filteredMessages" class="message-row">
+            <td>
+              <div class="client-name">{{ item.user.full_name }}</div>
+              <div class="client-email">{{ item.user.email }}</div>
+              <div *ngIf="item.user.company" class="client-company">{{ item.user.company }}</div>
+            </td>
+            <td>
+              <div class="recipient">{{ item.recipient }}</div>
+            </td>
+            <td>
+              <div class="message-text" [title]="item.message">{{ item.message }}</div>
+              <div *ngIf="item.error_message" class="error-text">{{ item.error_message }}</div>
+            </td>
+            <td>
+              <span class="status-badge" [ngClass]="item.status">
+                <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <ng-container [ngSwitch]="item.status">
+                    <ng-container *ngSwitchCase="'pending'">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'sent'">
+                      <path d="m22 2-7 20-4-9-9-4Z" />
+                      <path d="M22 2 11 13" />
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'delivered'">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <path d="m9 11 3 3L22 4" />
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'failed'">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="m15 9-6 6" />
+                      <path d="m9 9 6 6" />
+                    </ng-container>
+                  </ng-container>
+                </svg>
+                {{ statusLabel(item.status) }}
+              </span>
+            </td>
+            <td class="date-cell">{{ formatDate(item.sent_at) }}</td>
+            <td class="date-cell">{{ formatDate(item.delivered_at) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
