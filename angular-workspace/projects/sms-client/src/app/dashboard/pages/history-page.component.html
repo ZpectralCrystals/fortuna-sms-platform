@@ -1,0 +1,118 @@
+<div *ngIf="loading" class="loading-state">
+  <div class="spinner" aria-label="Cargando"></div>
+</div>
+
+<div *ngIf="!loading" class="history-page">
+  <header class="history-header">
+    <div>
+      <h1>Historial de SMS</h1>
+      <p>Revisa todos los mensajes enviados</p>
+    </div>
+    <button type="button" class="export-button" (click)="exportToCSV()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <path d="M7 10l5 5 5-5"></path>
+        <path d="M12 15V3"></path>
+      </svg>
+      Exportar CSV
+    </button>
+  </header>
+
+  <section class="filter-card" aria-label="Filtros">
+    <div class="filters-grid">
+      <label class="filter-field">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <input
+          type="text"
+          name="searchTerm"
+          placeholder="Buscar por número o mensaje..."
+          [(ngModel)]="searchTerm"
+        />
+      </label>
+
+      <label class="filter-field">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z"></path>
+        </svg>
+        <select name="statusFilter" [(ngModel)]="statusFilter">
+          <option value="all">Todos los estados</option>
+          <option value="delivered">Entregados</option>
+          <option value="sent">Enviados</option>
+          <option value="pending">Pendientes</option>
+          <option value="failed">Fallidos</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="messages-card">
+    <div class="messages-card__summary">
+      <p>Mostrando {{ filteredMessages.length }} de {{ messages.length }} mensajes</p>
+    </div>
+
+    <div class="message-list">
+      <div *ngIf="filteredMessages.length === 0" class="empty-state">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m22 2-7 20-4-9-9-4Z"></path>
+          <path d="M22 2 11 13"></path>
+        </svg>
+        <p>No se encontraron mensajes</p>
+      </div>
+
+      <article *ngFor="let message of filteredMessages" class="message-row">
+        <div class="message-row__main">
+          <div class="status-icon" [ngClass]="statusIconClass(message.status)">
+            <ng-container [ngSwitch]="message.status">
+              <svg *ngSwitchCase="'delivered'" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 12l2 2 4-4"></path>
+                <circle cx="12" cy="12" r="10"></circle>
+              </svg>
+              <svg *ngSwitchCase="'failed'" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="m15 9-6 6"></path>
+                <path d="m9 9 6 6"></path>
+              </svg>
+              <svg *ngSwitchCase="'sent'" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m22 2-7 20-4-9-9-4Z"></path>
+                <path d="M22 2 11 13"></path>
+              </svg>
+              <svg *ngSwitchDefault viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+              </svg>
+            </ng-container>
+          </div>
+
+          <div class="message-row__content">
+            <div class="message-row__headline">
+              <span>{{ message.to_phone }}</span>
+              <strong [ngClass]="statusBadgeClass(message.status)">
+                {{ statusText(message.status) }}
+              </strong>
+            </div>
+
+            <p class="message-text">{{ message.message }}</p>
+
+            <div class="message-meta">
+              <span>{{ formatDate(message.created_at) }}</span>
+              <span *ngIf="message.delivered_at">
+                Entregado: {{ formatTime(message.delivered_at) }}
+              </span>
+            </div>
+
+            <p *ngIf="message.error_message" class="message-error">
+              Error: {{ message.error_message }}
+            </p>
+          </div>
+        </div>
+
+        <div class="message-cost">
+          <p>S/ {{ formatCurrency(message.cost ?? 0) }}</p>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>

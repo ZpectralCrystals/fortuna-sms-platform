@@ -1,0 +1,170 @@
+<div class="api-keys-page">
+  <header class="api-keys-header">
+    <div>
+      <h1>API Keys</h1>
+      <p>Administra tus claves de API para integración</p>
+    </div>
+    <button type="button" class="primary-button" (click)="openModal()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12h14"></path>
+        <path d="M12 5v14"></path>
+      </svg>
+      Nueva API Key
+    </button>
+  </header>
+
+  <p *ngIf="noticeMessage" class="notice-message">
+    {{ noticeMessage }}
+  </p>
+
+  <section class="info-box">
+    <div class="info-layout">
+      <svg class="info-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m16 18 6-6-6-6"></path>
+        <path d="m8 6-6 6 6 6"></path>
+      </svg>
+      <div>
+        <h2>Integración API</h2>
+        <p class="info-copy">
+          Usa tus API keys para enviar SMS desde tu aplicación de forma programática.
+        </p>
+        <div class="code-box">
+          <p>Ejemplo de uso:</p>
+          <pre>{{ apiExample }}</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="keys-panel">
+    <div class="keys-panel__header">
+      <h2>Tus API Keys</h2>
+    </div>
+
+    <div class="keys-list">
+      <div *ngIf="apiKeys.length === 0" class="empty-state">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 2l-2 2"></path>
+          <path d="M15.5 7.5l2 2"></path>
+          <path d="M11.7 11.3a6 6 0 1 1-2.99-2.99L21 20.59V22h-1.41Z"></path>
+        </svg>
+        <p>No tienes API keys aún</p>
+        <button type="button" class="primary-button" (click)="openModal()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14"></path>
+            <path d="M12 5v14"></path>
+          </svg>
+          Crear primera API Key
+        </button>
+      </div>
+
+      <article *ngFor="let apiKey of apiKeys" class="key-row">
+        <div class="key-row__content">
+          <div class="key-row__main">
+            <div class="key-title">
+              <h3>{{ apiKey.name }}</h3>
+              <span [ngClass]="apiKey.is_active ? 'status status--active' : 'status status--inactive'">
+                {{ apiKey.is_active ? 'Activa' : 'Inactiva' }}
+              </span>
+            </div>
+
+            <div class="key-value-row">
+              <code>
+                {{ isVisible(apiKey.id) ? apiKey.key : maskKey(apiKey.key) }}
+              </code>
+              <button
+                type="button"
+                class="mini-button"
+                [title]="isVisible(apiKey.id) ? 'Ocultar' : 'Mostrar'"
+                (click)="toggleVisibility(apiKey.id)"
+              >
+                <svg *ngIf="!isVisible(apiKey.id)" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg *ngIf="isVisible(apiKey.id)" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m3 3 18 18"></path>
+                  <path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"></path>
+                  <path d="M9.88 4.24A10.94 10.94 0 0 1 12 4c6.5 0 10 8 10 8a18.5 18.5 0 0 1-5.3 6.18"></path>
+                  <path d="M6.61 6.61A18.74 18.74 0 0 0 2 12s3.5 8 10 8a10.5 10.5 0 0 0 5.39-1.61"></path>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="mini-button"
+                title="Copiar"
+                (click)="copyToClipboard(apiKey)"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" [ngClass]="copiedKeyId === apiKey.id ? 'copied' : ''">
+                  <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+
+            <p class="key-meta">
+              Creada:
+              {{ formatCreatedAt(apiKey.created_at) }}
+              <ng-container *ngIf="apiKey.last_used_at">
+                • Último uso:
+                {{ formatLastUsedAt(apiKey.last_used_at) }}
+              </ng-container>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="delete-button"
+            title="Eliminar"
+            (click)="requestDelete(apiKey.id)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6h18"></path>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+            </svg>
+          </button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <div *ngIf="showModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <section class="modal-card">
+      <h2>Crear nueva API Key</h2>
+
+      <div class="modal-field">
+        <label for="apiKeyName">Nombre de la API Key</label>
+        <input
+          id="apiKeyName"
+          type="text"
+          name="newKeyName"
+          [(ngModel)]="newKeyName"
+          placeholder="Ej: Producción, Testing, App Móvil"
+          autofocus
+        />
+        <p>Dale un nombre descriptivo para identificar dónde se usará</p>
+      </div>
+
+      <p *ngIf="modalMessage" class="modal-message">
+        {{ modalMessage }}
+      </p>
+
+      <div class="modal-actions">
+        <button type="button" class="secondary-button" (click)="closeModal()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="primary-submit"
+          [disabled]="!newKeyName.trim()"
+          (click)="showCreatePendingMessage()"
+        >
+          Crear
+        </button>
+      </div>
+    </section>
+  </div>
+</div>
