@@ -572,6 +572,113 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Validar que aparezcan clientes de `profiles` y que no aparezcan perfiles admin.
 - Definir backend seguro antes de habilitar cualquier modificación futura de clientes, balances o recargas.
 
+## Migración Messages backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Messages.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/messages-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con altura equivalente `h-64` y texto `Cargando mensajes...`.
+- Encabezado con icono morado de mensaje, título `Mensajes SMS` y subtítulo `Historial completo de mensajes enviados`.
+- Tarjetas estadísticas `Total`, `Pendientes`, `Enviados`, `Entregados` y `Fallidos`.
+- Panel de filtros con buscador, filtro de estado y filtro de fecha.
+- Tabla en card blanca con borde, sombra suave y columnas `Cliente`, `Destinatario`, `Mensaje`, `Estado`, `Enviado` y `Entregado`.
+- Filas preparadas para cliente, destinatario monoespaciado, mensaje truncado, error bajo mensaje, badge de estado y fechas `es-PE`.
+- Estado vacío `No se encontraron mensajes`.
+
+### Qué lectura quedó conectada
+
+- Ninguna lectura real por ahora.
+- `messages = []` y `filteredMessages = []` quedan inicializados localmente.
+- Estadísticas calculan desde `messages` y muestran 0.
+- Filtros funcionan localmente sobre el array actual.
+
+### Qué NO se conectó por seguridad
+
+- No se usa `from('users')` porque `public.users` no existe.
+- No se usa relación `users(...)`.
+- No se usa `sms_messages` porque todavía no existe en Supabase dev.
+- No se insertan ni actualizan mensajes.
+- No se modifican perfiles ni créditos.
+- No se llama Edge Functions.
+- No se llaman RPCs.
+- No se envían SMS.
+
+### Dependencias Supabase detectadas
+
+- React original dependía de `sms_messages`.
+- React original dependía de relación `users(full_name, email, company)`.
+- En el esquema real actual solo existen `admins` y `profiles`, por eso la pantalla queda visual y local hasta que exista esquema de mensajes.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Definir tabla real de mensajes o vista segura compatible con `profiles`.
+- Conectar lectura cuando existan `sms_messages`, RLS y relaciones reales.
+- Validar visual final en `/messages` con sesión admin real.
+
+## Migración visual API Keys backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/ApiKeys.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/api-keys-page.component.ts`
+
+### Qué se migró visualmente
+
+- Header con icono emerald de key.
+- Título `API Keys`.
+- Subtítulo `Administrar claves de acceso a la API`.
+- Botón `Nueva API Key`.
+- Caja informativa azul `Información Importante`.
+- Tabla con columnas `Cliente`, `Nombre`, `API Key`, `Estado`, `Último Uso`, `Expira` y `Acciones`.
+- Estado vacío `No hay API keys creadas`.
+- Modal `Crear Nueva API Key` con campos `Cliente`, `Nombre de la Key` y `Expiración (días)`.
+- Texto auxiliar `0 = la key nunca expira`.
+- Botones `Cancelar` y `Crear API Key`.
+- Modal visual `API Key Creada` con bloque de key, botón `Copiar`, advertencia amber y botón `Entendido`.
+
+### Qué NO se conectó por seguridad
+
+- No se usa Supabase en esta pantalla.
+- No se usa `from('api_keys')`.
+- No se usa `from('users')`.
+- No se insertan, actualizan ni eliminan registros.
+- No se llaman RPCs.
+- No se llaman Edge Functions.
+- No se generan API keys reales.
+- No se usa `Math.random`.
+- No se copian keys reales al portapapeles.
+- `apiKeys` y `users` inician vacíos.
+- Acciones de crear, ver, copiar, activar/desactivar y eliminar quedan bloqueadas con mensaje controlado.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Definir tabla y RLS de API keys.
+- Definir backend/RPC seguro para generar hash y secreto visible una sola vez.
+- Definir flujo de revocación/activación sin exponer claves en texto plano.
+- Conectar clientes reales cuando exista modelo seguro.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
