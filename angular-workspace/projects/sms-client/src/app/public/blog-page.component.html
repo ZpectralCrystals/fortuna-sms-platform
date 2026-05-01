@@ -1,0 +1,114 @@
+<main class="blog-page">
+  <div class="container">
+    <div class="hero">
+      <h1>Blog de SMS Platform</h1>
+      <p>Estrategias, tutoriales y las últimas tendencias en marketing por SMS</p>
+    </div>
+
+    <div class="filters">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar artículos..."
+          [value]="searchTerm"
+          (input)="onSearch($event)"
+        />
+      </div>
+
+      <div class="category-row">
+        <button
+          type="button"
+          (click)="selectCategory('all')"
+          [class.category-button--active]="selectedCategory === 'all'"
+          [class.category-button--inactive]="selectedCategory !== 'all'"
+          class="category-button"
+        >
+          Todos
+        </button>
+
+        <button
+          type="button"
+          *ngFor="let category of categories"
+          (click)="selectCategory(category.slug)"
+          [class.category-button--active]="selectedCategory === category.slug"
+          [class.category-button--inactive]="selectedCategory !== category.slug"
+          class="category-button"
+        >
+          {{ category.name }}
+        </button>
+      </div>
+    </div>
+
+    <div class="loading" *ngIf="loading; else loadedContent">
+      <div class="spinner" aria-label="Cargando artículos"></div>
+    </div>
+
+    <ng-template #loadedContent>
+      <div class="empty" *ngIf="posts.length === 0; else postsGrid">
+        <p>No se encontraron artículos</p>
+      </div>
+
+      <ng-template #postsGrid>
+        <div class="posts-grid">
+          <a
+            *ngFor="let post of posts"
+            class="post-card"
+            [routerLink]="['/blog', post.slug]"
+          >
+            <div class="post-card__media">
+              <img
+                *ngIf="post.featured_image_url; else imageFallback"
+                [src]="post.featured_image_url"
+                [alt]="post.title"
+              />
+              <ng-template #imageFallback>
+                <div class="post-card__fallback">{{ post.title.charAt(0) }}</div>
+              </ng-template>
+
+              <div class="post-card__category" *ngIf="post.category">
+                <span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                  </svg>
+                  {{ post.category.name }}
+                </span>
+              </div>
+            </div>
+
+            <div class="post-card__body">
+              <h2>{{ post.title }}</h2>
+              <p>{{ post.excerpt }}</p>
+
+              <div class="post-card__meta">
+                <div class="post-card__meta-left">
+                  <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    {{ formatDate(post.published_at) }}
+                  </span>
+                  <span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    {{ post.reading_time }} min
+                  </span>
+                </div>
+                <span class="read-more">Leer más →</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </ng-template>
+    </ng-template>
+  </div>
+</main>
