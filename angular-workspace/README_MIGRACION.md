@@ -725,6 +725,53 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Definir tablas, RLS y auditoría de historial.
 - Conectar estadísticas reales cuando exista esquema operativo.
 
+## Migración visual Invoices backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Invoices.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/invoices-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Header `Facturas`, subtítulo `Recargas aprobadas y generación de reportes` y botón verde `Exportar CSV`.
+- Card `Filtros` con icono `Filter`, select `Año`, select `Mes`, opción `Todos los meses`, meses completos y botón `Limpiar Filtros`.
+- Tarjetas estadísticas `Total Facturas`, `Total SMS Vendidos` e `Ingresos Totales`, todas en cero por defecto.
+- Iconos `FileText`, `Download`, `Filter` y `Calendar` como SVG inline equivalentes, más emoji `💰` igual al React original.
+- Card `Listado de Facturas - {año}` o `Listado de Facturas - {mes} {año}`.
+- Estado vacío `No hay facturas para el período seleccionado`.
+- Tabla preparada con columnas `Fecha`, `Cliente`, `Empresa`, `Paquete`, `SMS`, `Monto`, `Método` y `Código Op.`.
+
+### Qué NO se conectó por seguridad
+
+- No se usa Supabase en esta pantalla.
+- No se usa `from('recharges')`.
+- No se llama RPC `get_invoices_by_period`.
+- No se usan consultas `from(` ni `rpc(`.
+- No se insertan, actualizan ni eliminan registros.
+- No se llaman Edge Functions.
+- No se modifican recargas, usuarios ni balances.
+- No se generan facturas reales.
+- `invoices` inicia vacío y el botón `Exportar CSV` queda deshabilitado sin datos.
+- La exportación real queda bloqueada con mensaje controlado si se invoca.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Definir esquema operativo de facturas/recargas aprobadas.
+- Definir RPC o backend seguro para reportes por período.
+- Definir exportación CSV segura desde backend o lectura autorizada.
+- Conectar datos reales cuando existan RLS, tablas y contratos finales.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
