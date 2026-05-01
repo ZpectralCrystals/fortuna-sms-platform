@@ -772,6 +772,54 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Definir exportación CSV segura desde backend o lectura autorizada.
 - Conectar datos reales cuando existan RLS, tablas y contratos finales.
 
+## Migración visual Marketing backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Marketing.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/marketing-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Estado sin estadísticas con icono `AlertCircle` y texto `No se pudieron cargar las estadísticas`.
+- Header `Marketing & Análisis` y subtítulo `Decisiones basadas en datos para impulsar tu negocio`.
+- KPIs `Ingresos Este Mes`, `Crecimiento`, `Clientes Activos` y `Ticket Promedio`, todos en cero por defecto.
+- Card `Recomendaciones de Marketing` con recomendación segura `Todo Marcha Bien`.
+- Card `Tendencia de Ingresos (Últimos 12 Meses)` con estructura visual de barras preparada.
+- Grid inferior con cards `Adquisición de Clientes` y `Top 5 Clientes`.
+- Card gradiente `Métricas Clave del Negocio` con `Tasa de Retención`, `Nuevos Clientes` y `Diferencia`.
+- Iconos lucide equivalentes como SVG inline: `TrendingUp`, `TrendingDown`, `Users`, `DollarSign`, `BarChart3`, `Award` y `AlertCircle`.
+
+### Qué NO se conectó por seguridad
+
+- No se usa Supabase en esta pantalla.
+- No se llama RPC `get_marketing_stats`.
+- No se llama RPC `get_revenue_trends`.
+- No se llama RPC `get_customer_acquisition_stats`.
+- No se llama RPC `get_top_customers`.
+- No se usan consultas `from(` ni `rpc(`.
+- No se insertan, actualizan ni eliminan registros.
+- No se llaman Edge Functions.
+- No se modifican recargas, usuarios ni balances.
+- No se calculan métricas reales desde frontend.
+- `revenueTrends`, `acquisitionStats` y `topCustomers` inician vacíos.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Definir RPC/backend seguro para estadísticas de marketing.
+- Definir modelo final para tendencias, adquisición y top clientes.
+- Conectar métricas reales solo cuando existan RLS, tablas y contratos finales.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
