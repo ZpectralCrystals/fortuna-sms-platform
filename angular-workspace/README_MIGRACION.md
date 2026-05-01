@@ -872,6 +872,55 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Definir tablas/RLS para config, logs y auditoría.
 - Reemplazar URL placeholder cuando exista endpoint real autorizado.
 
+## Migración visual Integration Kit backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/IntegrationKit.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/integration-kit-page.component.ts`
+
+### Qué se migró visualmente
+
+- Header `Kit de Integración` y subtítulo `Gestiona y comparte el kit de integración con Corporate SMS API`.
+- Caja informativa azul `¿Qué incluye el kit de integración?` con lista completa.
+- Card `Subir Nuevo Kit` con zona punteada, icono `Upload`, botón `Seleccionar archivo ZIP`, input `.zip` y texto `Solo archivos ZIP, máximo 10MB`.
+- Estados visuales de subida success/error con mensajes locales controlados.
+- Card `Kits Disponibles` con loading interno, estado vacío `No hay kits disponibles` y texto `Sube un archivo ZIP para comenzar`.
+- Estructura preparada para listado local de archivos con `URL Pública:`, `Copiar`, `Abrir` y `Descargar`.
+- Caja amber `Instrucciones de Entrega` con lista numerada completa.
+- Iconos lucide equivalentes como SVG inline: `Download`, `Upload`, `ExternalLink`, `FileText` y `Package`.
+
+### Qué NO se conectó por seguridad
+
+- No se usa Supabase en esta pantalla.
+- No se usa `supabase.auth.getSession()`.
+- No se usa `fetch` a `upload-integration-kit`.
+- No se usa `import.meta.env.VITE_SUPABASE_URL`.
+- No se usan consultas `from(` ni `rpc(`.
+- No se insertan, actualizan ni eliminan registros.
+- No se llaman Edge Functions reales.
+- No se suben ZIP reales a backend.
+- No se lee storage real.
+- No se muestran URLs reales.
+- No se abren ni descargan URLs reales.
+- `files` inicia vacío y acciones de archivo muestran mensajes locales controlados.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Definir storage final y RLS/policies.
+- Definir Edge Function segura para upload/listado.
+- Definir URL pública o signed URL autorizada.
+- Activar copiar/abrir/descargar solo cuando existan URLs reales seguras.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
