@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+.empty-state {
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.empty-icon {
+  color: #cbd5e1;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  width: 3rem;
+}
+
+p {
+  color: #475569;
+  margin: 0;
+}
+
+span {
+  color: #64748b;
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  margin-top: 0.25rem;
+}

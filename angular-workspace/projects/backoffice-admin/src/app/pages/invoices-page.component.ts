@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { formatCurrency, formatDateTime, formatNumber } from '@sms-fortuna/shared';
+import { EmptyStateComponent } from '../components/empty-state.component';
+import { LoadingStateComponent } from '../components/loading-state.component';
 
 interface Invoice {
   recharge_id: string;
@@ -31,11 +33,9 @@ interface MonthOption {
 @Component({
   selector: 'bo-invoices-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, EmptyStateComponent, LoadingStateComponent],
   template: `
-    <div *ngIf="loading" class="loading-state">
-      <div class="spinner"></div>
-    </div>
+    <bo-loading-state *ngIf="loading"></bo-loading-state>
 
     <div *ngIf="!loading" class="invoices-page">
       <div class="page-header">
@@ -131,16 +131,11 @@ interface MonthOption {
           </h2>
         </div>
 
-        <div *ngIf="invoices.length === 0" class="empty-state">
-          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-            <path d="M10 9H8" />
-            <path d="M16 13H8" />
-            <path d="M16 17H8" />
-          </svg>
-          <p>No hay facturas para el período seleccionado</p>
-        </div>
+        <bo-empty-state
+          *ngIf="invoices.length === 0"
+          title="No hay facturas para el período seleccionado"
+          icon="file-text"
+        ></bo-empty-state>
 
         <div *ngIf="invoices.length > 0" class="table-wrap">
           <table>
