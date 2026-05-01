@@ -679,6 +679,52 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Definir flujo de revocación/activación sin exponer claves en texto plano.
 - Conectar clientes reales cuando exista modelo seguro.
 
+## Migración visual Alerts backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Alerts.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/alerts-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Estado sin configuración con icono `AlertCircle` y texto `No se pudo cargar la configuración`.
+- Header `Alertas de Saldo Bajo`, subtítulo `Sistema automático de notificaciones por SMS` y botón `Enviar Alertas Ahora`.
+- Alerta verde de éxito con icono `CheckCircle`.
+- Tarjetas estadísticas `Total Alertas`, `Hoy`, `Esta Semana` y `Usuarios Únicos`, todas en cero por defecto.
+- Card `Configuración del Sistema` con iconos `Settings`, `Bell`, `BellOff`, switch visual, campos, checkboxes, textarea y botones.
+- Card `Historial de Alertas` con icono `History`, tabla preparada y estado vacío `No hay alertas registradas`.
+- Iconos lucide equivalentes implementados como SVG inline, sin dependencias nuevas.
+
+### Qué NO se conectó por seguridad
+
+- No se usa Supabase en esta pantalla.
+- No se llaman RPCs de alertas.
+- No se llama Edge Function `send-low-balance-alerts`.
+- No se usa `import.meta.env.VITE_SUPABASE_URL`.
+- No se usa sesión Supabase para enviar alertas.
+- No se envían SMS ni correos.
+- No se modifica configuración real.
+- `recentAlerts` inicia vacío y estadísticas quedan en cero.
+- `Guardar Configuración` y `Enviar Alertas Ahora` muestran mensajes controlados locales.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Definir backend/RPC seguro para leer y guardar configuración.
+- Definir Edge Function segura para envío de alertas.
+- Definir tablas, RLS y auditoría de historial.
+- Conectar estadísticas reales cuando exista esquema operativo.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
