@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { LoadingStateComponent } from '../components/loading-state.component';
 
 interface AlertConfig {
   id: string;
@@ -40,11 +41,9 @@ interface RecentAlert {
 @Component({
   selector: 'bo-alerts-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LoadingStateComponent],
   template: `
-    <div *ngIf="loading" class="loading-state">
-      <div class="spinner"></div>
-    </div>
+    <bo-loading-state *ngIf="loading"></bo-loading-state>
 
     <div *ngIf="!loading && !config" class="config-error">
       <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
