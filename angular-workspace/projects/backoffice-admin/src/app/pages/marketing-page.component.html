@@ -1,0 +1,183 @@
+<div *ngIf="loading" class="loading-state">
+  <div class="spinner"></div>
+</div>
+
+<div *ngIf="!loading && !stats" class="stats-error">
+  <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 8v4" />
+    <path d="M12 16h.01" />
+  </svg>
+  <p>No se pudieron cargar las estadísticas</p>
+</div>
+
+<div *ngIf="!loading && stats" class="marketing-page">
+  <div>
+    <h1>Marketing & Análisis</h1>
+    <p class="subtitle">Decisiones basadas en datos para impulsar tu negocio</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>Ingresos Este Mes</p>
+        <svg class="kpi-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" x2="12" y1="2" y2="22" />
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+      </div>
+      <p class="kpi-value revenue">{{ formatCurrency(stats.current_month.revenue) }}</p>
+      <p class="kpi-help">{{ stats.current_month.month_name }}</p>
+    </div>
+
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>Crecimiento</p>
+        <svg *ngIf="stats.growth.is_growing" class="kpi-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+          <polyline points="16 7 22 7 22 13" />
+        </svg>
+        <svg *ngIf="!stats.growth.is_growing" class="kpi-icon red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+          <polyline points="16 17 22 17 22 11" />
+        </svg>
+      </div>
+      <p class="kpi-value" [class.revenue]="stats.growth.is_growing" [class.negative]="!stats.growth.is_growing">
+        {{ stats.growth.is_growing ? '+' : '' }}{{ stats.growth.percentage.toFixed(1) }}%
+      </p>
+      <p class="kpi-help">vs. mes anterior</p>
+    </div>
+
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>Clientes Activos</p>
+        <svg class="kpi-icon blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      </div>
+      <p class="kpi-value">{{ stats.customers.active }}</p>
+      <p class="kpi-help">de {{ stats.customers.total }} totales</p>
+    </div>
+
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>Ticket Promedio</p>
+        <svg class="kpi-icon purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 3v18h18" />
+          <path d="M18 17V9" />
+          <path d="M13 17V5" />
+          <path d="M8 17v-3" />
+        </svg>
+      </div>
+      <p class="kpi-value">{{ formatCurrency(stats.avg_recharge_amount) }}</p>
+      <p class="kpi-help">por recarga</p>
+    </div>
+  </div>
+
+  <div class="card recommendations-card">
+    <h2>Recomendaciones de Marketing</h2>
+    <div class="recommendations-list">
+      <div class="recommendation">
+        <div class="recommendation-inner">
+          <svg class="recommendation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
+            <circle cx="12" cy="8" r="6" />
+          </svg>
+          <div>
+            <h3>Todo Marcha Bien</h3>
+            <p>Tu negocio está funcionando correctamente. Continúa con tu estrategia actual y monitorea las métricas regularmente.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card trend-card">
+    <h2>Tendencia de Ingresos (Últimos 12 Meses)</h2>
+    <div class="chart-area">
+      <div *ngFor="let trend of revenueTrends" class="bar-column">
+        <div class="bar-track">
+          <div class="bar" [style.height.%]="getRevenueBarHeight(trend.revenue)">
+            <div class="tooltip">
+              <div class="tooltip-title">{{ formatCurrency(trend.revenue) }}</div>
+              <div>{{ trend.recharges_count }} recargas</div>
+              <div>{{ trend.unique_customers }} clientes</div>
+            </div>
+          </div>
+        </div>
+        <div class="bar-month">{{ trend.month_name }}</div>
+        <div class="bar-year">{{ trend.year }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lower-grid">
+    <div class="card table-card">
+      <h2>Adquisición de Clientes</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th class="right">Nuevos</th>
+              <th class="right">Recurrentes</th>
+              <th class="right">Ingresos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of acquisitionStats">
+              <td>{{ item.month_name }} {{ item.year }}</td>
+              <td class="right new-customers">{{ item.new_customers }}</td>
+              <td class="right repeat-customers">{{ item.repeat_customers }}</td>
+              <td class="right total-revenue">{{ formatCurrency(item.total_revenue) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card top-card">
+      <h2>Top 5 Clientes</h2>
+      <div class="top-list">
+        <div *ngFor="let customer of topCustomers; let index = index" class="top-item">
+          <div class="rank">{{ index + 1 }}</div>
+          <div class="customer-main">
+            <p class="customer-name">{{ customer.full_name }}</p>
+            <p class="customer-email">{{ customer.email }}</p>
+            <p *ngIf="customer.company" class="customer-company">{{ customer.company }}</p>
+          </div>
+          <div class="customer-revenue">
+            <p>{{ formatCurrency(customer.total_revenue) }}</p>
+            <span>{{ customer.total_recharges }} recargas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="business-card">
+    <h2>Métricas Clave del Negocio</h2>
+    <div class="business-grid">
+      <div class="business-metric">
+        <p>Tasa de Retención</p>
+        <strong>{{ stats.customers.retention_rate.toFixed(1) }}%</strong>
+        <span>{{ stats.customers.active }} de {{ stats.customers.total }} activos</span>
+      </div>
+      <div class="business-metric">
+        <p>Nuevos Clientes</p>
+        <strong class="green">{{ stats.customers.new_this_month }}</strong>
+        <span>este mes</span>
+      </div>
+      <div class="business-metric">
+        <p>Diferencia</p>
+        <strong [class.green]="stats.growth.amount >= 0" [class.red]="stats.growth.amount < 0">
+          {{ stats.growth.amount >= 0 ? '+' : '' }}{{ formatCurrency(stats.growth.amount) }}
+        </strong>
+        <span>vs. mes anterior</span>
+      </div>
+    </div>
+  </div>
+</div>
