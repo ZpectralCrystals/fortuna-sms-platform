@@ -1,0 +1,135 @@
+<bo-loading-state *ngIf="loading"></bo-loading-state>
+
+<div *ngIf="!loading" class="invoices-page">
+  <div class="page-header">
+    <div>
+      <h1>Facturas</h1>
+      <p>Recargas aprobadas y generación de reportes</p>
+    </div>
+    <button type="button" class="export-button" [disabled]="invoices.length === 0" (click)="exportToCSV()">
+      <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 15V3" />
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <path d="m7 10 5 5 5-5" />
+      </svg>
+      Exportar CSV
+    </button>
+  </div>
+
+  <p *ngIf="noticeMessage" class="notice-message">{{ noticeMessage }}</p>
+
+  <div class="filters-card">
+    <div class="filters-title">
+      <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+      </svg>
+      <h2>Filtros</h2>
+    </div>
+
+    <div class="filters-grid">
+      <div class="field">
+        <label for="selectedYear">Año</label>
+        <select id="selectedYear" name="selectedYear" [(ngModel)]="selectedYear">
+          <option *ngFor="let year of availableYears" [ngValue]="year">{{ year }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="selectedMonth">Mes</label>
+        <select id="selectedMonth" name="selectedMonth" [(ngModel)]="selectedMonth">
+          <option [ngValue]="null">Todos los meses</option>
+          <option *ngFor="let month of months" [ngValue]="month.value">{{ month.name }}</option>
+        </select>
+      </div>
+
+      <div class="filter-action">
+        <button type="button" class="clear-button" (click)="clearFilters()">Limpiar Filtros</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Total Facturas</p>
+        <svg class="stat-icon blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+          <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+          <path d="M10 9H8" />
+          <path d="M16 13H8" />
+          <path d="M16 17H8" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ invoices.length }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Total SMS Vendidos</p>
+        <svg class="stat-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 2v4" />
+          <path d="M16 2v4" />
+          <rect width="18" height="18" x="3" y="4" rx="2" />
+          <path d="M3 10h18" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ formatNumber(getTotalQuantity()) }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Ingresos Totales</p>
+        <span class="money-icon">💰</span>
+      </div>
+      <p class="stat-value revenue">{{ formatCurrency(getTotalRevenue()) }}</p>
+    </div>
+  </div>
+
+  <div class="list-card">
+    <div class="list-header">
+      <h2>
+        Listado de Facturas
+        <span *ngIf="selectedMonth" class="period-label">- {{ selectedMonthName }} {{ selectedYear }}</span>
+        <span *ngIf="!selectedMonth" class="period-label">- {{ selectedYear }}</span>
+      </h2>
+    </div>
+
+    <bo-empty-state
+      *ngIf="invoices.length === 0"
+      title="No hay facturas para el período seleccionado"
+      icon="file-text"
+    ></bo-empty-state>
+
+    <div *ngIf="invoices.length > 0" class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Empresa</th>
+            <th>Paquete</th>
+            <th class="right">SMS</th>
+            <th class="right">Monto</th>
+            <th>Método</th>
+            <th>Código Op.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let invoice of invoices">
+            <td>{{ formatDate(invoice.invoice_date) }}</td>
+            <td>
+              <div class="client-name">{{ invoice.user_name }}</div>
+              <div class="client-email">{{ invoice.user_email }}</div>
+            </td>
+            <td>{{ invoice.user_company || '-' }}</td>
+            <td class="package-cell">{{ invoice.package_name }}</td>
+            <td class="right strong">{{ formatNumber(invoice.quantity) }}</td>
+            <td class="right amount">{{ formatCurrency(invoice.amount) }}</td>
+            <td class="method-cell">{{ invoice.payment_method }}</td>
+            <td class="operation-cell">{{ invoice.operation_code || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
