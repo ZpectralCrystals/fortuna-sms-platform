@@ -1,0 +1,73 @@
+<main class="login-page">
+  <div class="login-shell">
+    <section class="login-card">
+      <div class="login-header">
+        <div class="login-icon">
+          <svg
+            class="login-icon-svg"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
+        <h1>SMS Fortuna</h1>
+        <p>Backoffice - Panel de Administración</p>
+      </div>
+
+      <form class="login-form" (ngSubmit)="submit()">
+        <div class="field-group">
+          <label for="email">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            autocomplete="email"
+            placeholder="admin@fortunasms.com"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="password">
+            Contraseña
+          </label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            [(ngModel)]="password"
+            required
+            autocomplete="current-password"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <p
+          *ngIf="errorMessage"
+          class="error-box"
+        >
+          {{ errorMessage }}
+        </p>
+
+        <button
+          type="submit"
+          [disabled]="loading"
+        >
+          {{ loading ? 'Ingresando...' : 'Ingresar' }}
+        </button>
+      </form>
+    </section>
+  </div>
+</main>
