@@ -820,6 +820,58 @@ Esta base no migra logica compleja. Solo deja rutas, guards, servicios vacios, m
 - Definir modelo final para tendencias, adquisición y top clientes.
 - Conectar métricas reales solo cuando existan RLS, tablas y contratos finales.
 
+## Migración visual Sync backoffice
+
+### Archivo React revisado
+
+- `backoffice/src/pages/Sync.tsx`
+
+### Archivo Angular modificado
+
+- `projects/backoffice-admin/src/app/pages/sync-page.component.ts`
+
+### Qué se migró visualmente
+
+- Estado loading con spinner centrado y altura equivalente `h-64`.
+- Header `Sincronización con Corporate API` y botón gris `Configuración`.
+- Panel desplegable `Configuración de Sincronización` con URL Corporate API, checkboxes, `Guardar Configuración` y `Cancelar`.
+- Tarjetas estadísticas `Estado`, `Sincronizaciones Hoy`, `Paquetes Sincronizados`, `Recargas Sincronizadas` y `Usuarios Auto-Creados`.
+- Card `Acciones de Sincronización` con botones `Sincronizar Paquetes`, `Sincronizar Usuarios` y bloque `Webhook URL`.
+- URL placeholder segura: `https://supabase.example.com/functions/v1/recharge-webhook`.
+- Sección preparada `Usuarios Creados Automáticamente`.
+- Card `Historial de Sincronizaciones` con tabla y estado vacío `No hay sincronizaciones registradas`.
+- Iconos lucide equivalentes como SVG inline: `RefreshCw`, `CheckCircle`, `XCircle`, `Clock`, `AlertCircle`, `Settings`, `Link` y `Users`.
+
+### Qué NO se conectó por seguridad
+
+- No se usa Supabase en esta pantalla.
+- No se llama RPC `get_sync_status`.
+- No se usa `from('users')`.
+- No se usa `from('platform_sync_config')`.
+- No se usa `supabase.auth.getSession()`.
+- No se usa `fetch` a `sync-packages`.
+- No se usa `fetch` a `sync-users`.
+- No se usa `import.meta.env.VITE_SUPABASE_URL`.
+- No se usan consultas `from(` ni `rpc(`.
+- No se insertan, actualizan ni eliminan registros.
+- No se llaman Edge Functions reales.
+- No se sincronizan paquetes ni usuarios reales.
+- No se guarda configuración real.
+- `logs` y `autoCreatedUsers` inician vacíos; estadísticas quedan en cero.
+
+### Resultado del build
+
+- Comando ejecutado: `cd angular-workspace && ng build backoffice-admin`
+- Resultado: exitoso.
+- Observación: Node mostró advertencia por versión impar `v25.9.0`; no bloqueó el build.
+
+### Pendientes reales
+
+- Definir backend/RPC seguro para estado de sincronización.
+- Definir Edge Functions seguras para paquetes y usuarios.
+- Definir tablas/RLS para config, logs y auditoría.
+- Reemplazar URL placeholder cuando exista endpoint real autorizado.
+
 ## Migración Send SMS visual
 
 ### Archivo React revisado
