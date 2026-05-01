@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SupabaseService } from '@sms-fortuna/shared';
+import { SupabaseService, formatNumber as sharedFormatNumber, formatPercent } from '@sms-fortuna/shared';
 
 interface DashboardProfile {
   id: string;
@@ -793,7 +793,7 @@ export class DashboardOverviewPageComponent implements OnInit {
   }
 
   formatNumber(value: number, decimals = 0): string {
-    return value.toLocaleString('en-US', {
+    return sharedFormatNumber(value, 'en-US', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     });
@@ -832,13 +832,13 @@ export class DashboardOverviewPageComponent implements OnInit {
 
   private get deliveryPercentage(): string {
     return this.stats.totalSent > 0
-      ? `${((this.stats.delivered / this.stats.totalSent) * 100).toFixed(1)}%`
+      ? formatPercent((this.stats.delivered / this.stats.totalSent) * 100, 'en-US')
       : '0%';
   }
 
   private get failedPercentage(): string {
     return this.stats.totalSent > 0
-      ? `${((this.stats.failed / this.stats.totalSent) * 100).toFixed(1)}%`
+      ? formatPercent((this.stats.failed / this.stats.totalSent) * 100, 'en-US')
       : '0%';
   }
 
