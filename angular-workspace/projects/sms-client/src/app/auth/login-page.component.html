@@ -1,0 +1,61 @@
+<main class="login-page">
+  <section class="login-card">
+    <div class="login-card__intro">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+        </svg>
+        <div>
+          <span>SMS Fortuna</span>
+          <small>Comunicación masiva</small>
+        </div>
+      </div>
+
+      <h1>Inicia sesión</h1>
+      <p>
+        ¿No tienes cuenta?
+        <a routerLink="/register">Regístrate gratis</a>
+      </p>
+    </div>
+
+    <form class="login-form" (ngSubmit)="submit()">
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <div class="fields">
+        <label>
+          <span>Correo electrónico</span>
+          <input
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            autocomplete="email"
+            placeholder="tu@empresa.com"
+          />
+        </label>
+
+        <label>
+          <span>Contraseña</span>
+          <input
+            type="password"
+            name="password"
+            [(ngModel)]="password"
+            required
+            autocomplete="current-password"
+            placeholder="••••••••"
+          />
+        </label>
+      </div>
+
+      <div class="form-links">
+        <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
+      </div>
+
+      <button type="submit" [disabled]="loading">
+        {{ loading ? 'Iniciando sesión...' : 'Iniciar sesión' }}
+      </button>
+    </form>
+  </section>
+</main>
