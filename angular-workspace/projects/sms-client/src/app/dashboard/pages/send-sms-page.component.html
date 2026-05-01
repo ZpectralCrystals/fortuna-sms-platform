@@ -1,0 +1,286 @@
+<div class="send-page">
+  <div>
+    <h1>Enviar SMS</h1>
+    <p class="page-subtitle">Envía mensajes individuales o campañas masivas</p>
+  </div>
+
+  <div *ngIf="success" class="alert alert--success">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 12l2 2 4-4"></path>
+      <circle cx="12" cy="12" r="10"></circle>
+    </svg>
+    <div>
+      <p>Mensajes enviados exitosamente</p>
+      <span>{{ phoneCount }} SMS enviados - S/ {{ totalCost.toFixed(2) }} debitados</span>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert--error">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M12 8v4"></path>
+      <path d="M12 16h.01"></path>
+    </svg>
+    <p>{{ error }}</p>
+  </div>
+
+  <section class="send-card">
+    <div class="tabs">
+      <button type="button" [class.tab--active]="mode === 'single'" (click)="setMode('single')">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m22 2-7 20-4-9-9-4Z"></path>
+          <path d="M22 2 11 13"></path>
+        </svg>
+        Individual
+      </button>
+      <button type="button" [class.tab--active]="mode === 'multiple'" (click)="setMode('multiple')">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        Múltiple
+      </button>
+      <button type="button" [class.tab--active]="mode === 'file'" (click)="setMode('file')">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <path d="M14 2v6h6"></path>
+          <path d="M16 13H8"></path>
+          <path d="M16 17H8"></path>
+          <path d="M10 9H8"></path>
+        </svg>
+        Desde Fichero
+      </button>
+    </div>
+
+    <form class="send-form" (ngSubmit)="handleSend()">
+      <ng-container *ngIf="mode === 'file'">
+        <div class="field">
+          <label for="campaignName">Nombre de la campaña</label>
+          <input
+            id="campaignName"
+            type="text"
+            name="campaignName"
+            [(ngModel)]="campaignName"
+            placeholder="Ej: Promoción Primavera 2026"
+          />
+        </div>
+
+        <div class="upload-box">
+          <div class="upload-box__header">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <path d="M17 8 12 3 7 8"></path>
+              <path d="M12 3v12"></path>
+            </svg>
+            <h3>Cargar archivo con mensajes personalizados</h3>
+            <p>Sube un archivo Excel (.xlsx, .xls) o CSV con dos columnas: Teléfono y Mensaje</p>
+
+            <div class="upload-actions">
+              <label class="btn btn--blue">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <path d="M17 8 12 3 7 8"></path>
+                  <path d="M12 3v12"></path>
+                </svg>
+                Seleccionar archivo
+                <input type="file" accept=".xlsx,.xls,.csv,.txt" (change)="handleExcelUpload($event)" hidden />
+              </label>
+
+              <button type="button" class="btn btn--green" (click)="downloadTemplate()">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <path d="M7 10l5 5 5-5"></path>
+                  <path d="M12 15V3"></path>
+                </svg>
+                Descargar plantilla
+              </button>
+            </div>
+          </div>
+
+          <div class="format-info">
+            <p>Información del formato:</p>
+            <ul>
+              <li><strong>Columna 1:</strong> Número de teléfono (Ej: +51987654321 o 987654321)</li>
+              <li><strong>Columna 2:</strong> Mensaje personalizado para cada destinatario</li>
+              <li>Tamaño máximo: 500KB</li>
+              <li>Formatos compatibles: Excel (.xlsx, .xls), CSV (.csv), Texto (.txt)</li>
+              <li>Un mensaje por línea, cada uno puede ser diferente</li>
+            </ul>
+          </div>
+        </div>
+
+        <div *ngIf="fileMessages.length > 0" class="preview-card">
+          <div class="preview-card__header">
+            <div>
+              <h3>Vista previa de mensajes</h3>
+              <p>{{ fileMessages.length }} mensajes cargados</p>
+            </div>
+            <button type="button" (click)="clearFileMessages()" title="Limpiar archivo" aria-label="Limpiar archivo">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 6 6 18"></path>
+                <path d="m6 6 12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="preview-list">
+            <div *ngFor="let fm of previewMessages" class="preview-row">
+              <div class="preview-row__phone">{{ fm.phone }}</div>
+              <div class="preview-row__message">
+                <p>{{ fm.message }}</p>
+                <span>{{ smsSegments(fm.message) }} SMS • {{ fm.message.length }} caracteres</span>
+              </div>
+            </div>
+            <div *ngIf="fileMessages.length > 10" class="preview-more">
+              ... y {{ fileMessages.length - 10 }} mensajes más
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="mode === 'single'">
+        <div class="field">
+          <label for="recipient">Número de teléfono</label>
+          <input
+            id="recipient"
+            type="text"
+            name="recipient"
+            required
+            [(ngModel)]="recipient"
+            placeholder="+51987654321"
+          />
+          <small>Formato: +51987654321 o 987654321</small>
+        </div>
+
+        <div class="example-card example-card--blue">
+          <h4><span>💡</span>Ejemplo de mensaje</h4>
+          <div>
+            <p>"Hola Juan, te recordamos tu cita para el día de mañana a las 10:00 AM en nuestra sede principal. ¡Te esperamos!"</p>
+            <small>130 caracteres • 1 SMS</small>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="mode === 'multiple'">
+        <div class="field">
+          <div class="field__header">
+            <label for="multiplePhones">Números de teléfono (uno por línea)</label>
+            <label class="file-inline">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <path d="M17 8 12 3 7 8"></path>
+                <path d="M12 3v12"></path>
+              </svg>
+              Cargar archivo
+              <input type="file" accept=".txt,.csv" (change)="handleFileUpload($event)" hidden />
+            </label>
+          </div>
+          <textarea
+            id="multiplePhones"
+            name="multiplePhones"
+            required
+            rows="6"
+            [(ngModel)]="multiplePhones"
+            placeholder="+51987654321&#10;+51976543210&#10;965432109"
+            class="mono"
+          ></textarea>
+          <small>{{ phoneCount }} números ingresados</small>
+        </div>
+
+        <div class="example-card example-card--green">
+          <h4><span>💡</span>Ejemplo de mensaje para múltiples destinatarios</h4>
+          <div>
+            <p>"¡Promoción especial! 30% de descuento en todos nuestros productos este fin de semana. Visítanos en Av. Arequipa 1234 o compra online. Código: PROMO30"</p>
+            <small>154 caracteres • 1 SMS • Se enviará el mismo mensaje a todos los números</small>
+          </div>
+        </div>
+      </ng-container>
+
+      <div *ngIf="templates.length > 0 && mode !== 'file'" class="field">
+        <label for="selectedTemplate">Usar plantilla (opcional)</label>
+        <select id="selectedTemplate" name="selectedTemplate" [(ngModel)]="selectedTemplate" (ngModelChange)="handleTemplateSelect($event)">
+          <option value="">Selecciona una plantilla</option>
+          <option *ngFor="let template of templates" [value]="template.id">{{ template.name }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="mode !== 'file'" class="field">
+        <label for="message">Mensaje</label>
+        <textarea
+          id="message"
+          name="message"
+          required
+          rows="5"
+          [(ngModel)]="message"
+          placeholder="Escribe tu mensaje aquí..."
+        ></textarea>
+        <div class="field-meta">
+          <small>{{ messageLength }} caracteres</small>
+          <small>{{ smsCount }} SMS {{ messageLength > 160 ? '(mensaje largo)' : '' }}</small>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-card__top">
+          <span>Resumen de envío</span>
+          <strong>S/ {{ totalCost.toFixed(2) }}</strong>
+        </div>
+
+        <div class="summary-grid">
+          <div>
+            <p>Destinatarios</p>
+            <strong>{{ phoneCount }}</strong>
+          </div>
+          <div *ngIf="mode !== 'file'">
+            <p>SMS por mensaje</p>
+            <strong>{{ smsCount }}</strong>
+          </div>
+          <div *ngIf="mode === 'file'">
+            <p>Total SMS</p>
+            <strong>{{ totalFileSms }}</strong>
+          </div>
+          <div>
+            <p>Créditos disponibles</p>
+            <strong>{{ credits.toFixed(0) }}</strong>
+          </div>
+          <div>
+            <p>Créditos después</p>
+            <strong>{{ afterCredits.toFixed(0) }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        class="submit-button"
+        [disabled]="sending || phoneCount === 0"
+      >
+        <ng-container *ngIf="sending; else sendLabel">
+          <span class="small-spinner"></span>
+          Enviando...
+        </ng-container>
+        <ng-template #sendLabel>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m22 2-7 20-4-9-9-4Z"></path>
+            <path d="M22 2 11 13"></path>
+          </svg>
+          Enviar {{ phoneCount }} SMS
+        </ng-template>
+      </button>
+    </form>
+  </section>
+
+  <section class="info-card">
+    <h3>Información importante</h3>
+    <ul>
+      <li><span>•</span>Cada SMS admite 160 caracteres (mensajes largos se dividen automáticamente)</li>
+      <li><span>•</span>Costo: S/ 0.08 por SMS - El mejor precio del Perú</li>
+      <li><span>•</span>Entrega en menos de 5 segundos con tasa de éxito del 99.9%</li>
+      <li><span>•</span><strong>Múltiple:</strong> Sube archivos .txt o .csv con números para enviar el mismo mensaje a todos</li>
+      <li><span>•</span><strong>Desde Fichero:</strong> Sube un Excel con columnas Teléfono y Mensaje para enviar mensajes personalizados</li>
+      <li><span>•</span>Los envíos desde fichero quedan registrados como campañas para consulta futura</li>
+    </ul>
+  </section>
+</div>

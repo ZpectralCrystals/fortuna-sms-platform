@@ -1,0 +1,339 @@
+<main class="landing">
+  <section class="hero">
+    <div class="hero__shade"></div>
+    <div class="pattern"></div>
+
+    <nav class="topbar" aria-label="Navegacion principal">
+      <a class="brand" routerLink="/">
+        <span class="brand__mark" aria-hidden="true">SMS</span>
+        <span>
+          <span class="brand__name">SMS Fortuna</span>
+          <span class="brand__tag">Comunicación masiva</span>
+        </span>
+      </a>
+      <a id="comenzar-btn" class="btn btn--light btn--small" routerLink="/register">Comenzar</a>
+    </nav>
+
+    <div class="hero__content">
+      <div class="hero__copy">
+        <p class="eyebrow">Solución empresarial de mensajería</p>
+        <h1>Envía SMS masivos desde tu aplicación o nuestra plataforma web</h1>
+        <p class="hero__lead">
+          Integra mediante API en tu aplicación o usa nuestra plataforma web directamente. No necesitas desarrollo técnico,
+          envía SMS desde nuestro panel de control con alcance garantizado a tus clientes.
+        </p>
+
+        <div class="hero__modes" aria-label="Modalidades de uso">
+          <article class="glass-card">
+            <span class="icon" aria-hidden="true">API</span>
+            <h3>Integración API</h3>
+            <p>Para desarrolladores: integra SMS en tu aplicación o sistema</p>
+          </article>
+          <article class="glass-card">
+            <span class="icon" aria-hidden="true">WEB</span>
+            <h3>Plataforma Web</h3>
+            <p>Sin código: envía SMS directamente desde nuestro panel</p>
+          </article>
+        </div>
+
+        <div class="actions">
+          <a class="btn btn--light" routerLink="/register">Prueba gratis <span aria-hidden="true">→</span></a>
+          <a class="btn btn--outline" routerLink="/dashboard/api-keys">Ver documentación</a>
+        </div>
+
+        <div class="stats" aria-label="Metricas principales">
+          <div>
+            <strong>99.9%</strong>
+            <span>Entrega garantizada</span>
+          </div>
+          <div>
+            <strong>&lt;5s</strong>
+            <span>Tiempo de envío</span>
+          </div>
+          <div>
+            <strong>24/7</strong>
+            <span>Soporte técnico</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero__preview" aria-hidden="true">
+        <div class="code-window code-window--float">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <pre>{{ heroCode }}</pre>
+          <p class="muted-line">→ Enviando SMS...</p>
+          <p class="success-line">✓ Mensaje entregado exitosamente</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--muted" id="features">
+    <div class="container">
+      <header class="section__header">
+        <h2>Todo lo que necesitas para comunicarte</h2>
+        <p>
+          Nuestra plataforma de SMS corporativo ofrece las herramientas más avanzadas para que conectes con tus clientes
+          de manera efectiva
+        </p>
+      </header>
+
+      <div class="feature-grid">
+        <article class="feature-card" *ngFor="let feature of features">
+          <span class="feature-card__icon" aria-hidden="true">{{ feature.icon }}</span>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="como-funciona">
+    <div class="container">
+      <header class="section__header">
+        <h2>¿Cómo funciona?</h2>
+        <p>Integración simple y rápida en 3 pasos. De la configuración al primer mensaje en minutos.</p>
+      </header>
+
+      <div class="steps">
+        <article class="step" *ngFor="let step of steps; let index = index" [class.step--reverse]="index % 2 === 1">
+          <div class="step__copy">
+            <div class="step__meta">
+              <span class="step__number">{{ index + 1 }}</span>
+              <span class="step__icon" aria-hidden="true">{{ step.icon }}</span>
+            </div>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.description }}</p>
+          </div>
+
+          <div class="code-window">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <pre>{{ step.code }}</pre>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--bluewash" id="beneficios">
+    <div class="container">
+      <header class="section__header">
+        <h2>Beneficios para tu negocio</h2>
+        <p>Descubre por qué más empresas confían en SMS Fortuna para sus comunicaciones críticas</p>
+      </header>
+
+      <div class="benefit-grid">
+        <article class="benefit-card" *ngFor="let benefit of benefits">
+          <div class="benefit-card__top">
+            <span class="benefit-card__icon" aria-hidden="true">{{ benefit.icon }}</span>
+            <span class="benefit-card__stat">
+              <strong>{{ benefit.stat }}</strong>
+              <small>{{ benefit.statLabel }}</small>
+            </span>
+          </div>
+          <h3>{{ benefit.title }}</h3>
+          <p>{{ benefit.description }}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="politicas">
+    <div class="container">
+      <header class="section__header">
+        <span class="section__icon" aria-hidden="true">✓</span>
+        <h2>Compromiso con las Buenas Prácticas</h2>
+        <p>
+          Nuestra plataforma cumple con las normas de protección al consumidor y promueve comunicaciones respetuosas
+        </p>
+      </header>
+
+      <div class="policy-grid">
+        <article class="policy-card policy-card--good">
+          <div class="policy-card__icon" aria-hidden="true">✓</div>
+          <div>
+            <h3>Mensajería Responsable</h3>
+            <ul>
+              <li>Cumplimiento de normas de protección al consumidor</li>
+              <li>Uso de lenguaje cordial y respetuoso en todos los mensajes</li>
+              <li>Comunicación profesional en campañas de marketing y cobranza</li>
+              <li>Respeto a los derechos de los consumidores</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="policy-card policy-card--bad">
+          <div class="policy-card__icon" aria-hidden="true">!</div>
+          <div>
+            <h3>Políticas de Uso</h3>
+            <p class="policy-card__label">Prohibiciones estrictas:</p>
+            <ul>
+              <li>Lenguaje irrespetuoso, ofensivo o amenazante</li>
+              <li>Mensajes que incumplan las normas de protección al consumidor</li>
+              <li>Contenido fraudulento o engañoso</li>
+            </ul>
+            <p class="policy-card__warning">
+              El incumplimiento de estas políticas resultará en la desactivación inmediata de su cuenta
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <aside class="quality-note">
+        <h3>Nuestro Compromiso con la Calidad</h3>
+        <p>
+          Monitoreamos activamente el contenido de los mensajes para garantizar el cumplimiento de las normas de protección
+          al consumidor. Promovemos una comunicación empresarial ética, cordial y profesional que beneficie tanto a las
+          empresas como a los consumidores.
+        </p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section" id="precios">
+    <div class="container">
+      <header class="section__header">
+        <h2>Precios simples y transparentes</h2>
+        <p>Comienza gratis y escala según tus necesidades. Solo pagas por lo que usas.</p>
+      </header>
+
+      <div class="pricing-grid">
+        <article class="plan-card" *ngFor="let plan of plans" [class.plan-card--popular]="plan.popular">
+          <div class="popular-badge" *ngIf="plan.popular">Más popular</div>
+          <div class="plan-card__header">
+            <h3>{{ plan.name }}</h3>
+            <p>{{ plan.description }}</p>
+          </div>
+
+          <div class="plan-card__price">
+            <span *ngIf="plan.price !== 'Personalizado'">S/ </span>{{ plan.price }}
+            <small *ngIf="plan.priceUnit">{{ plan.priceUnit }}</small>
+          </div>
+
+          <ul class="plan-card__features">
+            <li *ngFor="let item of plan.features">{{ item }}</li>
+          </ul>
+
+          <a
+            *ngIf="plan.externalUrl; else registerPlan"
+            class="btn"
+            [class.btn--light]="plan.popular"
+            [class.btn--primary]="!plan.popular"
+            [href]="plan.externalUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ plan.cta }}
+          </a>
+          <ng-template #registerPlan>
+            <a class="btn" [class.btn--light]="plan.popular" [class.btn--primary]="!plan.popular" routerLink="/register">
+              {{ plan.cta }}
+            </a>
+          </ng-template>
+        </article>
+      </div>
+
+      <div class="sales-note">
+        <p>¿Necesitas un plan personalizado o tienes dudas sobre precios?</p>
+        <a
+          href="https://wa.me/51982165728?text=Hola%2C%20me%20interesa%20conocer%20m%C3%A1s%20sobre%20los%20servicios%20de%20Fortuna%20SMS.%20Me%20gustar%C3%ADa%20recibir%20informaci%C3%B3n%20sobre%20planes%20y%20precios."
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Habla con nuestro equipo de ventas
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="pattern"></div>
+    <div class="container cta__inner">
+      <p class="eyebrow">Comienza hoy mismo</p>
+      <h2>¿Listo para transformar tu comunicación?</h2>
+      <p>
+        Únete a cientos de empresas que ya confían en nuestra plataforma para enviar millones de SMS cada mes.
+        Integración en minutos, resultados inmediatos.
+      </p>
+
+      <div class="actions actions--center">
+        <a class="btn btn--light" routerLink="/register">Comenzar gratis <span aria-hidden="true">→</span></a>
+        <a class="btn btn--outline" routerLink="/login">Iniciar sesión</a>
+      </div>
+
+      <div class="cta__stats">
+        <div><strong>10 SMS</strong><span>Gratis al registrarte</span></div>
+        <div><strong>5 min</strong><span>Tiempo de integración</span></div>
+        <div><strong>Sin tarjeta</strong><span>Para comenzar gratis</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__grid">
+        <section>
+          <a class="brand brand--footer" routerLink="/">
+            <span class="brand__mark" aria-hidden="true">SMS</span>
+            <span>
+              <span class="brand__name">SMS Fortuna</span>
+              <span class="brand__tag">Comunicación masiva</span>
+            </span>
+          </a>
+          <p>La solución más confiable para enviar SMS desde tu aplicación o plataforma web. El mejor precio del Perú.</p>
+          <div class="socials" aria-label="Redes sociales">
+            <a href="#" aria-label="Twitter">X</a>
+            <a href="#" aria-label="GitHub">GH</a>
+            <a href="#" aria-label="LinkedIn">in</a>
+          </div>
+        </section>
+
+        <section>
+          <h3>Producto</h3>
+          <ul>
+            <li><a href="#precios">Precios</a></li>
+            <li><a routerLink="/dashboard/api-keys">Documentación API</a></li>
+            <li><a href="#features">Integraciones</a></li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Empresa</h3>
+          <ul>
+            <li><a routerLink="/about">Sobre nosotros</a></li>
+            <li><a routerLink="/blog">Blog</a></li>
+            <li><a routerLink="/privacy">Privacidad</a></li>
+            <li><a routerLink="/terms">Términos de servicio</a></li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Contacto</h3>
+          <ul class="contact-list">
+            <li><span aria-hidden="true">✉</span><a href="mailto:admin@fortuna.com.pe">admin&#64;fortuna.com.pe</a></li>
+            <li>
+              <span aria-hidden="true">☎</span>
+              <a
+                href="https://wa.me/51982165728?text=Hola%2C%20me%20interesa%20conocer%20m%C3%A1s%20sobre%20Fortuna%20SMS."
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                +51 982 165 728
+              </a>
+            </li>
+            <li><span aria-hidden="true">⌖</span><span>Lima, Perú</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="footer__bottom">
+        <p>© {{ currentYear }} SMS Fortuna. Todos los derechos reservados. Fortuna Fintech SAC.</p>
+        <nav aria-label="Legal">
+          <a routerLink="/privacy">Política de privacidad</a>
+          <a routerLink="/terms">Términos de uso</a>
+          <a routerLink="/privacy">Cookies</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+</main>

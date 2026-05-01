@@ -1,0 +1,135 @@
+<div *ngIf="loading" class="loading-state">
+  <div class="spinner" aria-label="Cargando"></div>
+</div>
+
+<div *ngIf="!loading" class="dashboard-page">
+  <header class="dashboard-header">
+    <div>
+      <h1>Dashboard</h1>
+      <p>Bienvenido, {{ profile?.full_name }}</p>
+    </div>
+    <a routerLink="/dashboard/send" class="primary-action">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m22 2-7 20-4-9-9-4Z"></path>
+        <path d="M22 2 11 13"></path>
+      </svg>
+      Enviar SMS
+    </a>
+  </header>
+
+  <section class="stats-grid" aria-label="Indicadores">
+    <article *ngFor="let stat of statCards" class="stat-card">
+      <div class="stat-card__top">
+        <div class="stat-card__icon" [ngClass]="stat.colorClass">
+          <ng-container [ngSwitch]="stat.icon">
+            <svg *ngSwitchCase="'send'" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m22 2-7 20-4-9-9-4Z"></path>
+              <path d="M22 2 11 13"></path>
+            </svg>
+            <svg *ngSwitchCase="'check'" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 12l2 2 4-4"></path>
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            <svg *ngSwitchCase="'x'" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m15 9-6 6"></path>
+              <path d="m9 9 6 6"></path>
+            </svg>
+            <svg *ngSwitchCase="'credit'" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+              <path d="M2 10h20"></path>
+            </svg>
+          </ng-container>
+        </div>
+        <span *ngIf="stat.change" class="stat-card__change">{{ stat.change }}</span>
+      </div>
+      <p class="stat-card__label">{{ stat.name }}</p>
+      <p class="stat-card__value">{{ stat.value }}</p>
+      <p *ngIf="stat.percentage" class="stat-card__meta">{{ stat.percentage }} del total</p>
+      <p *ngIf="stat.subtitle" class="stat-card__meta">{{ stat.subtitle }}</p>
+    </article>
+  </section>
+
+  <section class="charts-grid" aria-label="Gráficos">
+    <article class="chart-card">
+      <h2>SMS por día (últimos 7 días)</h2>
+      <div class="bar-chart" role="img" aria-label="SMS enviados y entregados por día">
+        <div class="chart-gridlines" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="bar-chart__plot">
+          <div *ngFor="let point of chartData" class="bar-group">
+            <div class="bar-group__bars">
+              <span class="bar bar--sent" [style.height.%]="barHeight(point.enviados)"></span>
+              <span class="bar bar--delivered" [style.height.%]="barHeight(point.entregados)"></span>
+            </div>
+            <span class="bar-group__label">{{ point.date }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend">
+        <span><i class="legend-dot legend-dot--sent"></i>Enviados</span>
+        <span><i class="legend-dot legend-dot--delivered"></i>Entregados</span>
+      </div>
+    </article>
+
+    <article class="chart-card">
+      <h2>Tasa de entrega</h2>
+      <div class="line-chart" role="img" aria-label="Tasa de entrega últimos 7 días">
+        <svg viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M20 30 H300 M20 90 H300 M20 150 H300 M20 210 H300"></path>
+          <polyline [attr.points]="linePoints"></polyline>
+        </svg>
+        <div class="line-chart__labels">
+          <span *ngFor="let point of chartData">{{ point.date }}</span>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="recent-card">
+    <div class="recent-card__header">
+      <h2>Mensajes recientes</h2>
+      <a routerLink="/dashboard/history">
+        Ver todos
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 12h14"></path>
+          <path d="m12 5 7 7-7 7"></path>
+        </svg>
+      </a>
+    </div>
+
+    <div class="recent-card__body">
+      <div *ngIf="recentMessages.length === 0" class="empty-state">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+        </svg>
+        <p>Aún no has enviado ningún SMS</p>
+        <a routerLink="/dashboard/send">Enviar tu primer SMS</a>
+      </div>
+
+      <article *ngFor="let message of recentMessages" class="message-row">
+        <div class="message-row__content">
+          <div class="message-row__headline">
+            <span>{{ message.to_phone }}</span>
+            <strong [ngClass]="statusClass(message.status)">{{ statusLabel(message.status) }}</strong>
+          </div>
+          <p>{{ message.message }}</p>
+        </div>
+        <div class="message-row__meta">
+          <div>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 6v6l4 2"></path>
+            </svg>
+            {{ formatDate(message.created_at) }}
+          </div>
+          <p>S/ {{ formatCurrency(message.cost ?? 0) }}</p>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>
