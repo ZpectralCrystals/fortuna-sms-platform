@@ -1,16 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { SupabaseService } from '@sms-fortuna/shared';
+import { FormsModule } from '@angular/forms';
+import { Recharge, RechargesService, SmsPackage, SupabaseService } from '@sms-fortuna/shared';
 
-const IGV_RATE = 0.18;
 const WHATSAPP_NUMBER = '51982165728';
 const QR_ASSET = 'assets/whatsapp_image_2026-02-01_at_10.23.01_am.jpeg';
-
-interface RechargePackage {
-  amount: number;
-  sms: number;
-  popular?: boolean;
-}
 
 interface PaymentMethod {
   id: 'yape' | 'plin' | 'transferencia';
@@ -23,33 +17,16 @@ interface ProfileBalance {
   total_spent: number;
 }
 
-interface RechargeRecord {
-  id: string;
-  user_id: string;
-  amount: number;
-  sms_credits: number;
-  status: 'completed' | 'failed' | 'pending' | string;
-  payment_method: string | null;
-  created_at: string;
-}
-
 @Component({
   selector: 'sms-recharges-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './recharges-page.component.html',
   styleUrl: './recharges-page.component.scss'
 })
 export class RechargesPageComponent implements OnInit {
   private readonly supabase = inject(SupabaseService);
-
-  readonly rechargePackages: RechargePackage[] = [
-    { amount: 50, sms: 530 },
-    { amount: 100, sms: 1060, popular: true },
-    { amount: 200, sms: 2120 },
-    { amount: 500, sms: 5300 },
-    { amount: 1000, sms: 10600 }
-  ];
+  private readonly rechargesService = inject(RechargesService);
 
   readonly paymentMethods: PaymentMethod[] = [
     { id: 'yape', name: 'Yape', icon: '📱' },
@@ -64,21 +41,27 @@ export class RechargesPageComponent implements OnInit {
     total_spent: 0
   };
 
-  recharges: RechargeRecord[] = [];
+  rechargePackages: SmsPackage[] = [];
+  recharges: Recharge[] = [];
   showModal = false;
-  selectedPackage: RechargePackage | null = null;
+  selectedPackage: SmsPackage | null = null;
   selectedMethod: PaymentMethod['id'] | '' = '';
+  operationCode = '';
   copiedText = '';
   noticeMessage = '';
   requestMessage = '';
+  loadingPackages = true;
+  loadingRecharges = true;
+  submitting = false;
 
   ngOnInit(): void {
     void this.loadData();
   }
 
-  selectPackage(pkg: RechargePackage): void {
+  selectPackage(pkg: SmsPackage): void {
     this.selectedPackage = pkg;
     this.selectedMethod = '';
+    this.operationCode = '';
     this.requestMessage = '';
     this.showModal = true;
   }
@@ -87,29 +70,62 @@ export class RechargesPageComponent implements OnInit {
     this.showModal = false;
     this.selectedPackage = null;
     this.selectedMethod = '';
+    this.operationCode = '';
     this.requestMessage = '';
   }
 
-  calculateTotal(amount: number): number {
-    return amount;
+  calculateTotal(pkg: SmsPackage | null): number {
+    return Number(pkg?.total_price ?? 0);
   }
 
-  calculateSubtotal(amount: number): number {
-    return amount / (1 + IGV_RATE);
+  calculateSubtotal(pkg: SmsPackage | null): number {
+    return Number(pkg?.base_price ?? 0);
   }
 
-  calculateIGV(amount: number): number {
-    return amount - this.calculateSubtotal(amount);
+  calculateIGV(pkg: SmsPackage | null): number {
+    return this.calculateTotal(pkg) - this.calculateSubtotal(pkg);
   }
 
-  showPendingRechargeMessage(): void {
-    this.requestMessage =
-      'La solicitud automática de recarga se conectará en la siguiente fase. Por ahora envía tu constancia por WhatsApp.';
+  async submitRechargeRequest(): Promise<void> {
+    this.requestMessage = '';
+    this.noticeMessage = '';
+
+    if (!this.selectedPackage) {
+      this.requestMessage = 'Selecciona un paquete para enviar la solicitud.';
+      return;
+    }
+
+    if (!this.selectedMethod) {
+      this.requestMessage = 'Selecciona un método de pago para enviar la solicitud.';
+      return;
+    }
+
+    try {
+      this.submitting = true;
+
+      await this.rechargesService.createRecharge({
+        package_id: this.selectedPackage.id,
+        sms_credits: this.selectedPackage.sms_credits,
+        amount: this.selectedPackage.total_price,
+        payment_method: this.selectedMethod,
+        operation_code: this.operationCode
+      });
+
+      this.noticeMessage = 'Solicitud enviada. Quedará pendiente de aprobación por backoffice.';
+      this.closeModal();
+      await this.loadRecharges();
+    } catch (error) {
+      this.requestMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo crear la solicitud de recarga.';
+    } finally {
+      this.submitting = false;
+    }
   }
 
   openWhatsApp(): void {
-    const amount = this.selectedPackage?.amount ?? 0;
-    const sms = this.selectedPackage?.sms ?? 0;
+    const amount = this.selectedPackage?.total_price ?? 0;
+    const sms = this.selectedPackage?.sms_credits ?? 0;
     const message = `Hola, he realizado el pago de mi recarga por S/ ${this.formatCurrency(amount)} (${this.formatNumber(sms)} SMS). Adjunto mi constancia de pago.`;
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -128,20 +144,20 @@ export class RechargesPageComponent implements OnInit {
   }
 
   statusIconClass(status: string): string {
-    if (status === 'completed') return 'status-icon status-icon--completed';
-    if (status === 'failed') return 'status-icon status-icon--failed';
+    if (status === 'approved') return 'status-icon status-icon--completed';
+    if (status === 'rejected') return 'status-icon status-icon--failed';
     return 'status-icon status-icon--pending';
   }
 
   statusTextClass(status: string): string {
-    if (status === 'completed') return 'status-text--completed';
-    if (status === 'failed') return 'status-text--failed';
+    if (status === 'approved') return 'status-text--completed';
+    if (status === 'rejected') return 'status-text--failed';
     return 'status-text--pending';
   }
 
   statusLabel(status: string): string {
-    if (status === 'completed') return 'Completado';
-    if (status === 'failed') return 'Fallido';
+    if (status === 'approved') return 'Aprobado';
+    if (status === 'rejected') return 'Rechazado';
     return 'Pendiente';
   }
 
@@ -180,12 +196,17 @@ export class RechargesPageComponent implements OnInit {
       if (!userId) {
         this.profile = { credits: 0, total_spent: 0 };
         this.recharges = [];
+        this.rechargePackages = [];
+        this.loadingPackages = false;
+        this.loadingRecharges = false;
+        this.noticeMessage = 'No hay sesión activa. Inicia sesión para ver tus recargas.';
         return;
       }
 
       await Promise.all([
         this.loadProfile(userId),
-        this.loadRecharges(userId)
+        this.loadPackages(),
+        this.loadRecharges()
       ]);
     } catch {
       this.profile = { credits: 0, total_spent: 0 };
@@ -216,27 +237,31 @@ export class RechargesPageComponent implements OnInit {
     }
   }
 
-  private async loadRecharges(userId: string): Promise<void> {
+  private async loadPackages(): Promise<void> {
     try {
-      const { data, error } = await this.supabase.instance
-        .from('recharges')
-        .select('id, user_id, amount, sms_credits, status, payment_method, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      this.loadingPackages = true;
+      this.rechargePackages = await this.rechargesService.listActivePackages();
+    } catch (error) {
+      this.noticeMessage = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar los paquetes activos.';
+      this.rechargePackages = [];
+    } finally {
+      this.loadingPackages = false;
+    }
+  }
 
-      if (error) {
-        this.recharges = [];
-        return;
-      }
-
-      this.recharges = ((data as RechargeRecord[] | null) ?? []).map((recharge) => ({
-        ...recharge,
-        amount: Number(recharge.amount ?? 0),
-        sms_credits: Number(recharge.sms_credits ?? 0),
-        payment_method: recharge.payment_method ?? null
-      }));
-    } catch {
+  private async loadRecharges(): Promise<void> {
+    try {
+      this.loadingRecharges = true;
+      this.recharges = await this.rechargesService.listMyRecharges();
+    } catch (error) {
+      this.noticeMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo cargar tu historial de recargas.';
       this.recharges = [];
+    } finally {
+      this.loadingRecharges = false;
     }
   }
 }

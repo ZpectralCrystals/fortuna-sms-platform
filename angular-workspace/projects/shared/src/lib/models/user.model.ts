@@ -1,11 +1,11 @@
-export type UserRole = 'client' | 'admin' | 'super_admin';
-
 export interface UserProfile {
   id: string;
   email: string;
-  role: UserRole;
-  companyName?: string;
+  fullName?: string;
+  razonSocial?: string;
   ruc?: string;
+  phone?: string;
   credits?: number;
+  totalSpent?: number;
   isActive?: boolean;
 }

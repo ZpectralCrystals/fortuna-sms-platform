@@ -596,6 +596,36 @@ h1 {
   padding: 24px;
 }
 
+.operation-section {
+  margin-bottom: 24px;
+}
+
+.operation-section label {
+  color: #374151;
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  margin-bottom: 8px;
+}
+
+.operation-section input {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  line-height: 24px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.operation-section input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  outline: none;
+}
+
 .qr-section {
   text-align: center;
 }

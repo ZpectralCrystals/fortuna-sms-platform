@@ -16,7 +16,7 @@ export class ClientAuthGuard implements CanActivate, CanActivateChild {
   }
 
   private async checkAccess(): Promise<boolean | UrlTree> {
-    const isAuthenticated = await this.auth.isAuthenticated();
-    return isAuthenticated ? true : this.router.createUrlTree(['/login']);
+    const hasClientProfile = await this.auth.hasClientProfile();
+    return hasClientProfile ? true : this.router.createUrlTree(['/login']);
   }
 }

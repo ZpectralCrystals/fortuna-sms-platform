@@ -5,11 +5,10 @@ import { AuthService, SupabaseService } from '@sms-fortuna/shared';
 
 interface DashboardProfile {
   id: string;
-  email: string | null;
+  email: string;
   full_name: string | null;
-  company_name: string | null;
   razon_social: string | null;
-  credits: number | null;
+  credits: number;
 }
 
 interface NavigationItem {
@@ -70,7 +69,7 @@ export class DashboardLayoutComponent implements OnInit {
   }
 
   get companyName(): string {
-    return this.profile?.company_name || this.profile?.razon_social || 'Sin empresa';
+    return this.profile?.razon_social || 'Sin empresa';
   }
 
   openSidebar(): void {
@@ -125,13 +124,7 @@ export class DashboardLayoutComponent implements OnInit {
         return;
       }
 
-      const { data } = await this.supabase.instance
-        .from('profiles')
-        .select('id, email, full_name, company_name, razon_social, credits')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      this.profile = (data as DashboardProfile | null) ?? null;
+      this.profile = await this.authService.getCurrentProfile();
     } catch {
       this.profile = null;
     }

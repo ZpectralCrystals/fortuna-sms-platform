@@ -2,44 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { SupabaseService } from '../../../../shared/src/lib/services/supabase.service';
+import { AdminRecharge, RechargeStatus, RechargesService, SmsPackage } from '@sms-fortuna/shared';
 
-type RechargeStatus = 'pending' | 'approved' | 'rejected';
 type RechargeFilter = 'all' | RechargeStatus;
-
-interface RechargeWithDetails {
-  id: string;
-  user_id: string;
-  package_id: string;
-  quantity: number;
-  amount: number;
-  payment_method: string;
-  status: RechargeStatus;
-  created_at: string;
-  operation_code: string | null;
-  user: {
-    full_name: string;
-    email: string;
-    company: string | null;
-  };
-  package: {
-    name: string;
-  };
-}
-
-interface RechargeUser {
-  id: string;
-  email: string;
-  full_name: string;
-  company: string | null;
-}
-
-interface SmsPackage {
-  id: string;
-  name: string;
-  quantity: number;
-  total_price: number;
-}
 
 @Component({
   selector: 'bo-recharges-page',
@@ -49,20 +14,21 @@ interface SmsPackage {
   styleUrl: './recharges-page.component.scss'
 })
 export class RechargesPageComponent implements OnInit {
-  private readonly supabaseService = inject(SupabaseService);
+  private readonly rechargesService = inject(RechargesService);
 
-  recharges: RechargeWithDetails[] = [];
-  users: RechargeUser[] = [];
+  recharges: AdminRecharge[] = [];
   packages: SmsPackage[] = [];
   loading = true;
   submitting = false;
   filter: RechargeFilter = 'pending';
-  inventoryAvailable = 0;
   showCreateModal = false;
   showApprovalModal = false;
-  selectedRecharge: RechargeWithDetails | null = null;
+  showRejectModal = false;
+  selectedRecharge: AdminRecharge | null = null;
   operationCode = '';
+  rejectionReason = '';
   approvalError = '';
+  rejectError = '';
   message = '';
   newRecharge = {
     user_id: '',
@@ -76,7 +42,7 @@ export class RechargesPageComponent implements OnInit {
     { value: 'rejected', label: 'Rechazadas' }
   ];
 
-  get filteredRecharges(): RechargeWithDetails[] {
+  get filteredRecharges(): AdminRecharge[] {
     if (this.filter === 'all') {
       return this.recharges;
     }
@@ -84,142 +50,38 @@ export class RechargesPageComponent implements OnInit {
     return this.recharges.filter((recharge) => recharge.status === this.filter);
   }
 
-  get inventoryTone(): 'danger' | 'warning' | 'safe' {
-    if (this.inventoryAvailable < 1000) {
-      return 'danger';
-    }
-
-    if (this.inventoryAvailable < 10000) {
-      return 'warning';
-    }
-
-    return 'safe';
-  }
-
   async ngOnInit(): Promise<void> {
     await Promise.all([
       this.loadRecharges(),
-      this.loadInventory(),
-      this.loadUsers(),
       this.loadPackages()
     ]);
     this.loading = false;
   }
 
-  async loadUsers(): Promise<void> {
-    try {
-      const { data, error } = await this.supabaseService.instance
-        .from('users')
-        .select('id, email, full_name, company')
-        .eq('is_active', true)
-        .order('full_name');
-
-      if (error) {
-        throw error;
-      }
-
-      this.users = (data ?? []).map((user: any) => ({
-        id: String(user.id ?? ''),
-        email: String(user.email ?? ''),
-        full_name: String(user.full_name ?? ''),
-        company: typeof user.company === 'string' ? user.company : null
-      }));
-    } catch (error) {
-      console.warn('Error loading recharge users:', error);
-      this.users = [];
-    }
-  }
-
   async loadPackages(): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.instance
-        .from('sms_packages')
-        .select('id, name, quantity, total_price')
-        .eq('is_active', true)
-        .order('quantity');
-
-      if (error) {
-        throw error;
-      }
-
-      this.packages = (data ?? []).map((packageOption: any) => ({
-        id: String(packageOption.id ?? ''),
-        name: String(packageOption.name ?? ''),
-        quantity: Number(packageOption.quantity ?? 0),
-        total_price: Number(packageOption.total_price ?? 0)
-      }));
+      this.packages = await this.rechargesService.listActivePackages();
     } catch (error) {
-      console.warn('Error loading sms packages:', error);
+      this.message = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar los paquetes activos.';
       this.packages = [];
-    }
-  }
-
-  async loadInventory(): Promise<void> {
-    try {
-      const { data, error } = await this.supabaseService.instance
-        .from('sms_inventory')
-        .select('available_sms')
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      this.inventoryAvailable = Number(data?.available_sms ?? 0);
-    } catch (error) {
-      console.warn('Error loading sms inventory:', error);
-      this.inventoryAvailable = 0;
     }
   }
 
   async loadRecharges(): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.instance
-        .from('recharges')
-        .select(`
-          *,
-          user:users(full_name, email, company),
-          package:sms_packages(name)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      this.recharges = (data ?? []).map((recharge: any) => ({
-        id: String(recharge.id ?? ''),
-        user_id: String(recharge.user_id ?? ''),
-        package_id: String(recharge.package_id ?? ''),
-        quantity: Number(recharge.quantity ?? 0),
-        amount: Number(recharge.amount ?? 0),
-        payment_method: String(recharge.payment_method ?? ''),
-        status: this.toStatus(recharge.status),
-        created_at: String(recharge.created_at ?? new Date().toISOString()),
-        operation_code: typeof recharge.operation_code === 'string' ? recharge.operation_code : null,
-        user: {
-          full_name: String(recharge.user?.full_name ?? ''),
-          email: String(recharge.user?.email ?? ''),
-          company: typeof recharge.user?.company === 'string' ? recharge.user.company : null
-        },
-        package: {
-          name: String(recharge.package?.name ?? '')
-        }
-      }));
+      this.recharges = await this.rechargesService.listAdminRecharges();
     } catch (error) {
-      console.warn('Error loading recharges:', error);
+      this.message = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar las recargas.';
       this.recharges = [];
     }
   }
 
   openCreateModal(): void {
-    this.message = '';
-    this.newRecharge = {
-      user_id: '',
-      package_id: '',
-      payment_method: 'yape'
-    };
-    this.showCreateModal = true;
+    this.message = 'La creación manual desde backoffice se implementará en FASE 3 con RPC atómica.';
   }
 
   closeCreateModal(): void {
@@ -228,16 +90,16 @@ export class RechargesPageComponent implements OnInit {
 
   handleCreateRecharge(): void {
     this.submitting = true;
-    this.message = 'La creación segura de recargas se conectará en la siguiente fase.';
+    this.message = 'La creación manual desde backoffice se implementará en FASE 3 con RPC atómica.';
     this.submitting = false;
     this.showCreateModal = false;
   }
 
-  openApprovalModal(recharge: RechargeWithDetails): void {
+  openApprovalModal(recharge: AdminRecharge): void {
     this.message = '';
     this.approvalError = '';
     this.selectedRecharge = recharge;
-    this.operationCode = '';
+    this.operationCode = recharge.operation_code ?? '';
     this.showApprovalModal = true;
   }
 
@@ -248,21 +110,89 @@ export class RechargesPageComponent implements OnInit {
     this.approvalError = '';
   }
 
-  handleApprove(): void {
-    if (!this.operationCode.trim()) {
-      this.approvalError = 'El código de operación bancaria es requerido';
+  openRejectModal(recharge: AdminRecharge): void {
+    this.message = '';
+    this.rejectError = '';
+    this.selectedRecharge = recharge;
+    this.rejectionReason = '';
+    this.showRejectModal = true;
+  }
+
+  closeRejectModal(): void {
+    this.showRejectModal = false;
+    this.selectedRecharge = null;
+    this.rejectionReason = '';
+    this.rejectError = '';
+  }
+
+  async handleApprove(): Promise<void> {
+    this.approvalError = '';
+
+    if (!this.selectedRecharge) {
+      this.approvalError = 'Selecciona una recarga para aprobar.';
       return;
     }
 
-    this.approvalError = '';
+    if (this.selectedRecharge.status !== 'pending') {
+      this.approvalError = 'Esta recarga ya fue procesada.';
+      return;
+    }
+
+    const operationCode = this.operationCode.trim() || this.selectedRecharge.operation_code || '';
+
+    if (!operationCode) {
+      this.approvalError = 'El código de operación es requerido para aprobar.';
+      return;
+    }
+
     this.submitting = true;
-    this.message = 'La aprobación segura de recargas se conectará en la siguiente fase.';
-    this.submitting = false;
-    this.closeApprovalModal();
+
+    try {
+      await this.rechargesService.approveRecharge(this.selectedRecharge.id, operationCode);
+      this.message = 'Recarga aprobada correctamente.';
+      this.closeApprovalModal();
+      await this.loadRecharges();
+    } catch (error) {
+      this.approvalError = error instanceof Error
+        ? error.message
+        : 'No se pudo aprobar la recarga.';
+    } finally {
+      this.submitting = false;
+    }
   }
 
-  handleReject(): void {
-    this.message = 'El rechazo seguro de recargas se conectará en la siguiente fase.';
+  async handleReject(): Promise<void> {
+    this.rejectError = '';
+
+    if (!this.selectedRecharge) {
+      this.rejectError = 'Selecciona una recarga para rechazar.';
+      return;
+    }
+
+    if (this.selectedRecharge.status !== 'pending') {
+      this.rejectError = 'Esta recarga ya fue procesada.';
+      return;
+    }
+
+    if (!this.rejectionReason.trim()) {
+      this.rejectError = 'Ingresa un motivo de rechazo.';
+      return;
+    }
+
+    this.submitting = true;
+
+    try {
+      await this.rechargesService.rejectRecharge(this.selectedRecharge.id, this.rejectionReason);
+      this.message = 'Recarga rechazada correctamente.';
+      this.closeRejectModal();
+      await this.loadRecharges();
+    } catch (error) {
+      this.rejectError = error instanceof Error
+        ? error.message
+        : 'No se pudo rechazar la recarga.';
+    } finally {
+      this.submitting = false;
+    }
   }
 
   statusLabel(status: RechargeStatus): string {
@@ -295,11 +225,5 @@ export class RechargesPageComponent implements OnInit {
       minute: '2-digit',
       hour12: true
     });
-  }
-
-  private toStatus(value: unknown): RechargeStatus {
-    return value === 'approved' || value === 'rejected' || value === 'pending'
-      ? value
-      : 'pending';
   }
 }

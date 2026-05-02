@@ -2,7 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { SupabaseService } from '../../../../shared/src/lib/services/supabase.service';
+import {
+  BackofficeService,
+  InventoryPurchaseRecord
+} from '@sms-fortuna/shared';
 
 const WHOLESALE_SMS_COST = 0.04012;
 
@@ -18,21 +21,6 @@ interface DashboardStats {
   sentMessages: number;
   deliveredMessages: number;
   totalRevenue: number;
-}
-
-interface InventoryPurchase {
-  id: string;
-  quantity: number;
-  amount: number;
-  cost_per_sms: number;
-  operation_number: string | null;
-  notes: string | null;
-  created_at: string;
-  purchased_by: string | null;
-  admin: {
-    full_name: string;
-    email: string;
-  } | null;
 }
 
 interface StatCard {
@@ -52,7 +40,7 @@ interface StatCard {
   styleUrl: './dashboard-page.component.scss'
 })
 export class DashboardPageComponent implements OnInit {
-  private readonly supabaseService = inject(SupabaseService);
+  private readonly backofficeService = inject(BackofficeService);
 
   stats: DashboardStats = {
     totalUsers: 0,
@@ -72,8 +60,7 @@ export class DashboardPageComponent implements OnInit {
   submitting = false;
   showPurchaseModal = false;
   showPurchaseHistory = false;
-  purchases: InventoryPurchase[] = [];
-  adminId: string | null = null;
+  purchases: InventoryPurchaseRecord[] = [];
   errorMessage = '';
   successMessage = '';
   purchaseForm = {
@@ -153,19 +140,13 @@ export class DashboardPageComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await this.loadAdmin();
-    await Promise.all([this.loadStats(), this.loadPurchases()]);
+    await Promise.all([this.loadStats(), this.loadInventory(), this.loadPurchases()]);
     this.loading = false;
   }
 
   async loadStats(): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.instance.rpc('get_dashboard_stats');
-
-      if (error) {
-        throw error;
-      }
-
+      const data = await this.backofficeService.getDashboardStats();
       if (!data) {
         return;
       }
@@ -186,27 +167,35 @@ export class DashboardPageComponent implements OnInit {
         totalRevenue: Number.parseFloat(String(statsData.users?.total_revenue ?? 0))
       };
     } catch (error) {
-      console.warn('Error loading stats:', error);
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar las estadísticas.';
+    }
+  }
+
+  async loadInventory(): Promise<void> {
+    try {
+      const inventory = await this.backofficeService.getInventoryState();
+      this.stats = {
+        ...this.stats,
+        inventoryAvailable: inventory.available_sms,
+        inventorySold: inventory.sold_sms,
+        inventoryTotal: inventory.total_sms
+      };
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo cargar el inventario.';
     }
   }
 
   async loadPurchases(): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.instance
-        .from('inventory_purchases')
-        .select(`
-          *,
-          admin:admins(full_name, email)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      this.purchases = (data ?? []) as unknown as InventoryPurchase[];
+      this.purchases = await this.backofficeService.listInventoryPurchases();
     } catch (error) {
-      console.warn('Error loading purchases:', error);
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo cargar el historial de compras.';
       this.purchases = [];
     }
   }
@@ -232,15 +221,15 @@ export class DashboardPageComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    if (!this.adminId) {
-      this.errorMessage = 'No se pudo identificar al administrador actual.';
-      return;
-    }
-
     const quantity = Number.parseInt(this.purchaseForm.quantity, 10);
     const amount = Number.parseFloat(this.purchaseForm.amount);
 
-    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(quantity) || quantity < 1) {
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      this.errorMessage = 'Ingresa una cantidad válida mayor a 0.';
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount < 0) {
       this.errorMessage = 'Ingresa un monto válido para calcular la cantidad de SMS.';
       return;
     }
@@ -248,25 +237,21 @@ export class DashboardPageComponent implements OnInit {
     try {
       this.submitting = true;
 
-      const { error } = await this.supabaseService.instance.rpc('add_sms_to_inventory', {
-        p_quantity: quantity,
-        p_amount: amount,
-        p_admin_id: this.adminId,
-        p_notes: this.purchaseForm.notes || null,
-        p_operation_number: this.purchaseForm.operationNumber || null
+      await this.backofficeService.addSmsInventory({
+        quantity,
+        amount,
+        operation_number: this.purchaseForm.operationNumber || null,
+        notes: this.purchaseForm.notes || null
       });
-
-      if (error) {
-        throw error;
-      }
 
       this.successMessage = 'Compra de SMS agregada al inventario exitosamente';
       this.showPurchaseModal = false;
       this.purchaseForm = { quantity: '', amount: '', operationNumber: '', notes: '' };
-      await Promise.all([this.loadStats(), this.loadPurchases()]);
+      await Promise.all([this.loadStats(), this.loadInventory(), this.loadPurchases()]);
     } catch (error) {
-      console.error('Error adding SMS to inventory:', error);
-      this.errorMessage = 'Error al agregar SMS al inventario';
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'Error al agregar SMS al inventario.';
     } finally {
       this.submitting = false;
     }
@@ -296,20 +281,5 @@ export class DashboardPageComponent implements OnInit {
 
   toNumber(value: string): number {
     return Number.parseFloat(value || '0');
-  }
-
-  private async loadAdmin(): Promise<void> {
-    try {
-      const { data, error } = await this.supabaseService.instance.auth.getSession();
-
-      if (error || !data.session?.user) {
-        this.adminId = null;
-        return;
-      }
-
-      this.adminId = data.session.user.id;
-    } catch {
-      this.adminId = null;
-    }
   }
 }

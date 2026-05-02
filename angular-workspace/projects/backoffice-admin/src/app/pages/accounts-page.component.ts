@@ -139,7 +139,7 @@ export class AccountsPageComponent implements OnInit {
     try {
       const { data, error } = await this.supabaseService.instance
         .from('profiles')
-        .select('id,email,full_name,razon_social,ruc,phone,role,is_active,credits,total_spent,created_at,updated_at')
+        .select('id,email,full_name,razon_social,ruc,phone,is_active,credits,total_spent,created_at,updated_at')
         .order('created_at', { ascending: false });
 
       if (error) {

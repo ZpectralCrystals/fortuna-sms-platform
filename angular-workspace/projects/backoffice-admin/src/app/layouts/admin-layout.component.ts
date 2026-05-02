@@ -3,7 +3,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../../../shared/src/lib/services/auth.service';
-import { SupabaseService } from '../../../../shared/src/lib/services/supabase.service';
 
 interface NavigationItem {
   name: string;
@@ -20,7 +19,6 @@ interface NavigationItem {
 })
 export class AdminLayoutComponent implements OnInit {
   private readonly authService = inject(AuthService);
-  private readonly supabaseService = inject(SupabaseService);
   private readonly router = inject(Router);
 
   readonly navigation: NavigationItem[] = [
@@ -75,19 +73,16 @@ export class AdminLayoutComponent implements OnInit {
 
   private async loadAdminInfo(): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.instance.auth.getSession();
+      const admin = await this.authService.getCurrentAdmin();
 
-      if (error || !data.session?.user) {
+      if (!admin) {
         return;
       }
 
-      const user = data.session.user;
-      const fullName = user.user_metadata?.['full_name'];
-
-      this.adminName = typeof fullName === 'string' && fullName.trim()
-        ? fullName
+      this.adminName = admin.full_name?.trim()
+        ? admin.full_name
         : 'Administrador Principal';
-      this.adminEmail = user.email ?? 'admin@fortuna.com.pe';
+      this.adminEmail = admin.email || 'admin@fortuna.com.pe';
     } catch {
       this.adminName = 'Administrador Principal';
       this.adminEmail = 'admin@fortuna.com.pe';

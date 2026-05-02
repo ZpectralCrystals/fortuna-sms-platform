@@ -43,38 +43,45 @@
 
   <section>
     <h2 class="section-title">Paquetes de recarga</h2>
+    <div *ngIf="loadingPackages" class="empty-history">
+      <p>Cargando paquetes...</p>
+    </div>
+    <div *ngIf="!loadingPackages && rechargePackages.length === 0" class="empty-history">
+      <p>No hay paquetes activos disponibles</p>
+    </div>
     <div class="packages-grid">
       <article
         *ngFor="let pkg of rechargePackages"
         class="package-card"
-        [ngClass]="{ 'package-card--popular': pkg.popular }"
+        [ngClass]="{ 'package-card--popular': pkg.is_popular }"
         (click)="selectPackage(pkg)"
       >
-        <div *ngIf="pkg.popular" class="popular-badge">
+        <div *ngIf="pkg.is_popular" class="popular-badge">
           Popular
         </div>
 
         <div class="package-content">
-          <p class="package-amount">S/ {{ formatNumber(pkg.amount) }}</p>
+          <p class="package-amount">S/ {{ formatCurrency(pkg.total_price) }}</p>
           <p class="package-caption">Total a pagar (inc. IGV)</p>
 
           <div class="package-sms">
-            <p>{{ formatNumber(pkg.sms) }} SMS</p>
-            <span>Recarga efectiva: S/ {{ formatCurrency(calculateSubtotal(pkg.amount)) }}</span>
+            <p>{{ formatNumber(pkg.sms_credits) }} SMS</p>
+            <span>{{ pkg.name }}</span>
+            <span>Precio por SMS: S/ {{ formatCurrency(pkg.price_per_sms) }}</span>
           </div>
 
           <div class="package-breakdown">
             <div>
               <span>Base imponible:</span>
-              <span>S/ {{ formatCurrency(calculateSubtotal(pkg.amount)) }}</span>
+              <span>S/ {{ formatCurrency(pkg.base_price) }}</span>
             </div>
             <div>
-              <span>IGV (18%):</span>
-              <span>S/ {{ formatCurrency(calculateIGV(pkg.amount)) }}</span>
+              <span>IGV ({{ formatNumber(pkg.tax_rate * 100) }}%):</span>
+              <span>S/ {{ formatCurrency(calculateIGV(pkg)) }}</span>
             </div>
             <div class="package-total">
               <span>Total a pagar:</span>
-              <strong>S/ {{ formatCurrency(pkg.amount) }}</strong>
+              <strong>S/ {{ formatCurrency(pkg.total_price) }}</strong>
             </div>
           </div>
 
@@ -92,7 +99,11 @@
     </div>
 
     <div class="history-list">
-      <div *ngIf="recharges.length === 0" class="empty-history">
+      <div *ngIf="loadingRecharges" class="empty-history">
+        <p>Cargando historial...</p>
+      </div>
+
+      <div *ngIf="!loadingRecharges && recharges.length === 0" class="empty-history">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="2" y="5" width="20" height="14" rx="2"></rect>
           <path d="M2 10h20"></path>
@@ -103,26 +114,39 @@
       <article *ngFor="let recharge of recharges" class="history-row">
         <div class="history-row__left">
           <div class="status-icon" [ngClass]="statusIconClass(recharge.status)">
-            <svg *ngIf="recharge.status === 'completed'" viewBox="0 0 24 24" aria-hidden="true">
+            <svg *ngIf="recharge.status === 'approved'" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M9 12l2 2 4-4"></path>
               <circle cx="12" cy="12" r="10"></circle>
             </svg>
-            <svg *ngIf="recharge.status === 'failed'" viewBox="0 0 24 24" aria-hidden="true">
+            <svg *ngIf="recharge.status === 'rejected'" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="10"></circle>
               <path d="m15 9-6 6"></path>
               <path d="m9 9 6 6"></path>
             </svg>
-            <svg *ngIf="recharge.status !== 'completed' && recharge.status !== 'failed'" viewBox="0 0 24 24" aria-hidden="true">
+            <svg *ngIf="recharge.status !== 'approved' && recharge.status !== 'rejected'" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="10"></circle>
               <path d="M12 6v6l4 2"></path>
             </svg>
           </div>
 
           <div>
-            <p class="history-sms">{{ formatNumber(recharge.sms_credits) }} SMS</p>
+            <p class="history-sms">{{ recharge.package?.name || 'Paquete SMS' }}</p>
             <p class="history-meta">
+              {{ formatNumber(recharge.sms_credits) }} SMS -
               {{ recharge.payment_method || 'Sin método' }} -
               {{ formatHistoryDate(recharge.created_at) }}
+            </p>
+            <p *ngIf="recharge.operation_code" class="history-meta">
+              Operación: {{ recharge.operation_code }}
+            </p>
+            <p *ngIf="recharge.approved_at" class="history-meta">
+              Aprobado: {{ formatHistoryDate(recharge.approved_at) }}
+            </p>
+            <p *ngIf="recharge.rejected_at" class="history-meta">
+              Rechazado: {{ formatHistoryDate(recharge.rejected_at) }}
+            </p>
+            <p *ngIf="recharge.rejection_reason" class="history-meta">
+              Motivo: {{ recharge.rejection_reason }}
             </p>
           </div>
         </div>
@@ -144,25 +168,28 @@
       <div class="selected-package-card">
         <p class="selected-label">Paquete seleccionado</p>
         <div class="selected-summary">
-          <p class="selected-amount">S/ {{ formatNumber(selectedPackage?.amount || 0) }}</p>
-          <p class="selected-sms">{{ formatNumber(selectedPackage?.sms || 0) }} SMS</p>
+          <p class="selected-amount">S/ {{ formatCurrency(selectedPackage?.total_price || 0) }}</p>
+          <p class="selected-sms">{{ formatNumber(selectedPackage?.sms_credits || 0) }} SMS</p>
           <p class="selected-effective">
-            Recarga efectiva: S/ {{ formatCurrency(calculateSubtotal(selectedPackage?.amount || 0)) }}
+            {{ selectedPackage?.name || 'Paquete SMS' }}
+          </p>
+          <p class="selected-effective">
+            Precio por SMS: S/ {{ formatCurrency(selectedPackage?.price_per_sms || 0) }}
           </p>
         </div>
 
         <div class="selected-breakdown">
           <div>
             <span>Base imponible:</span>
-            <strong>S/ {{ formatCurrency(calculateSubtotal(selectedPackage?.amount || 0)) }}</strong>
+            <strong>S/ {{ formatCurrency(calculateSubtotal(selectedPackage)) }}</strong>
           </div>
           <div>
-            <span>IGV (18%):</span>
-            <strong>S/ {{ formatCurrency(calculateIGV(selectedPackage?.amount || 0)) }}</strong>
+            <span>IGV ({{ formatNumber((selectedPackage?.tax_rate || 0) * 100) }}%):</span>
+            <strong>S/ {{ formatCurrency(calculateIGV(selectedPackage)) }}</strong>
           </div>
           <div class="selected-total">
             <span>Total a pagar:</span>
-            <strong>S/ {{ formatCurrency(calculateTotal(selectedPackage?.amount || 0)) }}</strong>
+            <strong>S/ {{ formatCurrency(calculateTotal(selectedPackage)) }}</strong>
           </div>
         </div>
       </div>
@@ -204,7 +231,7 @@
             <p>2. Escanea el código QR</p>
             <p>
               3. Verifica el monto:
-              <strong>S/ {{ formatCurrency(calculateTotal(selectedPackage?.amount || 0)) }}</strong>
+              <strong>S/ {{ formatCurrency(calculateTotal(selectedPackage)) }}</strong>
             </p>
             <p>4. Completa la transacción</p>
           </div>
@@ -276,7 +303,7 @@
 
             <div class="bank-card">
               <p>Monto a transferir</p>
-              <strong class="transfer-amount">S/ {{ formatCurrency(calculateTotal(selectedPackage?.amount || 0)) }}</strong>
+              <strong class="transfer-amount">S/ {{ formatCurrency(calculateTotal(selectedPackage)) }}</strong>
               <span>Incluye IGV</span>
             </div>
           </div>
@@ -311,6 +338,17 @@
         </div>
       </section>
 
+      <div class="operation-section">
+        <label for="operationCode">Código de operación</label>
+        <input
+          id="operationCode"
+          type="text"
+          name="operationCode"
+          [(ngModel)]="operationCode"
+          placeholder="Opcional: OP-123456789"
+        />
+      </div>
+
       <p *ngIf="requestMessage" class="request-message">
         {{ requestMessage }}
       </p>
@@ -322,10 +360,10 @@
         <button
           type="button"
           class="confirm-button"
-          [disabled]="!selectedMethod"
-          (click)="showPendingRechargeMessage()"
+          [disabled]="!selectedMethod || !selectedPackage || submitting"
+          (click)="submitRechargeRequest()"
         >
-          Confirmar recarga
+          {{ submitting ? 'Enviando...' : 'Confirmar recarga' }}
         </button>
       </div>
     </section>
