@@ -3,6 +3,10 @@
 </div>
 
 <div *ngIf="!loading" class="messages-page">
+  <div *ngIf="errorMessage" class="error-box">
+    {{ errorMessage }}
+  </div>
+
   <div class="page-header">
     <div class="title-group">
       <div class="title-icon">
@@ -52,7 +56,7 @@
             type="text"
             [(ngModel)]="searchTerm"
             (ngModelChange)="applyFilters()"
-            placeholder="Buscar por destinatario, mensaje, cliente..."
+            placeholder="Buscar por cliente, email, destinatario o mensaje..."
           />
         </div>
 
@@ -61,7 +65,7 @@
             <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
             </svg>
-            <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()">
+            <select [(ngModel)]="statusFilter" (ngModelChange)="onStatusFilterChange()">
               <option value="all">Todos los estados</option>
               <option value="pending">Pendiente</option>
               <option value="sent">Enviado</option>
@@ -69,13 +73,6 @@
               <option value="failed">Fallido</option>
             </select>
           </div>
-
-          <select class="date-select" [(ngModel)]="dateFilter" (ngModelChange)="applyFilters()">
-            <option value="all">Todo el tiempo</option>
-            <option value="today">Hoy</option>
-            <option value="week">Última semana</option>
-            <option value="month">Último mes</option>
-          </select>
         </div>
       </div>
     </div>
@@ -87,21 +84,25 @@
             <th>Cliente</th>
             <th>Destinatario</th>
             <th>Mensaje</th>
+            <th>Segmentos</th>
+            <th>Costo</th>
             <th>Estado</th>
+            <th>Modo</th>
+            <th>Proveedor</th>
+            <th>Creado</th>
             <th>Enviado</th>
-            <th>Entregado</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="filteredMessages.length === 0">
-            <td class="empty-cell" colspan="6">No se encontraron mensajes</td>
+            <td class="empty-cell" colspan="10">Aún no hay mensajes enviados.</td>
           </tr>
 
           <tr *ngFor="let item of filteredMessages" class="message-row">
             <td>
-              <div class="client-name">{{ item.user.full_name }}</div>
-              <div class="client-email">{{ item.user.email }}</div>
-              <div *ngIf="item.user.company" class="client-company">{{ item.user.company }}</div>
+              <div class="client-name">{{ clientName(item) }}</div>
+              <div class="client-email">{{ clientEmail(item) }}</div>
+              <div *ngIf="clientCompany(item) as company" class="client-company">{{ company }}</div>
             </td>
             <td>
               <div class="recipient">{{ item.recipient }}</div>
@@ -110,6 +111,8 @@
               <div class="message-text" [title]="item.message">{{ item.message }}</div>
               <div *ngIf="item.error_message" class="error-text">{{ item.error_message }}</div>
             </td>
+            <td class="number-cell">{{ formatNumber(item.segments) }}</td>
+            <td class="number-cell">{{ formatCost(item.cost) }}</td>
             <td>
               <span class="status-badge" [ngClass]="item.status">
                 <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -136,8 +139,17 @@
                 {{ statusLabel(item.status) }}
               </span>
             </td>
+            <td>
+              <span *ngIf="isTestMode(item); else prodMode" class="mode-badge mode-badge--test">
+                Test
+              </span>
+              <ng-template #prodMode>
+                <span class="mode-badge">Prod</span>
+              </ng-template>
+            </td>
+            <td class="provider-cell">{{ provider(item) }}</td>
+            <td class="date-cell">{{ formatDate(item.created_at) }}</td>
             <td class="date-cell">{{ formatDate(item.sent_at) }}</td>
-            <td class="date-cell">{{ formatDate(item.delivered_at) }}</td>
           </tr>
         </tbody>
       </table>

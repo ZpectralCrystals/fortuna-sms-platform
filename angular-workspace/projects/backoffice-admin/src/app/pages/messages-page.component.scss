@@ -19,6 +19,15 @@
   gap: 1.5rem;
 }
 
+.error-box {
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
 .page-header {
   display: flex;
   align-items: center;
@@ -371,6 +380,31 @@ td {
   font-size: 0.875rem;
   line-height: 1.25rem;
   white-space: nowrap;
+}
+
+.number-cell,
+.provider-cell {
+  color: #334155;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+}
+
+.mode-badge--test {
+  background: #ecfeff;
+  color: #0e7490;
 }
 
 .empty-cell {

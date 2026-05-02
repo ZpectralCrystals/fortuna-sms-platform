@@ -1,28 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AdminSmsMessage, SmsMessageStatus, SmsService } from '@sms-fortuna/shared';
 
-type MessageStatus = 'pending' | 'sent' | 'delivered' | 'failed';
-type StatusFilter = MessageStatus | 'all';
-type DateFilter = 'all' | 'today' | 'week' | 'month';
-
-interface BackofficeMessage {
-  id: string;
-  user_id: string;
-  recipient: string;
-  message: string;
-  status: MessageStatus;
-  provider_message_id: string | null;
-  error_message: string | null;
-  sent_at: string | null;
-  delivered_at: string | null;
-  created_at: string;
-  user: {
-    full_name: string;
-    email: string;
-    company: string | null;
-  };
-}
+type StatusFilter = SmsMessageStatus | 'all';
 
 @Component({
   selector: 'bo-messages-page',
@@ -32,12 +13,14 @@ interface BackofficeMessage {
   styleUrl: './messages-page.component.scss'
 })
 export class MessagesPageComponent implements OnInit {
-  messages: BackofficeMessage[] = [];
-  filteredMessages: BackofficeMessage[] = [];
+  private readonly smsService = inject(SmsService);
+
+  messages: AdminSmsMessage[] = [];
+  filteredMessages: AdminSmsMessage[] = [];
   loading = true;
+  errorMessage = '';
   searchTerm = '';
   statusFilter: StatusFilter = 'all';
-  dateFilter: DateFilter = 'all';
 
   get stats() {
     return {
@@ -49,11 +32,26 @@ export class MessagesPageComponent implements OnInit {
     };
   }
 
-  ngOnInit(): void {
-    this.messages = [];
-    this.filteredMessages = [];
-    this.applyFilters();
-    this.loading = false;
+  async ngOnInit(): Promise<void> {
+    await this.loadMessages();
+  }
+
+  async loadMessages(): Promise<void> {
+    this.loading = true;
+    this.errorMessage = '';
+
+    try {
+      this.messages = await this.smsService.listAdminMessages({ status: this.statusFilter });
+      this.applyFilters();
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar los mensajes. Verifica permisos de administrador.';
+      this.messages = [];
+      this.filteredMessages = [];
+    } finally {
+      this.loading = false;
+    }
   }
 
   applyFilters(): void {
@@ -65,40 +63,18 @@ export class MessagesPageComponent implements OnInit {
       filtered = filtered.filter((message) =>
         message.recipient.toLowerCase().includes(term) ||
         message.message.toLowerCase().includes(term) ||
-        message.user.full_name.toLowerCase().includes(term) ||
-        message.user.email.toLowerCase().includes(term) ||
-        (message.user.company ?? '').toLowerCase().includes(term)
+        this.clientName(message).toLowerCase().includes(term) ||
+        this.clientEmail(message).toLowerCase().includes(term) ||
+        (message.profile?.razon_social ?? '').toLowerCase().includes(term) ||
+        (message.profile?.ruc ?? '').toLowerCase().includes(term)
       );
-    }
-
-    if (this.statusFilter !== 'all') {
-      filtered = filtered.filter((message) => message.status === this.statusFilter);
-    }
-
-    if (this.dateFilter !== 'all') {
-      const now = new Date();
-      const filterDate = new Date();
-
-      switch (this.dateFilter) {
-        case 'today':
-          filterDate.setHours(0, 0, 0, 0);
-          break;
-        case 'week':
-          filterDate.setDate(now.getDate() - 7);
-          break;
-        case 'month':
-          filterDate.setMonth(now.getMonth() - 1);
-          break;
-      }
-
-      filtered = filtered.filter((message) => new Date(message.created_at) >= filterDate);
     }
 
     this.filteredMessages = filtered;
   }
 
-  statusLabel(status: MessageStatus): string {
-    const labels: Record<MessageStatus, string> = {
+  statusLabel(status: SmsMessageStatus): string {
+    const labels: Record<SmsMessageStatus, string> = {
       pending: 'Pendiente',
       sent: 'Enviado',
       delivered: 'Entregado',
@@ -106,6 +82,49 @@ export class MessagesPageComponent implements OnInit {
     };
 
     return labels[status];
+  }
+
+  async onStatusFilterChange(): Promise<void> {
+    await this.loadMessages();
+  }
+
+  clientName(message: AdminSmsMessage): string {
+    return message.profile?.full_name
+      || message.profile?.email
+      || 'Cliente sin nombre';
+  }
+
+  clientEmail(message: AdminSmsMessage): string {
+    return message.profile?.email || '-';
+  }
+
+  clientCompany(message: AdminSmsMessage): string | null {
+    if (message.profile?.razon_social && message.profile?.ruc) {
+      return `${message.profile.razon_social} / ${message.profile.ruc}`;
+    }
+
+    return message.profile?.razon_social || message.profile?.ruc || null;
+  }
+
+  provider(message: AdminSmsMessage): string {
+    return message.provider_response?.provider
+      || message.provider_response?.provider_name
+      || (this.isTestMode(message) ? 'test' : '-');
+  }
+
+  isTestMode(message: AdminSmsMessage): boolean {
+    return message.provider_response?.test_mode === true;
+  }
+
+  formatNumber(value: number): string {
+    return value.toLocaleString('es-PE');
+  }
+
+  formatCost(value: number): string {
+    return value.toLocaleString('es-PE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    });
   }
 
   formatDate(value: string | null): string {
