@@ -88,7 +88,7 @@
 
           <div class="message-row__content">
             <div class="message-row__headline">
-              <span>{{ message.to_phone }}</span>
+              <span>{{ message.recipient }}</span>
               <strong [ngClass]="statusBadgeClass(message.status)">
                 {{ statusText(message.status) }}
               </strong>
@@ -98,8 +98,11 @@
 
             <div class="message-meta">
               <span>{{ formatDate(message.created_at) }}</span>
-              <span *ngIf="message.delivered_at">
-                Entregado: {{ formatTime(message.delivered_at) }}
+              <span *ngIf="message.sent_at">
+                Enviado: {{ formatTime(message.sent_at) }}
+              </span>
+              <span *ngIf="message.segments">
+                {{ message.segments }} segmento(s)
               </span>
             </div>
 

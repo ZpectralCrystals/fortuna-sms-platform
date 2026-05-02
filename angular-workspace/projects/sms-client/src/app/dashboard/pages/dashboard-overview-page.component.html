@@ -114,7 +114,7 @@
       <article *ngFor="let message of recentMessages" class="message-row">
         <div class="message-row__content">
           <div class="message-row__headline">
-            <span>{{ message.to_phone }}</span>
+            <span>{{ message.recipient }}</span>
             <strong [ngClass]="statusClass(message.status)">{{ statusLabel(message.status) }}</strong>
           </div>
           <p>{{ message.message }}</p>

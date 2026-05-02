@@ -10,8 +10,14 @@
       <circle cx="12" cy="12" r="10"></circle>
     </svg>
     <div>
-      <p>Mensajes enviados exitosamente</p>
-      <span>{{ phoneCount }} SMS enviados - S/ {{ totalCost.toFixed(2) }} debitados</span>
+      <p>SMS enviado en modo test</p>
+      <span>
+        {{ sendResult?.recipient || recipient }} -
+        {{ sendResult?.segments || smsCount }} segmento(s) -
+        costo {{ sendResult?.cost ?? requiredCredits }} -
+        estado {{ sendResult?.status || 'sent' }} -
+        test_mode {{ sendResult?.test_mode === false ? 'false' : 'true' }}
+      </span>
     </div>
   </div>
 
@@ -55,6 +61,15 @@
     </div>
 
     <form class="send-form" (ngSubmit)="handleSend()">
+      <div *ngIf="mode !== 'single'" class="alert alert--error">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 8v4"></path>
+          <path d="M12 16h.01"></path>
+        </svg>
+        <p>Envío múltiple se implementará en siguiente fase</p>
+      </div>
+
       <ng-container *ngIf="mode === 'file'">
         <div class="field">
           <label for="campaignName">Nombre de la campaña</label>
@@ -225,7 +240,7 @@
       <div class="summary-card">
         <div class="summary-card__top">
           <span>Resumen de envío</span>
-          <strong>S/ {{ totalCost.toFixed(2) }}</strong>
+          <strong>{{ requiredCredits }} crédito(s)</strong>
         </div>
 
         <div class="summary-grid">
@@ -255,7 +270,7 @@
       <button
         type="submit"
         class="submit-button"
-        [disabled]="sending || phoneCount === 0"
+        [disabled]="sending || phoneCount === 0 || mode !== 'single'"
       >
         <ng-container *ngIf="sending; else sendLabel">
           <span class="small-spinner"></span>
@@ -266,7 +281,7 @@
             <path d="m22 2-7 20-4-9-9-4Z"></path>
             <path d="M22 2 11 13"></path>
           </svg>
-          Enviar {{ phoneCount }} SMS
+          {{ mode === 'single' ? 'Enviar 1 SMS' : 'Envío bloqueado' }}
         </ng-template>
       </button>
     </form>
@@ -276,11 +291,10 @@
     <h3>Información importante</h3>
     <ul>
       <li><span>•</span>Cada SMS admite 160 caracteres (mensajes largos se dividen automáticamente)</li>
-      <li><span>•</span>Costo: S/ 0.08 por SMS - El mejor precio del Perú</li>
-      <li><span>•</span>Entrega en menos de 5 segundos con tasa de éxito del 99.9%</li>
-      <li><span>•</span><strong>Múltiple:</strong> Sube archivos .txt o .csv con números para enviar el mismo mensaje a todos</li>
-      <li><span>•</span><strong>Desde Fichero:</strong> Sube un Excel con columnas Teléfono y Mensaje para enviar mensajes personalizados</li>
-      <li><span>•</span>Los envíos desde fichero quedan registrados como campañas para consulta futura</li>
+      <li><span>•</span>Esta fase usa provider test interno mediante Edge Function y RPC segura</li>
+      <li><span>•</span>Angular no inserta mensajes ni descuenta créditos directamente</li>
+      <li><span>•</span><strong>Múltiple:</strong> pendiente para siguiente fase</li>
+      <li><span>•</span><strong>Desde Fichero:</strong> pendiente para siguiente fase</li>
     </ul>
   </section>
 </div>

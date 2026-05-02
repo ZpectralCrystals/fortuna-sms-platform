@@ -11,7 +11,7 @@ interface DashboardProfile {
 
 interface SmsMessage {
   id: string;
-  to_phone: string;
+  recipient: string;
   message: string;
   status: 'pending' | 'sent' | 'delivered' | 'failed' | string;
   cost: number | null;
@@ -207,7 +207,7 @@ export class DashboardOverviewPageComponent implements OnInit {
 
       const { data: messagesData } = await this.supabase.instance
         .from('sms_messages')
-        .select('id, to_phone, message, status, cost, created_at')
+        .select('id, recipient, message, status, cost, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 

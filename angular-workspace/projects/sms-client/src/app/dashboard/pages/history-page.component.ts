@@ -8,11 +8,13 @@ type StatusFilter = 'all' | 'delivered' | 'sent' | 'pending' | 'failed';
 interface SmsHistoryMessage {
   id: string;
   user_id: string;
-  to_phone: string;
+  recipient: string;
   message: string;
+  segments: number | null;
   status: string;
   cost: number | null;
   created_at: string;
+  sent_at: string | null;
   delivered_at: string | null;
   error_message: string | null;
 }
@@ -46,7 +48,7 @@ export class HistoryPageComponent implements OnInit {
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.trim().toLowerCase();
       filtered = filtered.filter((message) =>
-        message.to_phone.includes(term) ||
+        message.recipient.includes(term) ||
         message.message.toLowerCase().includes(term)
       );
     }
@@ -121,7 +123,7 @@ export class HistoryPageComponent implements OnInit {
     const headers = ['Fecha', 'Teléfono', 'Mensaje', 'Estado', 'Costo'];
     const rows = this.filteredMessages.map((message) => [
       new Date(message.created_at).toLocaleString('es-PE'),
-      message.to_phone,
+      message.recipient,
       message.message.replace(/,/g, ';'),
       this.statusText(message.status),
       `S/ ${this.formatCurrency(message.cost ?? 0)}`
@@ -148,7 +150,7 @@ export class HistoryPageComponent implements OnInit {
 
       const { data } = await this.supabase.instance
         .from('sms_messages')
-        .select('id, user_id, to_phone, message, status, cost, created_at, delivered_at, error_message')
+        .select('id, user_id, recipient, message, segments, cost, status, created_at, sent_at, error_message')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 

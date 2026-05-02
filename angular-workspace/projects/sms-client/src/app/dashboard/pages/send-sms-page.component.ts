@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SupabaseService } from '@sms-fortuna/shared';
+import { SmsSendResult, SmsService, SupabaseService } from '@sms-fortuna/shared';
 
 type SendMode = 'single' | 'multiple' | 'file';
 
@@ -24,6 +24,7 @@ interface SendProfile {
 })
 export class SendSmsPageComponent implements OnInit {
   private readonly supabase = inject(SupabaseService);
+  private readonly smsService = inject(SmsService);
 
   mode: SendMode = 'single';
   recipient = '';
@@ -37,6 +38,7 @@ export class SendSmsPageComponent implements OnInit {
   success = false;
   error = '';
   profile: SendProfile | null = null;
+  sendResult: SmsSendResult | null = null;
 
   async ngOnInit(): Promise<void> {
     await this.loadProfileCredits();
@@ -66,12 +68,20 @@ export class SendSmsPageComponent implements OnInit {
     return this.getPhonesList().length * this.smsCount * 0.08;
   }
 
+  get requiredCredits(): number {
+    if (this.mode === 'file') {
+      return this.totalFileSms;
+    }
+
+    return this.getPhonesList().length * this.smsCount;
+  }
+
   get credits(): number {
     return Number(this.profile?.credits ?? 0);
   }
 
   get afterCredits(): number {
-    return Math.max(0, this.credits - this.totalCost);
+    return Math.max(0, this.credits - this.requiredCredits);
   }
 
   get previewMessages(): FileMessage[] {
@@ -82,6 +92,7 @@ export class SendSmsPageComponent implements OnInit {
     this.mode = mode;
     this.error = '';
     this.success = false;
+    this.sendResult = null;
   }
 
   handleTemplateSelect(templateId: string): void {
@@ -188,42 +199,53 @@ export class SendSmsPageComponent implements OnInit {
     this.fileMessages = [];
   }
 
-  handleSend(): void {
+  async handleSend(): Promise<void> {
     this.error = '';
     this.success = false;
+    this.sendResult = null;
 
-    if (this.mode === 'file') {
-      if (this.fileMessages.length === 0) {
-        this.error = 'Debes cargar un archivo con los mensajes a enviar';
-        return;
-      }
-
-      const invalidPhones = this.fileMessages.filter((fm) => !this.validatePhone(fm.phone));
-      if (invalidPhones.length > 0) {
-        this.error = `Números inválidos encontrados: ${invalidPhones.slice(0, 3).map((fm) => fm.phone).join(', ')}${invalidPhones.length > 3 ? '...' : ''}. Formato: +51987654321`;
-        return;
-      }
-    } else {
-      const phones = this.getPhonesList();
-
-      if (phones.length === 0) {
-        this.error = 'Debes ingresar al menos un número de teléfono';
-        return;
-      }
-
-      const invalidPhones = phones.filter((phone) => !this.validatePhone(phone));
-      if (invalidPhones.length > 0) {
-        this.error = `Números inválidos: ${invalidPhones.slice(0, 3).join(', ')}${invalidPhones.length > 3 ? '...' : ''}. Formato: +51987654321`;
-        return;
-      }
-    }
-
-    if (this.credits < this.totalCost) {
-      this.error = `Créditos insuficientes. Necesitas ${this.totalCost.toFixed(2)} SMS pero solo tienes ${this.credits.toFixed(2)}`;
+    if (this.mode !== 'single') {
+      this.error = 'Envío múltiple se implementará en siguiente fase';
       return;
     }
 
-    this.error = 'El envío real se conectará en la siguiente fase.';
+    const recipient = this.recipient.trim();
+    const message = this.message.trim();
+
+    if (!recipient) {
+      this.error = 'Debes ingresar un número de teléfono';
+      return;
+    }
+
+    if (!this.validatePhone(recipient)) {
+      this.error = 'Número inválido. Usa formato peruano +51XXXXXXXXX.';
+      return;
+    }
+
+    if (!message) {
+      this.error = 'El mensaje no puede estar vacío.';
+      return;
+    }
+
+    if (this.credits < this.requiredCredits) {
+      this.error = `Créditos insuficientes. Necesitas ${this.requiredCredits} créditos pero solo tienes ${this.credits.toFixed(0)}.`;
+      return;
+    }
+
+    this.sending = true;
+
+    try {
+      const result = await this.smsService.sendSingle({ recipient, message });
+      this.sendResult = result;
+      this.success = true;
+      await this.loadProfileCredits();
+    } catch (error) {
+      this.error = error instanceof Error
+        ? error.message
+        : 'No se pudo enviar el SMS.';
+    } finally {
+      this.sending = false;
+    }
   }
 
   smsSegments(value: string): number {
