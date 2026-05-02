@@ -15,7 +15,6 @@ interface SmsHistoryMessage {
   cost: number | null;
   created_at: string;
   sent_at: string | null;
-  delivered_at: string | null;
   error_message: string | null;
 }
 

@@ -1,7 +1,7 @@
 <div class="send-page">
   <div>
     <h1>Enviar SMS</h1>
-    <p class="page-subtitle">Envía mensajes individuales o campañas masivas</p>
+    <p class="page-subtitle">Envía SMS individuales en modo test</p>
   </div>
 
   <div *ngIf="success" class="alert alert--success">
@@ -14,7 +14,7 @@
       <span>
         {{ sendResult?.recipient || recipient }} -
         {{ sendResult?.segments || smsCount }} segmento(s) -
-        costo {{ sendResult?.cost ?? requiredCredits }} -
+        costo {{ sendResult?.cost ?? requiredCredits }} crédito(s) -
         estado {{ sendResult?.status || 'sent' }} -
         test_mode {{ sendResult?.test_mode === false ? 'false' : 'true' }}
       </span>
@@ -117,7 +117,7 @@
           <div class="format-info">
             <p>Información del formato:</p>
             <ul>
-              <li><strong>Columna 1:</strong> Número de teléfono (Ej: +51987654321 o 987654321)</li>
+              <li><strong>Columna 1:</strong> Número de teléfono (Ej: +51987654321)</li>
               <li><strong>Columna 2:</strong> Mensaje personalizado para cada destinatario</li>
               <li>Tamaño máximo: 500KB</li>
               <li>Formatos compatibles: Excel (.xlsx, .xls), CSV (.csv), Texto (.txt)</li>
@@ -166,7 +166,7 @@
             [(ngModel)]="recipient"
             placeholder="+51987654321"
           />
-          <small>Formato: +51987654321 o 987654321</small>
+          <small>Formato: +51987654321</small>
         </div>
 
         <div class="example-card example-card--blue">
@@ -198,7 +198,7 @@
             required
             rows="6"
             [(ngModel)]="multiplePhones"
-            placeholder="+51987654321&#10;+51976543210&#10;965432109"
+            placeholder="+51987654321&#10;+51976543210"
             class="mono"
           ></textarea>
           <small>{{ phoneCount }} números ingresados</small>

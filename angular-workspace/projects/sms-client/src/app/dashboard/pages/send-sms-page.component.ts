@@ -183,7 +183,7 @@ export class SendSmsPageComponent implements OnInit {
       ['Telefono', 'Mensaje'],
       ['+51987654321', 'Hola Juan, tenemos una promoción especial para ti'],
       ['+51976543210', 'Hola María, tu pedido está listo para recoger'],
-      ['965432109', 'Estimado cliente, le recordamos su cita del día de mañana']
+      ['+51965432109', 'Estimado cliente, le recordamos su cita del día de mañana']
     ];
 
     const csv = template.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
