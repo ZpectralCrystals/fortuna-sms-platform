@@ -81,7 +81,7 @@ export class RechargesPageComponent implements OnInit {
   }
 
   openCreateModal(): void {
-    this.message = 'La creación manual desde backoffice se implementará en FASE 3 con RPC atómica.';
+    this.message = 'La creación manual desde backoffice se implementará en una fase posterior.';
   }
 
   closeCreateModal(): void {
@@ -90,7 +90,7 @@ export class RechargesPageComponent implements OnInit {
 
   handleCreateRecharge(): void {
     this.submitting = true;
-    this.message = 'La creación manual desde backoffice se implementará en FASE 3 con RPC atómica.';
+    this.message = 'La creación manual desde backoffice se implementará en una fase posterior.';
     this.submitting = false;
     this.showCreateModal = false;
   }
@@ -203,6 +203,22 @@ export class RechargesPageComponent implements OnInit {
     };
 
     return labels[status];
+  }
+
+  clientName(recharge: AdminRecharge): string {
+    return recharge.profile?.full_name?.trim()
+      || recharge.profile?.email?.trim()
+      || 'Cliente sin nombre';
+  }
+
+  clientEmail(recharge: AdminRecharge): string {
+    return recharge.profile?.email?.trim() || '-';
+  }
+
+  clientCompany(recharge: AdminRecharge): string | null {
+    return recharge.profile?.razon_social?.trim()
+      || recharge.profile?.ruc?.trim()
+      || null;
   }
 
   formatNumber(value: number): string {

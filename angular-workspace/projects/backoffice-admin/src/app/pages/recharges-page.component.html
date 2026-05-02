@@ -78,10 +78,10 @@
           <tr *ngFor="let recharge of filteredRecharges">
             <td>
               <div>
-                <div class="user-name">{{ recharge.profile?.full_name || '-' }}</div>
-                <div class="user-email">{{ recharge.profile?.email || '-' }}</div>
-                <div *ngIf="recharge.profile?.razon_social || recharge.profile?.ruc" class="user-company">
-                  {{ recharge.profile?.razon_social || recharge.profile?.ruc }}
+                <div class="user-name">{{ clientName(recharge) }}</div>
+                <div class="user-email">{{ clientEmail(recharge) }}</div>
+                <div *ngIf="clientCompany(recharge) as company" class="user-company">
+                  {{ company }}
                 </div>
               </div>
             </td>
@@ -180,7 +180,7 @@
         <div class="info-list">
           <div class="info-row">
             <span>Cliente:</span>
-            <strong>{{ selectedRecharge.profile?.full_name || '-' }}</strong>
+            <strong>{{ clientName(selectedRecharge) }}</strong>
           </div>
           <div class="info-row">
             <span>Paquete:</span>
@@ -264,7 +264,7 @@
         <div class="info-list">
           <div class="info-row">
             <span>Cliente:</span>
-            <strong>{{ selectedRecharge.profile?.full_name || '-' }}</strong>
+            <strong>{{ clientName(selectedRecharge) }}</strong>
           </div>
           <div class="info-row">
             <span>Paquete:</span>

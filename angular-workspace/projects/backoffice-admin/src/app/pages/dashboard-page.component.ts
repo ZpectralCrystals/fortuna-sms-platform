@@ -140,7 +140,8 @@ export class DashboardPageComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.loadStats(), this.loadInventory(), this.loadPurchases()]);
+    await Promise.all([this.loadStats(), this.loadPurchases()]);
+    await this.loadInventory();
     this.loading = false;
   }
 
@@ -247,7 +248,8 @@ export class DashboardPageComponent implements OnInit {
       this.successMessage = 'Compra de SMS agregada al inventario exitosamente';
       this.showPurchaseModal = false;
       this.purchaseForm = { quantity: '', amount: '', operationNumber: '', notes: '' };
-      await Promise.all([this.loadStats(), this.loadInventory(), this.loadPurchases()]);
+      await Promise.all([this.loadStats(), this.loadPurchases()]);
+      await this.loadInventory();
     } catch (error) {
       this.errorMessage = error instanceof Error
         ? error.message
