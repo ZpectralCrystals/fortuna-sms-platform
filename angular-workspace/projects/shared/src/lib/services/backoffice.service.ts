@@ -4,6 +4,7 @@ import {
   BackofficeClientMessage,
   BackofficeClientProfile,
   BackofficeClientRecharge,
+  BackofficeProfileAuditLog,
   UpdateClientBasicInfoPayload
 } from '../models/user.model';
 import { SupabaseService } from './supabase.service';
@@ -149,18 +150,20 @@ export class BackofficeService {
   }
 
   async getClientDetail(profileId: string): Promise<BackofficeClientDetail> {
-    const [profile, recentRecharges, recentMessages, allRecharges, allMessages] = await Promise.all([
+    const [profile, recentRecharges, recentMessages, allRecharges, allMessages, auditLogs] = await Promise.all([
       this.getClientProfile(profileId),
       this.listClientRecharges(profileId, 5),
       this.listClientMessages(profileId, 5),
       this.listClientRecharges(profileId),
-      this.listClientMessages(profileId)
+      this.listClientMessages(profileId),
+      this.listClientAuditLogs(profileId, 5).catch(() => [])
     ]);
 
     return {
       profile,
       recentRecharges,
       recentMessages,
+      auditLogs,
       counts: {
         pendingRecharges: allRecharges.filter((recharge) => recharge.status === 'pending').length,
         approvedRecharges: allRecharges.filter((recharge) => recharge.status === 'approved').length,
@@ -171,30 +174,28 @@ export class BackofficeService {
   }
 
   async updateClientBasicInfo(profileId: string, payload: UpdateClientBasicInfoPayload): Promise<void> {
-    const { error } = await this.supabase.instance
-      .from('profiles')
-      .update({
-        full_name: payload.full_name,
-        razon_social: payload.razon_social,
-        ruc: payload.ruc,
-        phone: payload.phone,
-        is_active: payload.is_active
-      })
-      .eq('id', profileId);
+    const { error } = await this.supabase.instance.rpc('admin_update_client_profile', {
+      p_profile_id: profileId,
+      p_full_name: payload.full_name,
+      p_razon_social: payload.razon_social,
+      p_ruc: payload.ruc,
+      p_phone: this.normalizePhone(payload.phone),
+      p_is_active: payload.is_active
+    });
 
     if (error) {
-      throw new Error(`No se pudo actualizar el cliente. Verifica permisos de administrador: ${error.message}`);
+      throw new Error(this.toClientProfileRpcError(error.message, 'No se pudo actualizar el cliente.'));
     }
   }
 
   async setClientActive(profileId: string, isActive: boolean): Promise<void> {
-    const { error } = await this.supabase.instance
-      .from('profiles')
-      .update({ is_active: isActive })
-      .eq('id', profileId);
+    const { error } = await this.supabase.instance.rpc('admin_set_client_active', {
+      p_profile_id: profileId,
+      p_is_active: isActive
+    });
 
     if (error) {
-      throw new Error(`No se pudo cambiar el estado del cliente. Verifica permisos de administrador: ${error.message}`);
+      throw new Error(this.toClientProfileRpcError(error.message, 'No se pudo cambiar el estado del cliente.'));
     }
   }
 
@@ -238,6 +239,33 @@ export class BackofficeService {
     return ((data as unknown[]) ?? []).map((message) => this.mapClientMessage(message));
   }
 
+  async listClientAuditLogs(profileId: string, limit = 5): Promise<BackofficeProfileAuditLog[]> {
+    const { data, error } = await this.supabase.instance
+      .from('profile_audit_logs')
+      .select(`
+        id,
+        profile_id,
+        changed_by,
+        action,
+        old_data,
+        new_data,
+        created_at,
+        admin:admins (
+          full_name,
+          email
+        )
+      `)
+      .eq('profile_id', profileId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`No se pudo cargar la auditoría del cliente: ${error.message}`);
+    }
+
+    return ((data as unknown[]) ?? []).map((log) => this.mapProfileAuditLog(log));
+  }
+
   async syncUsers(): Promise<void> {
     // TODO: trigger users synchronization.
   }
@@ -256,6 +284,30 @@ export class BackofficeService {
     }
 
     return message;
+  }
+
+  private toClientProfileRpcError(message: string, fallback: string): string {
+    if (message.includes('NOT_AUTHORIZED')) {
+      return `${fallback} No tienes permisos de administrador.`;
+    }
+
+    if (message.includes('PROFILE_NOT_FOUND')) {
+      return `${fallback} Perfil no encontrado.`;
+    }
+
+    if (message.includes('CANNOT_UPDATE_ADMIN_PROFILE')) {
+      return `${fallback} No se puede editar un perfil administrador desde clientes.`;
+    }
+
+    if (message.includes('INVALID_RUC')) {
+      return 'El RUC debe tener 11 dígitos.';
+    }
+
+    if (message.includes('INVALID_PHONE')) {
+      return 'El teléfono debe tener formato peruano +51XXXXXXXXX o quedar vacío.';
+    }
+
+    return `${fallback} ${message}`;
   }
 
   private async getClientProfile(profileId: string): Promise<BackofficeClientProfile> {
@@ -320,6 +372,27 @@ export class BackofficeService {
     };
   }
 
+  private mapProfileAuditLog(value: unknown): BackofficeProfileAuditLog {
+    const log = value as Record<string, unknown>;
+    const admin = Array.isArray(log['admin']) ? log['admin'][0] : log['admin'];
+
+    return {
+      id: this.toSafeString(log['id']),
+      profile_id: this.toSafeString(log['profile_id']),
+      changed_by: this.toNullableString(log['changed_by']),
+      action: this.toSafeString(log['action']),
+      old_data: this.toJsonObject(log['old_data']),
+      new_data: this.toJsonObject(log['new_data']),
+      created_at: this.toSafeString(log['created_at']) || new Date().toISOString(),
+      admin: admin && typeof admin === 'object'
+        ? {
+            full_name: this.toNullableString((admin as Record<string, unknown>)['full_name']),
+            email: this.toNullableString((admin as Record<string, unknown>)['email'])
+          }
+        : null
+    };
+  }
+
   private toRechargeStatus(value: unknown): BackofficeClientRecharge['status'] {
     return value === 'approved' || value === 'rejected' || value === 'pending'
       ? value
@@ -338,5 +411,20 @@ export class BackofficeService {
 
   private toNullableString(value: unknown): string | null {
     return typeof value === 'string' && value.trim() ? value : null;
+  }
+
+  private toJsonObject(value: unknown): Record<string, unknown> | null {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  }
+
+  private normalizePhone(value: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const cleanValue = value.trim().replace(/\s+/g, '');
+    return cleanValue ? cleanValue : null;
   }
 }

@@ -50,6 +50,7 @@ export interface BackofficeClientDetail {
   profile: BackofficeClientProfile;
   recentRecharges: BackofficeClientRecharge[];
   recentMessages: BackofficeClientMessage[];
+  auditLogs: BackofficeProfileAuditLog[];
   counts: {
     pendingRecharges: number;
     approvedRecharges: number;
@@ -64,4 +65,18 @@ export interface UpdateClientBasicInfoPayload {
   ruc: string | null;
   phone: string | null;
   is_active: boolean;
+}
+
+export interface BackofficeProfileAuditLog {
+  id: string;
+  profile_id: string;
+  changed_by: string | null;
+  action: string;
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
+  created_at: string;
+  admin: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
 }

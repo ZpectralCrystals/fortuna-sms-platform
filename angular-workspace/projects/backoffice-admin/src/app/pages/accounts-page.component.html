@@ -20,15 +20,15 @@
       <strong>{{ formatNumber(inactiveClients) }}</strong>
     </article>
     <article class="metric-card">
-      <span>Créditos totales</span>
+      <span>Créditos</span>
       <strong>{{ formatNumber(totalCredits) }}</strong>
     </article>
     <article class="metric-card">
-      <span>Total gastado</span>
+      <span>Gastado</span>
       <strong>S/ {{ formatCurrency(totalSpent) }}</strong>
     </article>
     <article class="metric-card">
-      <span>Más créditos</span>
+      <span>Top créditos</span>
       <strong>{{ topCreditClient ? clientName(topCreditClient) : '-' }}</strong>
       <small *ngIf="topCreditClient">{{ formatNumber(topCreditClient.credits) }} créditos</small>
     </article>
@@ -56,58 +56,35 @@
   </section>
 
   <div class="clients-grid">
-    <article
-      *ngFor="let client of filteredClients"
-      class="client-card"
-    >
-      <div class="client-header">
+    <article *ngFor="let client of filteredClients" class="client-card">
+      <div class="client-topline">
         <div class="client-title">
           <h3>{{ clientName(client) }}</h3>
           <p class="client-email">{{ client.email || '-' }}</p>
-          <p *ngIf="clientCompany(client)" class="client-company">{{ clientCompany(client) }}</p>
-          <p *ngIf="client.phone" class="client-phone">{{ client.phone }}</p>
         </div>
-        <span class="status-badge" [class.active]="client.is_active" [class.inactive]="!client.is_active">
+        <span class="status-pill" [class.active]="client.is_active" [class.inactive]="!client.is_active">
           {{ client.is_active ? 'Activo' : 'Inactivo' }}
         </span>
       </div>
 
-      <div class="client-metrics">
-        <div class="metric-row blue">
-          <div class="metric-label">
-            <span>Créditos</span>
-          </div>
+      <p *ngIf="clientCompany(client)" class="client-company">{{ clientCompany(client) }}</p>
+      <p *ngIf="client.phone" class="client-phone">{{ client.phone }}</p>
+
+      <div class="client-card-metrics">
+        <div>
+          <span>Créditos</span>
           <strong>{{ formatNumber(client.credits) }}</strong>
         </div>
-
-        <div class="metric-row green">
-          <div class="metric-label">
-            <span>Total gastado</span>
-          </div>
+        <div>
+          <span>Gastado</span>
           <strong>S/ {{ formatCurrency(client.total_spent) }}</strong>
-        </div>
-
-        <div class="since-row">
-          <span>Creado {{ formatDate(client.created_at) }}</span>
-        </div>
-
-        <div class="since-row">
-          <span>Actualizado {{ formatDate(client.updated_at) }}</span>
         </div>
       </div>
 
-      <div class="card-actions">
+      <div class="client-card-footer">
+        <span>Creado {{ formatDate(client.created_at) }}</span>
         <button type="button" class="secondary-button" (click)="openClient(client)">
           Ver detalle
-        </button>
-        <button
-          type="button"
-          class="status-button"
-          [class.deactivate]="client.is_active"
-          [class.activate]="!client.is_active"
-          (click)="toggleClientActive(client)"
-        >
-          {{ client.is_active ? 'Desactivar' : 'Activar' }}
         </button>
       </div>
     </article>
@@ -132,160 +109,182 @@
       </div>
 
       <ng-container *ngIf="selectedDetail && !detailLoading">
-        <div class="modal-header">
-          <div>
-            <h2>{{ clientName(selectedDetail.profile) }}</h2>
-            <p>{{ selectedDetail.profile.email || '-' }}</p>
+        <header class="modal-header">
+          <div class="modal-identity">
+            <h2>{{ editMode ? 'Editar cliente' : clientName(selectedDetail.profile) }}</h2>
+            <p class="client-email">{{ selectedDetail.profile.email || '-' }}</p>
             <p *ngIf="clientCompany(selectedDetail.profile)" class="modal-company">
               {{ clientCompany(selectedDetail.profile) }}
             </p>
-            <p *ngIf="selectedDetail.profile.phone" class="modal-phone">{{ selectedDetail.profile.phone }}</p>
           </div>
-          <button type="button" class="modal-close" aria-label="Cerrar" (click)="closeClient()">
-            <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </div>
 
-        <div class="modal-actions-top">
-          <button type="button" class="secondary-button" (click)="startEdit()" [disabled]="editMode">
-            Editar datos
-          </button>
-          <button
-            type="button"
-            class="status-button"
-            [class.deactivate]="selectedDetail.profile.is_active"
-            [class.activate]="!selectedDetail.profile.is_active"
-            (click)="toggleSelectedClientActive()"
-          >
-            {{ selectedDetail.profile.is_active ? 'Desactivar cliente' : 'Activar cliente' }}
-          </button>
-        </div>
-
-        <p class="inactive-note">
-          Cliente inactivo no podrá entrar al dashboard cliente.
-        </p>
+          <div class="modal-header-actions">
+            <span class="status-pill" [class.active]="selectedDetail.profile.is_active" [class.inactive]="!selectedDetail.profile.is_active">
+              {{ selectedDetail.profile.is_active ? 'Activo' : 'Inactivo' }}
+            </span>
+            <button type="button" class="modal-close" aria-label="Cerrar" (click)="closeClient()">
+              <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+        </header>
 
         <p *ngIf="editError" class="message-box error">{{ editError }}</p>
 
-        <form *ngIf="editMode" class="edit-form" (ngSubmit)="saveClient()">
-          <label>
-            <span>Nombre completo</span>
-            <input type="text" name="full_name" [(ngModel)]="editForm.full_name" />
-          </label>
-          <label>
-            <span>Razón social</span>
-            <input type="text" name="razon_social" [(ngModel)]="editForm.razon_social" />
-          </label>
-          <label>
-            <span>RUC</span>
-            <input type="text" name="ruc" [(ngModel)]="editForm.ruc" maxlength="11" />
-          </label>
-          <label>
-            <span>Teléfono</span>
-            <input type="tel" name="phone" [(ngModel)]="editForm.phone" placeholder="+51987654321" />
-          </label>
-          <label class="checkbox-field">
-            <input type="checkbox" name="is_active" [(ngModel)]="editForm.is_active" />
-            <span>Cliente activo</span>
-          </label>
+        <ng-container *ngIf="editMode; else detailView">
+          <form class="edit-form clean" (ngSubmit)="saveClient()">
+            <label>
+              <span>Nombre completo</span>
+              <input type="text" name="full_name" [(ngModel)]="editForm.full_name" />
+            </label>
+            <label>
+              <span>Razón social</span>
+              <input type="text" name="razon_social" [(ngModel)]="editForm.razon_social" />
+            </label>
+            <label>
+              <span>RUC</span>
+              <input type="text" name="ruc" [(ngModel)]="editForm.ruc" maxlength="11" />
+            </label>
+            <label>
+              <span>Teléfono</span>
+              <input type="tel" name="phone" [(ngModel)]="editForm.phone" placeholder="+51956062256" />
+            </label>
+            <label class="checkbox-field">
+              <input type="checkbox" name="is_active" [(ngModel)]="editForm.is_active" />
+              <span>Cliente activo</span>
+            </label>
 
-          <div class="edit-note">
-            Créditos, total gastado, ID y email no se editan desde Angular.
-          </div>
+            <div class="edit-note">
+              Créditos, total gastado, ID y email no se editan desde Angular.
+            </div>
 
-          <div class="edit-actions">
-            <button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="saving">
-              Cancelar
+            <div class="edit-actions">
+              <button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="saving">
+                Cancelar
+              </button>
+              <button type="submit" class="primary-button" [disabled]="saving">
+                {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+            </div>
+          </form>
+        </ng-container>
+
+        <ng-template #detailView>
+          <div class="modal-actions-top">
+            <button type="button" class="secondary-button" (click)="startEdit()">
+              Editar datos
             </button>
-            <button type="submit" class="primary-button" [disabled]="saving">
-              {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+            <button
+              type="button"
+              class="status-button"
+              [class.deactivate]="selectedDetail.profile.is_active"
+              [class.activate]="!selectedDetail.profile.is_active"
+              (click)="toggleSelectedClientActive()"
+            >
+              {{ selectedDetail.profile.is_active ? 'Desactivar' : 'Activar' }}
             </button>
           </div>
-        </form>
 
-        <div class="modal-summary-grid">
-          <div class="summary-card blue">
-            <p class="summary-value">{{ formatNumber(selectedDetail.profile.credits) }}</p>
-            <p class="summary-label">Créditos</p>
-          </div>
+          <p class="inactive-note">Cliente inactivo no podrá entrar al dashboard cliente.</p>
 
-          <div class="summary-card green">
-            <p class="summary-value">S/ {{ formatCurrency(selectedDetail.profile.total_spent) }}</p>
-            <p class="summary-label">Total gastado</p>
-          </div>
-
-          <div class="summary-card amber">
-            <p class="summary-value">{{ selectedDetail.counts.pendingRecharges }}</p>
-            <p class="summary-label">Recargas pendientes</p>
-          </div>
-
-          <div class="summary-card purple">
-            <p class="summary-value">{{ selectedDetail.counts.approvedRecharges }}</p>
-            <p class="summary-label">Recargas aprobadas</p>
-          </div>
-
-          <div class="summary-card blue">
-            <p class="summary-value">{{ selectedDetail.counts.sentMessages }}</p>
-            <p class="summary-label">Mensajes enviados</p>
-          </div>
-
-          <div class="summary-card red">
-            <p class="summary-value">{{ selectedDetail.counts.failedMessages }}</p>
-            <p class="summary-label">Mensajes fallidos</p>
-          </div>
-        </div>
-
-        <section class="detail-section">
-          <h3>Datos del perfil</h3>
-          <div class="profile-grid">
-            <div><span>ID</span><strong>{{ selectedDetail.profile.id }}</strong></div>
-            <div><span>Email</span><strong>{{ selectedDetail.profile.email || '-' }}</strong></div>
-            <div><span>Creado</span><strong>{{ formatDate(selectedDetail.profile.created_at) }}</strong></div>
-            <div><span>Actualizado</span><strong>{{ formatDate(selectedDetail.profile.updated_at) }}</strong></div>
-          </div>
-        </section>
-
-        <section class="detail-section">
-          <h3>Últimas recargas</h3>
-          <div class="item-list">
-            <article *ngFor="let recharge of selectedDetail.recentRecharges" class="detail-item">
-              <div>
-                <p>{{ formatNumber(recharge.sms_credits) }} créditos</p>
-                <small>{{ formatDate(recharge.created_at) }} · {{ recharge.payment_method || '-' }}</small>
-              </div>
-              <div class="item-side">
-                <strong>S/ {{ formatCurrency(recharge.amount) }}</strong>
-                <span class="status-chip" [ngClass]="recharge.status">{{ rechargeStatusLabel(recharge.status) }}</span>
-              </div>
+          <section class="compact-summary-grid">
+            <article>
+              <span>Créditos</span>
+              <strong>{{ formatNumber(selectedDetail.profile.credits) }}</strong>
             </article>
-            <p *ngIf="selectedDetail.recentRecharges.length === 0" class="empty-recharges">
-              No hay recargas registradas
-            </p>
-          </div>
-        </section>
-
-        <section class="detail-section">
-          <h3>Últimos mensajes</h3>
-          <div class="item-list">
-            <article *ngFor="let message of selectedDetail.recentMessages" class="detail-item">
-              <div>
-                <p>{{ message.recipient }}</p>
-                <small>{{ message.message }}</small>
-                <small *ngIf="message.error_message" class="error-text">{{ message.error_message }}</small>
-              </div>
-              <div class="item-side">
-                <strong>{{ formatNumber(message.segments) }} seg.</strong>
-                <span class="status-chip" [ngClass]="message.status">{{ messageStatusLabel(message.status) }}</span>
-              </div>
+            <article>
+              <span>Total gastado</span>
+              <strong>S/ {{ formatCurrency(selectedDetail.profile.total_spent) }}</strong>
             </article>
-            <p *ngIf="selectedDetail.recentMessages.length === 0" class="empty-recharges">
-              No hay mensajes registrados
-            </p>
-          </div>
-        </section>
+            <article>
+              <span>Recargas pendientes</span>
+              <strong>{{ selectedDetail.counts.pendingRecharges }}</strong>
+            </article>
+            <article>
+              <span>Recargas aprobadas</span>
+              <strong>{{ selectedDetail.counts.approvedRecharges }}</strong>
+            </article>
+            <article>
+              <span>Mensajes enviados</span>
+              <strong>{{ selectedDetail.counts.sentMessages }}</strong>
+            </article>
+            <article>
+              <span>Mensajes fallidos</span>
+              <strong>{{ selectedDetail.counts.failedMessages }}</strong>
+            </article>
+          </section>
+
+          <section class="detail-section">
+            <h3>Perfil</h3>
+            <div class="profile-grid">
+              <div><span>ID</span><strong>{{ selectedDetail.profile.id }}</strong></div>
+              <div><span>Email</span><strong class="email-value">{{ selectedDetail.profile.email || '-' }}</strong></div>
+              <div><span>Teléfono</span><strong>{{ selectedDetail.profile.phone || '-' }}</strong></div>
+              <div><span>Creado</span><strong>{{ formatDate(selectedDetail.profile.created_at) }}</strong></div>
+              <div><span>Actualizado</span><strong>{{ formatDate(selectedDetail.profile.updated_at) }}</strong></div>
+            </div>
+          </section>
+
+          <section class="detail-columns">
+            <div class="detail-section">
+              <h3>Últimas recargas</h3>
+              <div class="item-list">
+                <article *ngFor="let recharge of selectedDetail.recentRecharges" class="detail-item compact">
+                  <div>
+                    <p>{{ formatNumber(recharge.sms_credits) }} créditos</p>
+                    <small>{{ formatDate(recharge.created_at) }}</small>
+                  </div>
+                  <div class="item-side">
+                    <strong>S/ {{ formatCurrency(recharge.amount) }}</strong>
+                    <span class="status-chip" [ngClass]="recharge.status">{{ rechargeStatusLabel(recharge.status) }}</span>
+                  </div>
+                </article>
+                <p *ngIf="selectedDetail.recentRecharges.length === 0" class="empty-inline">
+                  No hay recargas registradas.
+                </p>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Últimos mensajes</h3>
+              <div class="item-list">
+                <article *ngFor="let message of selectedDetail.recentMessages" class="detail-item compact">
+                  <div>
+                    <p>{{ message.recipient }}</p>
+                    <small>{{ message.message }}</small>
+                    <small *ngIf="message.error_message" class="error-text">{{ message.error_message }}</small>
+                  </div>
+                  <div class="item-side">
+                    <strong>{{ formatNumber(message.segments) }} seg.</strong>
+                    <span class="status-chip" [ngClass]="message.status">{{ messageStatusLabel(message.status) }}</span>
+                  </div>
+                </article>
+                <p *ngIf="selectedDetail.recentMessages.length === 0" class="empty-inline">
+                  No hay mensajes registrados.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-section audit-section">
+            <h3>Auditoría reciente</h3>
+            <div class="item-list">
+              <article *ngFor="let log of selectedDetail.auditLogs" class="detail-item audit-item">
+                <div>
+                  <p>{{ auditActionLabel(log.action) }}</p>
+                  <small>{{ auditActorName(log) }} · {{ formatDate(log.created_at) }}</small>
+                  <small>Cambios: {{ auditSummary(log) }}</small>
+                </div>
+                <span class="status-chip pending">Auditado</span>
+              </article>
+              <p *ngIf="selectedDetail.auditLogs.length === 0" class="empty-inline">
+                Aún no hay cambios auditados para este cliente.
+              </p>
+            </div>
+          </section>
+        </ng-template>
       </ng-container>
     </div>
   </div>

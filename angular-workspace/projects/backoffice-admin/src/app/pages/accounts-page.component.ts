@@ -184,7 +184,7 @@ export class AccountsPageComponent implements OnInit {
       full_name: this.toNullable(this.editForm.full_name),
       razon_social: this.toNullable(this.editForm.razon_social),
       ruc: this.toNullable(this.editForm.ruc),
-      phone: this.toNullable(this.editForm.phone),
+      phone: this.toNullablePhone(this.editForm.phone),
       is_active: this.editForm.is_active
     };
 
@@ -275,6 +275,29 @@ export class AccountsPageComponent implements OnInit {
     return labels[status];
   }
 
+  auditActorName(log: { admin: { full_name: string | null; email: string | null } | null }): string {
+    return log.admin?.full_name || log.admin?.email || 'Admin';
+  }
+
+  auditActionLabel(action: string): string {
+    const labels: Record<string, string> = {
+      admin_update_client_profile: 'Actualización de perfil',
+      admin_set_client_active: 'Cambio de estado'
+    };
+
+    return labels[action] || action;
+  }
+
+  auditSummary(log: { old_data: Record<string, unknown> | null; new_data: Record<string, unknown> | null }): string {
+    const oldData = log.old_data ?? {};
+    const newData = log.new_data ?? {};
+    const changes = Object.keys(newData)
+      .filter((key) => oldData[key] !== newData[key])
+      .map((key) => this.auditFieldLabel(key));
+
+    return changes.length ? changes.join(', ') : 'Sin diferencias visibles';
+  }
+
   formatNumber(value: number): string {
     return value.toLocaleString('es-PE');
   }
@@ -313,7 +336,7 @@ export class AccountsPageComponent implements OnInit {
 
   private validateEditForm(): string {
     const ruc = this.editForm.ruc.trim();
-    const phone = this.editForm.phone.trim();
+    const phone = this.normalizePhone(this.editForm.phone);
 
     if (ruc && !/^\d{11}$/.test(ruc)) {
       return 'El RUC debe tener 11 dígitos.';
@@ -349,5 +372,26 @@ export class AccountsPageComponent implements OnInit {
   private toNullable(value: string): string | null {
     const cleanValue = value.trim();
     return cleanValue ? cleanValue : null;
+  }
+
+  private toNullablePhone(value: string): string | null {
+    const cleanValue = this.normalizePhone(value);
+    return cleanValue ? cleanValue : null;
+  }
+
+  private normalizePhone(value: string): string {
+    return value.trim().replace(/\s+/g, '');
+  }
+
+  private auditFieldLabel(field: string): string {
+    const labels: Record<string, string> = {
+      full_name: 'nombre',
+      razon_social: 'razón social',
+      ruc: 'RUC',
+      phone: 'teléfono',
+      is_active: 'estado'
+    };
+
+    return labels[field] || field;
   }
 }
