@@ -80,7 +80,7 @@ export interface SmsTemplate {
   name: string;
   content: string;
   category: SmsTemplateCategory;
-  variables: unknown[];
+  variables: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -90,13 +90,13 @@ export interface CreateSmsTemplateRequest {
   name: string;
   content: string;
   category: SmsTemplateCategory;
-  variables?: unknown[];
+  variables?: string[];
 }
 
 export interface UpdateSmsTemplateRequest {
   name?: string;
   content?: string;
   category?: SmsTemplateCategory;
-  variables?: unknown[];
+  variables?: string[];
   is_active?: boolean;
 }

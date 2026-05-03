@@ -87,6 +87,41 @@ export class SmsService {
     // TODO: implement file upload flow.
   }
 
+  extractTemplateVariables(content: string): string[] {
+    const matches = content.matchAll(/\{([a-zA-Z0-9_-]+)\}/g);
+    return Array.from(new Set(Array.from(matches, (match) => match[1]).filter(Boolean)));
+  }
+
+  renderTemplatePreview(content: string, values: Record<string, string>): string {
+    return content.replace(/\{([a-zA-Z0-9_-]+)\}/g, (match, variableName: string) => {
+      const value = values[variableName]?.trim();
+      return value || match;
+    });
+  }
+
+  renderTemplateExample(content: string): string {
+    return content.replace(/\{([a-zA-Z0-9_-]+)\}/g, (_match, variableName: string) =>
+      this.getExampleValue(variableName)
+    );
+  }
+
+  getExampleValue(variableName: string): string {
+    const normalized = variableName.trim().toLowerCase();
+    const examples: Record<string, string> = {
+      nombre: 'Juan',
+      codigo: '123456',
+      empresa: 'Fortuna',
+      fecha: '02/05/2026',
+      monto: 'S/ 50.00'
+    };
+
+    return examples[normalized] ?? 'Ejemplo';
+  }
+
+  calculateSegments(message: string): number {
+    return Math.ceil(message.length / 160) || 1;
+  }
+
   async listTemplates(): Promise<SmsTemplate[]> {
     const userId = await this.getCurrentUserId();
 
@@ -139,15 +174,16 @@ export class SmsService {
 
   async createTemplate(payload: CreateSmsTemplateRequest): Promise<SmsTemplate> {
     const userId = await this.getCurrentUserId();
+    const content = payload.content.trim();
 
     const { data, error } = await this.supabase.instance
       .from('templates')
       .insert({
         user_id: userId,
         name: payload.name.trim(),
-        content: payload.content.trim(),
+        content,
         category: payload.category,
-        variables: payload.variables ?? []
+        variables: this.extractTemplateVariables(content)
       })
       .select('id, user_id, name, content, category, variables, is_active, created_at, updated_at')
       .single();
@@ -166,9 +202,13 @@ export class SmsService {
     };
 
     if (payload.name !== undefined) updatePayload['name'] = payload.name.trim();
-    if (payload.content !== undefined) updatePayload['content'] = payload.content.trim();
+    if (payload.content !== undefined) {
+      const content = payload.content.trim();
+      updatePayload['content'] = content;
+      updatePayload['variables'] = this.extractTemplateVariables(content);
+    }
     if (payload.category !== undefined) updatePayload['category'] = payload.category;
-    if (payload.variables !== undefined) updatePayload['variables'] = payload.variables;
+    if (payload.variables !== undefined && payload.content === undefined) updatePayload['variables'] = payload.variables;
     if (payload.is_active !== undefined) updatePayload['is_active'] = payload.is_active;
 
     const { data, error } = await this.supabase.instance
@@ -257,7 +297,7 @@ export class SmsService {
       name: String(row['name'] ?? ''),
       content: String(row['content'] ?? ''),
       category: this.toTemplateCategory(row['category']),
-      variables: Array.isArray(row['variables']) ? row['variables'] : [],
+      variables: this.toStringArray(row['variables']),
       is_active: row['is_active'] !== false,
       created_at: String(row['created_at'] ?? ''),
       updated_at: String(row['updated_at'] ?? row['created_at'] ?? '')
@@ -308,5 +348,11 @@ export class SmsService {
     return typeof value === 'string' && value.trim()
       ? value
       : null;
+  }
+
+  private toStringArray(value: unknown): string[] {
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      : [];
   }
 }

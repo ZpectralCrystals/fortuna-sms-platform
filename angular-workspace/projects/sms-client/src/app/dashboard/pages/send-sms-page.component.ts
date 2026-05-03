@@ -30,12 +30,15 @@ export class SendSmsPageComponent implements OnInit {
 
   mode: SendMode = 'single';
   recipient = '';
-  message = '';
+  manualMessage = '';
   multiplePhones = '';
   campaignName = '';
   fileMessages: FileMessage[] = [];
   templates: SmsTemplate[] = [];
-  selectedTemplate = '';
+  selectedTemplateId = '';
+  selectedTemplate: SmsTemplate | null = null;
+  templateVariables: string[] = [];
+  templateVariableValues: Record<string, string> = {};
   sending = false;
   success = false;
   error = '';
@@ -51,11 +54,11 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   get messageLength(): number {
-    return this.message.length;
+    return this.getMessageToSend().length;
   }
 
   get smsCount(): number {
-    return this.smsSegments(this.message);
+    return this.smsSegments(this.getMessageToSend());
   }
 
   get phoneCount(): number {
@@ -79,7 +82,7 @@ export class SendSmsPageComponent implements OnInit {
       return this.totalFileSms;
     }
 
-    return this.getPhonesList().length * this.smsCount;
+    return this.smsCount;
   }
 
   get credits(): number {
@@ -94,6 +97,28 @@ export class SendSmsPageComponent implements OnInit {
     return this.fileMessages.slice(0, 10);
   }
 
+  get isTemplateMode(): boolean {
+    return !!this.selectedTemplate;
+  }
+
+  get templateBaseContent(): string {
+    return this.selectedTemplate?.content ?? '';
+  }
+
+  get renderedFinalMessage(): string {
+    return this.isTemplateMode
+      ? this.renderTemplate(this.templateBaseContent, this.templateVariableValues)
+      : this.manualMessage;
+  }
+
+  get hasTemplateVariables(): boolean {
+    return this.templateVariables.length > 0;
+  }
+
+  get sendDisabledReason(): string | null {
+    return this.getSendDisabledReason();
+  }
+
   setMode(mode: SendMode): void {
     this.mode = mode;
     this.error = '';
@@ -105,8 +130,21 @@ export class SendSmsPageComponent implements OnInit {
     const template = this.templates.find((item) => item.id === templateId);
 
     if (template) {
-      this.message = template.content;
-      this.selectedTemplate = templateId;
+      this.selectTemplate(template);
+    } else {
+      this.removeTemplate(false);
+    }
+  }
+
+  removeTemplate(useRenderedMessage = true): void {
+    const rendered = this.renderedFinalMessage.trim();
+    this.selectedTemplateId = '';
+    this.selectedTemplate = null;
+    this.templateVariables = [];
+    this.templateVariableValues = {};
+
+    if (useRenderedMessage) {
+      this.manualMessage = rendered;
     }
   }
 
@@ -216,25 +254,11 @@ export class SendSmsPageComponent implements OnInit {
     }
 
     const recipient = this.recipient.trim();
-    const message = this.message.trim();
+    const message = this.getMessageToSend();
+    const disabledReason = this.getSendDisabledReason();
 
-    if (!recipient) {
-      this.error = 'Debes ingresar un número de teléfono';
-      return;
-    }
-
-    if (!this.validatePhone(recipient)) {
-      this.error = 'Número inválido. Usa formato peruano +51XXXXXXXXX.';
-      return;
-    }
-
-    if (!message) {
-      this.error = 'El mensaje no puede estar vacío.';
-      return;
-    }
-
-    if (this.credits < this.requiredCredits) {
-      this.error = `Créditos insuficientes. Necesitas ${this.requiredCredits} créditos pero solo tienes ${this.credits.toFixed(0)}.`;
+    if (disabledReason) {
+      this.error = disabledReason;
       return;
     }
 
@@ -255,7 +279,11 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   smsSegments(value: string): number {
-    return Math.ceil(value.length / 160) || 1;
+    return value.trim() ? this.smsService.calculateSegments(value) : 0;
+  }
+
+  renderTemplate(content: string, values: Record<string, string>): string {
+    return this.smsService.renderTemplatePreview(content, values);
   }
 
   private validatePhone(phone: string): boolean {
@@ -265,7 +293,8 @@ export class SendSmsPageComponent implements OnInit {
 
   private getPhonesList(): string[] {
     if (this.mode === 'single') {
-      return this.recipient.trim() ? [this.recipient.trim()] : [];
+      const recipient = this.recipient.trim();
+      return this.validatePhone(recipient) ? [recipient] : [];
     }
 
     if (this.mode === 'file') {
@@ -325,7 +354,68 @@ export class SendSmsPageComponent implements OnInit {
     }
 
     this.mode = 'single';
-    this.selectedTemplate = template.id;
-    this.message = template.content;
+    this.selectTemplate(template);
+  }
+
+  private selectTemplate(template: SmsTemplate): void {
+    this.selectedTemplate = template;
+    this.selectedTemplateId = template.id;
+    this.templateVariables = template.variables.length > 0
+      ? template.variables
+      : this.smsService.extractTemplateVariables(template.content);
+
+    const nextValues: Record<string, string> = {};
+    for (const variable of this.templateVariables) {
+      nextValues[variable] = this.templateVariableValues[variable] ?? '';
+    }
+
+    this.templateVariableValues = nextValues;
+    this.error = '';
+    this.success = false;
+    this.sendResult = null;
+  }
+
+  getMissingTemplateVariables(): string[] {
+    return this.templateVariables.filter((variable) => !this.templateVariableValues[variable]?.trim());
+  }
+
+  hasUnresolvedPlaceholders(message: string): boolean {
+    return /\{[a-zA-Z0-9_-]+\}/.test(message);
+  }
+
+  getMessageToSend(): string {
+    return this.renderedFinalMessage.trim();
+  }
+
+  getSendDisabledReason(): string | null {
+    if (this.mode !== 'single') {
+      return 'Envío múltiple se implementará en siguiente fase';
+    }
+
+    const recipient = this.recipient.trim();
+    const message = this.getMessageToSend();
+
+    if (!recipient || !this.validatePhone(recipient)) {
+      return 'Ingresa un número válido.';
+    }
+
+    if (!message) {
+      return 'El mensaje no puede estar vacío.';
+    }
+
+    const missingVariables = this.getMissingTemplateVariables();
+    if (this.isTemplateMode && missingVariables.length > 0) {
+      return `Completa las variables: ${missingVariables.join(', ')}.`;
+    }
+
+    if (this.hasUnresolvedPlaceholders(message)) {
+      return 'Completa todas las variables de la plantilla.';
+    }
+
+    if (this.credits < this.requiredCredits) {
+      return `Créditos insuficientes. Necesitas ${this.requiredCredits} créditos pero solo tienes ${this.credits.toFixed(0)}.`;
+    }
+
+    return null;
   }
 }

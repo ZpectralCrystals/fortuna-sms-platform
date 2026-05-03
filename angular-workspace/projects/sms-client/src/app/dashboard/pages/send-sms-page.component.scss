@@ -458,6 +458,127 @@ h1 {
   text-align: center;
 }
 
+.template-base-card,
+.variables-card,
+.preview-final-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.template-base-card {
+  display: grid;
+  gap: 12px;
+}
+
+.template-base-card__header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.template-base-card span {
+  color: #374151;
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.template-base-card h3 {
+  color: #111827;
+  font-size: 16px;
+  line-height: 22px;
+  margin-top: 2px;
+}
+
+.template-base-card p {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.template-base-card small {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.link-button {
+  background: transparent;
+  border: 0;
+  color: #2563eb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  text-align: right;
+}
+
+.link-button:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.variables-card__header {
+  margin-bottom: 14px;
+}
+
+.variables-card__header h3 {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.variables-card__header p {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+  margin-top: 2px;
+}
+
+.variables-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field span {
+  display: block;
+  margin-bottom: 8px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.preview-final-card {
+  display: grid;
+  gap: 8px;
+}
+
+.preview-final-card span {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.preview-final-card p {
+  color: #111827;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: pre-wrap;
+}
+
 .summary-card {
   border: 1px solid #bfdbfe;
   border-radius: 8px;
@@ -531,6 +652,13 @@ h1 {
   margin-right: 8px;
 }
 
+.disabled-reason {
+  color: #b91c1c;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+}
+
 .small-spinner {
   display: inline-block;
   width: 20px;
@@ -575,8 +703,12 @@ h1 {
     padding: 14px 10px;
   }
 
+  .template-base-card__header,
   .upload-actions,
-  .preview-row {
+  .preview-row,
+  .variables-grid {
+    align-items: stretch;
+    grid-template-columns: 1fr;
     flex-direction: column;
   }
 

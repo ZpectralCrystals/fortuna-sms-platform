@@ -65,6 +65,14 @@ export class TemplatesPageComponent implements OnInit {
     });
   }
 
+  get formVariables(): string[] {
+    return this.extractVariables(this.formData.content);
+  }
+
+  get formPreview(): string {
+    return this.previewTemplateContent(this.formData.content);
+  }
+
   openCreateModal(): void {
     this.editingTemplate = null;
     this.formData = this.emptyForm();
@@ -109,7 +117,7 @@ export class TemplatesPageComponent implements OnInit {
         name: this.formData.name,
         content: this.formData.content,
         category: this.formData.category,
-        variables: this.extractVariables(this.formData.content)
+        variables: this.formVariables
       };
 
       if (this.editingTemplate) {
@@ -177,7 +185,25 @@ export class TemplatesPageComponent implements OnInit {
   }
 
   smsSegments(value: string): number {
-    return Math.ceil(value.length / 160) || 1;
+    return this.smsService.calculateSegments(value);
+  }
+
+  extractVariables(content: string): string[] {
+    return this.smsService.extractTemplateVariables(content);
+  }
+
+  templateVariables(template: SmsTemplate): string[] {
+    return template.variables.length > 0
+      ? template.variables
+      : this.extractVariables(template.content);
+  }
+
+  previewTemplateContent(content: string): string {
+    return this.smsService.renderTemplateExample(content);
+  }
+
+  getExampleValue(variableName: string): string {
+    return this.smsService.getExampleValue(variableName);
   }
 
   private async fetchTemplates(showLoader = true): Promise<void> {
@@ -218,11 +244,6 @@ export class TemplatesPageComponent implements OnInit {
     }
 
     return '';
-  }
-
-  private extractVariables(content: string): string[] {
-    const matches = content.match(/\{[a-zA-Z0-9_]+\}/g) ?? [];
-    return Array.from(new Set(matches.map((item) => item.slice(1, -1))));
   }
 
   private normalizeCategory(category: string): SmsTemplateCategory {

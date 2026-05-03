@@ -106,6 +106,23 @@
         <p>{{ template.content }}</p>
       </div>
 
+      <div class="variables-block">
+        <span class="variables-block__label">Variables</span>
+        <div *ngIf="templateVariables(template).length > 0; else noCardVariables" class="chips-row">
+          <span *ngFor="let variable of templateVariables(template)" class="variable-chip">
+            {{ variable }}
+          </span>
+        </div>
+        <ng-template #noCardVariables>
+          <span class="muted-text">Sin variables</span>
+        </ng-template>
+      </div>
+
+      <div class="preview-box">
+        <span>Vista previa</span>
+        <p>{{ previewTemplateContent(template.content) }}</p>
+      </div>
+
       <div class="template-meta">
         <span>{{ template.content.length }} caracteres</span>
         <span>{{ smsSegments(template.content) }} segmento(s)</span>
@@ -175,10 +192,27 @@
           </small>
         </label>
 
+        <div class="variables-block variables-block--form">
+          <span class="variables-block__label">Variables detectadas</span>
+          <div *ngIf="formVariables.length > 0; else noFormVariables" class="chips-row">
+            <span *ngFor="let variable of formVariables" class="variable-chip">
+              {{ variable }}
+            </span>
+          </div>
+          <ng-template #noFormVariables>
+            <span class="muted-text">Sin variables</span>
+          </ng-template>
+        </div>
+
+        <div class="preview-box">
+          <span>Vista previa</span>
+          <p>{{ formPreview || 'Escribe contenido para ver la vista previa.' }}</p>
+        </div>
+
         <div class="tip-box">
           <p>
-            Puedes usar variables visuales como {{ '{nombre}' }} o {{ '{codigo}' }}. En esta fase
-            solo se guarda el texto; no se reemplazan automáticamente.
+            Variables como {{ '{nombre}' }} o {{ '{codigo}' }} se detectan automáticamente y se
+            llenan antes de enviar.
           </p>
         </div>
 

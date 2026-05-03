@@ -329,6 +329,67 @@ small {
   white-space: pre-wrap;
 }
 
+.variables-block {
+  display: grid;
+  gap: 8px;
+}
+
+.variables-block--form {
+  background: #f9fafb;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.variables-block__label,
+.preview-box span {
+  color: #374151;
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.variable-chip {
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
+  border-radius: 999px;
+  color: #0e7490;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  padding: 4px 8px;
+}
+
+.muted-text {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.preview-box {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.preview-box p {
+  color: #334155;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: pre-wrap;
+}
+
 .template-meta,
 .template-dates {
   color: #6b7280;
