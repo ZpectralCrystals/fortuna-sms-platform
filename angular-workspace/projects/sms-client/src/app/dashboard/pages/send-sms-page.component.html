@@ -11,13 +11,7 @@
     </svg>
     <div>
       <p>{{ successTitle }}</p>
-      <span>
-        {{ sendResult?.recipient || recipient }} -
-        {{ sendResult?.segments || smsCount }} segmento(s) -
-        créditos descontados {{ successCreditsUsed }} -
-        estado {{ sendResult?.status || 'sent' }} -
-        modo {{ successModeLabel }}
-      </span>
+      <span>{{ successDetail }}</span>
     </div>
   </div>
 
@@ -287,7 +281,7 @@
             <strong>{{ phoneCount }}</strong>
           </div>
           <div *ngIf="mode !== 'file'">
-            <p>SMS por mensaje</p>
+            <p>SMS requeridos</p>
             <strong>{{ smsCount }}</strong>
           </div>
           <div *ngIf="mode === 'file'">
@@ -332,7 +326,7 @@
     <h3>Información importante</h3>
     <ul>
       <li><span>•</span>Cada SMS admite 160 caracteres (mensajes largos se dividen automáticamente)</li>
-      <li><span>•</span>Esta fase usa provider test interno mediante Edge Function y RPC segura</li>
+      <li><span>•</span>El envío se procesa mediante Edge Function y RPC segura</li>
       <li><span>•</span>Angular no inserta mensajes ni descuenta créditos directamente</li>
       <li><span>•</span><strong>Múltiple:</strong> pendiente para siguiente fase</li>
       <li><span>•</span><strong>Desde Fichero:</strong> pendiente para siguiente fase</li>

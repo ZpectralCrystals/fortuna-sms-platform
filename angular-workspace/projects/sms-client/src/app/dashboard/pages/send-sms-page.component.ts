@@ -125,12 +125,36 @@ export class SendSmsPageComponent implements OnInit {
       : 'SMS enviado en modo test';
   }
 
-  get successModeLabel(): string {
-    return this.sendResult?.test_mode === false ? 'real' : 'test';
+  get successDetail(): string {
+    if (this.sendResult?.test_mode !== false) {
+      return 'Simulación interna. No enviado a proveedor real.';
+    }
+
+    const recipient = this.sendResult?.recipient || this.recipient.trim();
+    return `${recipient} · ${this.successSmsLabel} · estado ${this.successStatusLabel}`;
   }
 
   get successCreditsUsed(): number {
     return Number(this.sendResult?.segments ?? this.requiredCredits);
+  }
+
+  get successSmsLabel(): string {
+    const count = this.successCreditsUsed;
+    return count === 1 ? '1 SMS descontado' : `${count} SMS descontados`;
+  }
+
+  get successStatusLabel(): string {
+    switch (this.sendResult?.status) {
+      case 'delivered':
+        return 'entregado';
+      case 'failed':
+        return 'fallido';
+      case 'pending':
+        return 'pendiente';
+      case 'sent':
+      default:
+        return 'enviado';
+    }
   }
 
   setMode(mode: SendMode): void {
