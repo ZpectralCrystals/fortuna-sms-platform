@@ -1,7 +1,7 @@
 <div class="send-page">
   <div>
     <h1>Enviar SMS</h1>
-    <p class="page-subtitle">Envía SMS individuales en modo test</p>
+    <p class="page-subtitle">Envía SMS individuales desde tu saldo disponible</p>
   </div>
 
   <div *ngIf="success" class="alert alert--success">
@@ -10,13 +10,13 @@
       <circle cx="12" cy="12" r="10"></circle>
     </svg>
     <div>
-      <p>SMS enviado en modo test</p>
+      <p>{{ successTitle }}</p>
       <span>
         {{ sendResult?.recipient || recipient }} -
         {{ sendResult?.segments || smsCount }} segmento(s) -
-        costo {{ sendResult?.cost ?? requiredCredits }} crédito(s) -
+        créditos descontados {{ successCreditsUsed }} -
         estado {{ sendResult?.status || 'sent' }} -
-        test_mode {{ sendResult?.test_mode === false ? 'false' : 'true' }}
+        modo {{ successModeLabel }}
       </span>
     </div>
   </div>

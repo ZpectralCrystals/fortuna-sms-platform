@@ -119,6 +119,20 @@ export class SendSmsPageComponent implements OnInit {
     return this.getSendDisabledReason();
   }
 
+  get successTitle(): string {
+    return this.sendResult?.test_mode === false
+      ? 'SMS enviado correctamente'
+      : 'SMS enviado en modo test';
+  }
+
+  get successModeLabel(): string {
+    return this.sendResult?.test_mode === false ? 'real' : 'test';
+  }
+
+  get successCreditsUsed(): number {
+    return Number(this.sendResult?.segments ?? this.requiredCredits);
+  }
+
   setMode(mode: SendMode): void {
     this.mode = mode;
     this.error = '';
