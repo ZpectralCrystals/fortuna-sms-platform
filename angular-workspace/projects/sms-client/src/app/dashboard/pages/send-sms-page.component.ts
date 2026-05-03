@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SmsSendResult, SmsService, SupabaseService } from '@sms-fortuna/shared';
+import { ActivatedRoute } from '@angular/router';
+import { SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
 
 type SendMode = 'single' | 'multiple' | 'file';
 
@@ -23,6 +24,7 @@ interface SendProfile {
   styleUrl: './send-sms-page.component.scss'
 })
 export class SendSmsPageComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
   private readonly supabase = inject(SupabaseService);
   private readonly smsService = inject(SmsService);
 
@@ -32,7 +34,7 @@ export class SendSmsPageComponent implements OnInit {
   multiplePhones = '';
   campaignName = '';
   fileMessages: FileMessage[] = [];
-  templates: Array<{ id: string; name: string; content: string }> = [];
+  templates: SmsTemplate[] = [];
   selectedTemplate = '';
   sending = false;
   success = false;
@@ -41,7 +43,11 @@ export class SendSmsPageComponent implements OnInit {
   sendResult: SmsSendResult | null = null;
 
   async ngOnInit(): Promise<void> {
-    await this.loadProfileCredits();
+    await Promise.all([
+      this.loadProfileCredits(),
+      this.loadTemplates()
+    ]);
+    await this.applyTemplateFromQueryParam();
   }
 
   get messageLength(): number {
@@ -253,8 +259,8 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   private validatePhone(phone: string): boolean {
-    const cleanPhone = phone.replace(/\s+/g, '');
-    return /^\+?51[0-9]{9}$/.test(cleanPhone);
+    const cleanPhone = phone.trim();
+    return /^\+51\d{9}$/.test(cleanPhone);
   }
 
   private getPhonesList(): string[] {
@@ -289,5 +295,37 @@ export class SendSmsPageComponent implements OnInit {
     } catch {
       this.profile = null;
     }
+  }
+
+  private async loadTemplates(): Promise<void> {
+    try {
+      this.templates = await this.smsService.listActiveTemplates();
+    } catch {
+      this.templates = [];
+    }
+  }
+
+  private async applyTemplateFromQueryParam(): Promise<void> {
+    const templateId = this.route.snapshot.queryParamMap.get('templateId');
+    if (!templateId) return;
+
+    let template = this.templates.find((item) => item.id === templateId) ?? null;
+
+    if (!template) {
+      try {
+        template = await this.smsService.getTemplate(templateId);
+      } catch {
+        template = null;
+      }
+    }
+
+    if (!template) {
+      this.error = 'No se pudo cargar la plantilla seleccionada.';
+      return;
+    }
+
+    this.mode = 'single';
+    this.selectedTemplate = template.id;
+    this.message = template.content;
   }
 }

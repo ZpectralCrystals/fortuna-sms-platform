@@ -3,9 +3,13 @@ import {
   AdminSmsMessage,
   AdminSmsMessageFilters,
   AdminSmsMessageProfile,
+  CreateSmsTemplateRequest,
   SmsProviderResponse,
   SmsSendRequest,
-  SmsSendResult
+  SmsSendResult,
+  SmsTemplate,
+  SmsTemplateCategory,
+  UpdateSmsTemplateRequest
 } from '../models/sms.model';
 import { SupabaseService } from './supabase.service';
 
@@ -83,6 +87,119 @@ export class SmsService {
     // TODO: implement file upload flow.
   }
 
+  async listTemplates(): Promise<SmsTemplate[]> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.supabase.instance
+      .from('templates')
+      .select('id, user_id, name, content, category, variables, is_active, created_at, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      throw new Error('No se pudieron cargar las plantillas.');
+    }
+
+    return ((data as unknown[]) ?? []).map((item) => this.mapTemplate(item));
+  }
+
+  async listActiveTemplates(): Promise<SmsTemplate[]> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.supabase.instance
+      .from('templates')
+      .select('id, user_id, name, content, category, variables, is_active, created_at, updated_at')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+
+    if (error) {
+      throw new Error('No se pudieron cargar las plantillas.');
+    }
+
+    return ((data as unknown[]) ?? []).map((item) => this.mapTemplate(item));
+  }
+
+  async getTemplate(id: string): Promise<SmsTemplate | null> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.supabase.instance
+      .from('templates')
+      .select('id, user_id, name, content, category, variables, is_active, created_at, updated_at')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error('No se pudo cargar la plantilla.');
+    }
+
+    return data ? this.mapTemplate(data) : null;
+  }
+
+  async createTemplate(payload: CreateSmsTemplateRequest): Promise<SmsTemplate> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.supabase.instance
+      .from('templates')
+      .insert({
+        user_id: userId,
+        name: payload.name.trim(),
+        content: payload.content.trim(),
+        category: payload.category,
+        variables: payload.variables ?? []
+      })
+      .select('id, user_id, name, content, category, variables, is_active, created_at, updated_at')
+      .single();
+
+    if (error) {
+      throw new Error('No se pudo guardar la plantilla.');
+    }
+
+    return this.mapTemplate(data);
+  }
+
+  async updateTemplate(id: string, payload: UpdateSmsTemplateRequest): Promise<SmsTemplate> {
+    const userId = await this.getCurrentUserId();
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (payload.name !== undefined) updatePayload['name'] = payload.name.trim();
+    if (payload.content !== undefined) updatePayload['content'] = payload.content.trim();
+    if (payload.category !== undefined) updatePayload['category'] = payload.category;
+    if (payload.variables !== undefined) updatePayload['variables'] = payload.variables;
+    if (payload.is_active !== undefined) updatePayload['is_active'] = payload.is_active;
+
+    const { data, error } = await this.supabase.instance
+      .from('templates')
+      .update(updatePayload)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id, user_id, name, content, category, variables, is_active, created_at, updated_at')
+      .single();
+
+    if (error) {
+      throw new Error('No se pudo guardar la plantilla.');
+    }
+
+    return this.mapTemplate(data);
+  }
+
+  async deleteTemplate(id: string): Promise<void> {
+    const userId = await this.getCurrentUserId();
+
+    const { error } = await this.supabase.instance
+      .from('templates')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new Error('No se pudo eliminar la plantilla.');
+    }
+  }
+
   private async getFunctionErrorMessage(error: unknown): Promise<string> {
     const context = (error as { context?: unknown }).context;
 
@@ -118,6 +235,44 @@ export class SmsService {
       created_at: String(row['created_at'] ?? ''),
       profile: this.toProfile(row['profile'])
     };
+  }
+
+  private async getCurrentUserId(): Promise<string> {
+    const { data, error } = await this.supabase.instance.auth.getSession();
+    const userId = data.session?.user?.id;
+
+    if (error || !userId) {
+      throw new Error('Sesión inválida.');
+    }
+
+    return userId;
+  }
+
+  private mapTemplate(item: unknown): SmsTemplate {
+    const row = item as Record<string, unknown>;
+
+    return {
+      id: String(row['id'] ?? ''),
+      user_id: String(row['user_id'] ?? ''),
+      name: String(row['name'] ?? ''),
+      content: String(row['content'] ?? ''),
+      category: this.toTemplateCategory(row['category']),
+      variables: Array.isArray(row['variables']) ? row['variables'] : [],
+      is_active: row['is_active'] !== false,
+      created_at: String(row['created_at'] ?? ''),
+      updated_at: String(row['updated_at'] ?? row['created_at'] ?? '')
+    };
+  }
+
+  private toTemplateCategory(value: unknown): SmsTemplateCategory {
+    return value === 'general' ||
+      value === 'marketing' ||
+      value === 'cobranza' ||
+      value === 'recordatorio' ||
+      value === 'soporte' ||
+      value === 'otro'
+      ? value
+      : 'general';
   }
 
   private toMessageStatus(value: unknown): AdminSmsMessage['status'] {

@@ -65,3 +65,38 @@ export interface AdminSmsMessage {
 export interface AdminSmsMessageFilters {
   status?: SmsMessageStatus | 'all';
 }
+
+export type SmsTemplateCategory =
+  | 'general'
+  | 'marketing'
+  | 'cobranza'
+  | 'recordatorio'
+  | 'soporte'
+  | 'otro';
+
+export interface SmsTemplate {
+  id: string;
+  user_id: string;
+  name: string;
+  content: string;
+  category: SmsTemplateCategory;
+  variables: unknown[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSmsTemplateRequest {
+  name: string;
+  content: string;
+  category: SmsTemplateCategory;
+  variables?: unknown[];
+}
+
+export interface UpdateSmsTemplateRequest {
+  name?: string;
+  content?: string;
+  category?: SmsTemplateCategory;
+  variables?: unknown[];
+  is_active?: boolean;
+}

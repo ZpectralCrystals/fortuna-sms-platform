@@ -1,24 +1,18 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SupabaseService } from '@sms-fortuna/shared';
-
-type TemplateCategory = 'marketing' | 'transactional' | 'notification';
-
-interface MessageTemplate {
-  id: string;
-  user_id: string;
-  name: string;
-  content: string;
-  category: TemplateCategory | string;
-  variables: unknown[] | null;
-  created_at: string;
-}
+import { Router } from '@angular/router';
+import { SmsService, SmsTemplate, SmsTemplateCategory } from '@sms-fortuna/shared';
 
 interface TemplateFormData {
   name: string;
   content: string;
-  category: TemplateCategory;
+  category: SmsTemplateCategory;
+}
+
+interface TemplateCategoryOption {
+  value: SmsTemplateCategory | 'all';
+  label: string;
 }
 
 @Component({
@@ -29,35 +23,65 @@ interface TemplateFormData {
   styleUrl: './templates-page.component.scss'
 })
 export class TemplatesPageComponent implements OnInit {
-  private readonly supabase = inject(SupabaseService);
+  private readonly router = inject(Router);
+  private readonly smsService = inject(SmsService);
 
-  templates: MessageTemplate[] = [];
+  readonly categories: TemplateCategoryOption[] = [
+    { value: 'all', label: 'Todas' },
+    { value: 'general', label: 'General' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'cobranza', label: 'Cobranza' },
+    { value: 'recordatorio', label: 'Recordatorio' },
+    { value: 'soporte', label: 'Soporte' },
+    { value: 'otro', label: 'Otro' }
+  ];
+
+  templates: SmsTemplate[] = [];
+  categoryFilter: SmsTemplateCategory | 'all' = 'all';
+  searchTerm = '';
   showModal = false;
-  editingTemplate: MessageTemplate | null = null;
+  editingTemplate: SmsTemplate | null = null;
   formData: TemplateFormData = this.emptyForm();
   loading = false;
+  saving = false;
   formError = '';
   noticeMessage = '';
 
-  ngOnInit(): void {
-    void this.fetchTemplates();
+  async ngOnInit(): Promise<void> {
+    await this.fetchTemplates();
+  }
+
+  get filteredTemplates(): SmsTemplate[] {
+    const search = this.searchTerm.trim().toLowerCase();
+
+    return this.templates.filter((template) => {
+      const matchesCategory = this.categoryFilter === 'all' || template.category === this.categoryFilter;
+      const matchesSearch = !search ||
+        template.name.toLowerCase().includes(search) ||
+        template.content.toLowerCase().includes(search) ||
+        this.categoryLabel(template.category).toLowerCase().includes(search);
+
+      return matchesCategory && matchesSearch;
+    });
   }
 
   openCreateModal(): void {
     this.editingTemplate = null;
     this.formData = this.emptyForm();
     this.formError = '';
+    this.noticeMessage = '';
     this.showModal = true;
   }
 
-  openEditModal(template: MessageTemplate): void {
+  openEditModal(template: SmsTemplate): void {
     this.editingTemplate = template;
     this.formData = {
       name: template.name,
       content: template.content,
-      category: this.normalizeCategory(template.category)
+      category: template.category
     };
     this.formError = '';
+    this.noticeMessage = '';
     this.showModal = true;
   }
 
@@ -72,84 +96,63 @@ export class TemplatesPageComponent implements OnInit {
     this.formError = '';
     this.noticeMessage = '';
 
-    const userId = await this.getCurrentUserId();
-    if (!userId) {
-      this.formError = 'No se pudo guardar la plantilla.';
+    const validationError = this.validateForm();
+    if (validationError) {
+      this.formError = validationError;
       return;
     }
 
-    this.loading = true;
+    this.saving = true;
 
     try {
+      const payload = {
+        name: this.formData.name,
+        content: this.formData.content,
+        category: this.formData.category,
+        variables: this.extractVariables(this.formData.content)
+      };
+
       if (this.editingTemplate) {
-        const { error } = await this.supabase.instance
-          .from('templates')
-          .update({
-            name: this.formData.name,
-            content: this.formData.content,
-            category: this.formData.category
-          })
-          .eq('id', this.editingTemplate.id)
-          .eq('user_id', userId);
-
-        if (error) {
-          throw error;
-        }
+        await this.smsService.updateTemplate(this.editingTemplate.id, payload);
+        this.noticeMessage = 'Plantilla actualizada.';
       } else {
-        const { error } = await this.supabase.instance
-          .from('templates')
-          .insert({
-            user_id: userId,
-            name: this.formData.name,
-            content: this.formData.content,
-            category: this.formData.category,
-            variables: []
-          });
-
-        if (error) {
-          throw error;
-        }
+        await this.smsService.createTemplate(payload);
+        this.noticeMessage = 'Plantilla creada.';
       }
 
       this.closeModal();
-      await this.fetchTemplates();
-    } catch {
-      this.formError = 'No se pudo guardar la plantilla.';
+      await this.fetchTemplates(false);
+    } catch (error) {
+      this.formError = error instanceof Error
+        ? error.message
+        : 'No se pudo guardar la plantilla.';
     } finally {
-      this.loading = false;
+      this.saving = false;
     }
   }
 
-  async deleteTemplate(id: string): Promise<void> {
-    if (!window.confirm('¿Estás seguro de eliminar esta plantilla?')) {
+  async deleteTemplate(template: SmsTemplate): Promise<void> {
+    if (!window.confirm(`Eliminar plantilla "${template.name}"?`)) {
       return;
     }
 
-    const userId = await this.getCurrentUserId();
-    if (!userId) {
-      this.noticeMessage = 'No se pudo eliminar la plantilla.';
-      return;
-    }
+    this.noticeMessage = '';
 
     try {
-      const { error } = await this.supabase.instance
-        .from('templates')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId);
-
-      if (error) {
-        throw error;
-      }
-
-      await this.fetchTemplates();
-    } catch {
-      this.noticeMessage = 'No se pudo eliminar la plantilla.';
+      await this.smsService.deleteTemplate(template.id);
+      this.noticeMessage = 'Plantilla eliminada.';
+      await this.fetchTemplates(false);
+    } catch (error) {
+      this.noticeMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo eliminar la plantilla.';
     }
   }
 
-  showUseNotice(): void {
-    this.noticeMessage = 'La acción Usar plantilla se conectará en una siguiente fase.';
+  async useTemplate(template: SmsTemplate): Promise<void> {
+    await this.router.navigate(['/dashboard/send'], {
+      queryParams: { templateId: template.id }
+    });
   }
 
   categoryClass(category: string): string {
@@ -157,85 +160,91 @@ export class TemplatesPageComponent implements OnInit {
   }
 
   categoryLabel(category: string): string {
-    switch (category) {
-      case 'marketing':
-        return 'Marketing';
-      case 'transactional':
-        return 'Transaccional';
-      case 'notification':
-        return 'Notificación';
-      default:
-        return category;
-    }
+    const match = this.categories.find((item) => item.value === category);
+    return match?.label ?? 'General';
   }
 
   formatDate(value: string): string {
+    if (!value) return '-';
+
     return new Date(value).toLocaleString('es-PE', {
       day: '2-digit',
       month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   }
 
-  private async fetchTemplates(): Promise<void> {
-    this.noticeMessage = '';
+  smsSegments(value: string): number {
+    return Math.ceil(value.length / 160) || 1;
+  }
+
+  private async fetchTemplates(showLoader = true): Promise<void> {
+    if (showLoader) {
+      this.loading = true;
+    }
 
     try {
-      const userId = await this.getCurrentUserId();
-      if (!userId) {
-        this.templates = [];
-        return;
-      }
-
-      const { data, error } = await this.supabase.instance
-        .from('templates')
-        .select('id, user_id, name, content, category, variables, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        this.templates = [];
-        return;
-      }
-
-      this.templates = ((data as MessageTemplate[] | null) ?? []).map((template) => ({
-        ...template,
-        name: template.name ?? '',
-        content: template.content ?? '',
-        category: template.category ?? 'marketing'
-      }));
-    } catch {
+      this.templates = await this.smsService.listTemplates();
+    } catch (error) {
       this.templates = [];
+      this.noticeMessage = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar las plantillas.';
+    } finally {
+      this.loading = false;
     }
   }
 
-  private async getCurrentUserId(): Promise<string | null> {
-    try {
-      const { data } = await this.supabase.instance.auth.getSession();
-      return data.session?.user?.id ?? null;
-    } catch {
-      return null;
+  private validateForm(): string {
+    this.formData.name = this.formData.name.trim();
+    this.formData.content = this.formData.content.trim();
+
+    if (!this.formData.name) {
+      return 'El nombre es requerido.';
     }
+
+    if (!this.formData.content) {
+      return 'El contenido es requerido.';
+    }
+
+    if (this.formData.content.length > 480) {
+      return 'El contenido no debe superar 480 caracteres.';
+    }
+
+    if (!this.normalizeCategory(this.formData.category)) {
+      return 'La categoría es requerida.';
+    }
+
+    return '';
   }
 
-  private normalizeCategory(category: string): TemplateCategory {
+  private extractVariables(content: string): string[] {
+    const matches = content.match(/\{[a-zA-Z0-9_]+\}/g) ?? [];
+    return Array.from(new Set(matches.map((item) => item.slice(1, -1))));
+  }
+
+  private normalizeCategory(category: string): SmsTemplateCategory {
     if (
+      category === 'general' ||
       category === 'marketing' ||
-      category === 'transactional' ||
-      category === 'notification'
+      category === 'cobranza' ||
+      category === 'recordatorio' ||
+      category === 'soporte' ||
+      category === 'otro'
     ) {
       return category;
     }
 
-    return 'marketing';
+    return 'general';
   }
 
   private emptyForm(): TemplateFormData {
     return {
       name: '',
       content: '',
-      category: 'marketing'
+      category: 'general'
     };
   }
 }

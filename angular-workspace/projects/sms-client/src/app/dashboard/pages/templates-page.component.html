@@ -1,15 +1,15 @@
 <div class="templates-page">
   <header class="templates-header">
     <div>
-      <h1>Plantillas de Mensajes</h1>
-      <p>Crea y administra plantillas reutilizables</p>
+      <h1>Plantillas SMS</h1>
+      <p>Crea mensajes reutilizables y úsalos al enviar SMS individuales.</p>
     </div>
     <button type="button" class="primary-button" (click)="openCreateModal()">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M5 12h14"></path>
         <path d="M12 5v14"></path>
       </svg>
-      Nueva Plantilla
+      Nueva plantilla
     </button>
   </header>
 
@@ -17,8 +17,34 @@
     {{ noticeMessage }}
   </p>
 
+  <section class="filters-card" aria-label="Filtros de plantillas">
+    <label>
+      <span>Buscar</span>
+      <input
+        type="search"
+        name="searchTerm"
+        [(ngModel)]="searchTerm"
+        placeholder="Nombre, contenido o categoría"
+      />
+    </label>
+
+    <label>
+      <span>Categoría</span>
+      <select name="categoryFilter" [(ngModel)]="categoryFilter">
+        <option *ngFor="let category of categories" [value]="category.value">
+          {{ category.label }}
+        </option>
+      </select>
+    </label>
+  </section>
+
   <section class="templates-grid" aria-label="Plantillas guardadas">
-    <div *ngIf="templates.length === 0" class="empty-card">
+    <div *ngIf="loading" class="state-card">
+      <span class="spinner"></span>
+      <p>Cargando plantillas...</p>
+    </div>
+
+    <div *ngIf="!loading && templates.length === 0" class="state-card">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
         <path d="M14 2v6h6"></path>
@@ -26,17 +52,17 @@
         <path d="M16 17H8"></path>
         <path d="M10 9H8"></path>
       </svg>
-      <p>No tienes plantillas aún</p>
+      <p>No tienes plantillas aún.</p>
       <button type="button" class="primary-button" (click)="openCreateModal()">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M5 12h14"></path>
-          <path d="M12 5v14"></path>
-        </svg>
         Crear primera plantilla
       </button>
     </div>
 
-    <article *ngFor="let template of templates" class="template-card">
+    <div *ngIf="!loading && templates.length > 0 && filteredTemplates.length === 0" class="state-card">
+      <p>No hay plantillas que coincidan con los filtros.</p>
+    </div>
+
+    <article *ngFor="let template of filteredTemplates" class="template-card">
       <div class="template-card__header">
         <div class="template-card__title">
           <h3>{{ template.name }}</h3>
@@ -50,6 +76,7 @@
             type="button"
             class="icon-button icon-button--edit"
             title="Editar"
+            aria-label="Editar plantilla"
             (click)="openEditModal(template)"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -61,7 +88,8 @@
             type="button"
             class="icon-button icon-button--delete"
             title="Eliminar"
-            (click)="deleteTemplate(template.id)"
+            aria-label="Eliminar plantilla"
+            (click)="deleteTemplate(template)"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M3 6h18"></path>
@@ -80,44 +108,54 @@
 
       <div class="template-meta">
         <span>{{ template.content.length }} caracteres</span>
-        <span>{{ formatDate(template.created_at) }}</span>
+        <span>{{ smsSegments(template.content) }} segmento(s)</span>
       </div>
 
-      <button type="button" class="use-button" (click)="showUseNotice()">
+      <div class="template-dates">
+        <span>Creada: {{ formatDate(template.created_at) }}</span>
+        <span>Actualizada: {{ formatDate(template.updated_at) }}</span>
+      </div>
+
+      <button type="button" class="use-button" (click)="useTemplate(template)">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m22 2-7 20-4-9-9-4Z"></path>
           <path d="M22 2 11 13"></path>
         </svg>
-        Usar plantilla
+        Usar en envío
       </button>
     </article>
   </section>
 
   <div *ngIf="showModal" class="modal-backdrop" role="dialog" aria-modal="true">
     <section class="modal-card">
-      <h2>{{ editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla' }}</h2>
+      <div class="modal-card__header">
+        <h2>{{ editingTemplate ? 'Editar plantilla' : 'Nueva plantilla' }}</h2>
+        <button type="button" class="icon-button" title="Cerrar" aria-label="Cerrar" (click)="closeModal()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
 
       <form class="template-form" (ngSubmit)="saveTemplate()">
         <label>
-          <span>Nombre de la plantilla</span>
+          <span>Nombre</span>
           <input
             type="text"
             name="templateName"
             [(ngModel)]="formData.name"
             required
-            placeholder="Ej: Confirmación de pedido"
+            placeholder="Ej: Recordatorio de cita"
           />
         </label>
 
         <label>
           <span>Categoría</span>
-          <select
-            name="templateCategory"
-            [(ngModel)]="formData.category"
-          >
-            <option value="marketing">Marketing</option>
-            <option value="transactional">Transaccional</option>
-            <option value="notification">Notificación</option>
+          <select name="templateCategory" [(ngModel)]="formData.category" required>
+            <option *ngFor="let category of categories" [value]="category.value" [disabled]="category.value === 'all'">
+              {{ category.label }}
+            </option>
           </select>
         </label>
 
@@ -127,16 +165,20 @@
             name="templateContent"
             [(ngModel)]="formData.content"
             required
-            rows="6"
+            rows="7"
+            maxlength="480"
             placeholder="Escribe el contenido de tu plantilla..."
           ></textarea>
-          <small>{{ formData.content.length }} caracteres</small>
+          <small>
+            {{ formData.content.length }}/480 caracteres -
+            {{ smsSegments(formData.content) }} segmento(s)
+          </small>
         </label>
 
         <div class="tip-box">
           <p>
-            <strong>Consejo:</strong> Usa variables como {{ '{nombre}' }}, {{ '{codigo}' }} para
-            personalizar tus mensajes.
+            Puedes usar variables visuales como {{ '{nombre}' }} o {{ '{codigo}' }}. En esta fase
+            solo se guarda el texto; no se reemplazan automáticamente.
           </p>
         </div>
 
@@ -148,8 +190,8 @@
           <button type="button" class="secondary-button" (click)="closeModal()">
             Cancelar
           </button>
-          <button type="submit" class="primary-submit" [disabled]="loading">
-            {{ loading ? 'Guardando...' : editingTemplate ? 'Actualizar' : 'Crear' }}
+          <button type="submit" class="primary-submit" [disabled]="saving">
+            {{ saving ? 'Guardando...' : editingTemplate ? 'Actualizar' : 'Crear' }}
           </button>
         </div>
       </form>
