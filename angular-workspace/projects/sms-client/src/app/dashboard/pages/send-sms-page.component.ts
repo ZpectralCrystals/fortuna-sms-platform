@@ -44,6 +44,7 @@ export class SendSmsPageComponent implements OnInit {
   error = '';
   profile: SendProfile | null = null;
   sendResult: SmsSendResult | null = null;
+  currentIdempotencyKey = '';
 
   async ngOnInit(): Promise<void> {
     await Promise.all([
@@ -282,6 +283,8 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   async handleSend(): Promise<void> {
+    if (this.sending) return;
+
     this.error = '';
     this.success = false;
     this.sendResult = null;
@@ -300,10 +303,15 @@ export class SendSmsPageComponent implements OnInit {
       return;
     }
 
+    this.currentIdempotencyKey = this.createIdempotencyKey();
     this.sending = true;
 
     try {
-      const result = await this.smsService.sendSingle({ recipient, message });
+      const result = await this.smsService.sendSingle({
+        recipient,
+        message,
+        idempotency_key: this.currentIdempotencyKey
+      });
       this.sendResult = result;
       this.success = true;
       await this.loadProfileCredits();
@@ -313,6 +321,7 @@ export class SendSmsPageComponent implements OnInit {
         : 'No se pudo enviar el SMS.';
     } finally {
       this.sending = false;
+      this.currentIdempotencyKey = '';
     }
   }
 
@@ -327,6 +336,17 @@ export class SendSmsPageComponent implements OnInit {
   private validatePhone(phone: string): boolean {
     const cleanPhone = phone.trim();
     return /^\+51\d{9}$/.test(cleanPhone);
+  }
+
+  private createIdempotencyKey(): string {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    const values = new Uint32Array(4);
+    globalThis.crypto?.getRandomValues(values);
+    const randomPart = Array.from(values, (value) => value.toString(36)).join('');
+    return `sms_${Date.now().toString(36)}_${randomPart}`;
   }
 
   private getPhonesList(): string[] {

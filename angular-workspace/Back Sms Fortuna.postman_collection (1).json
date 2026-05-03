@@ -1,0 +1,172 @@
+{
+  "info": {
+    "_postman_id": "f060b2d1-02c6-4d7d-84a4-ce26901c3c7d",
+    "name": "Back Sms Fortuna",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "3915982"
+  },
+  "item": [
+    {
+      "name": "login",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "usuario",
+              "value": "admin.fortuna",
+              "type": "text",
+              "uuid": "a876180c-6a0c-4341-95d0-ebc91a53d506"
+            },
+            {
+              "key": "password",
+              "value": "Fortun@dmin$$",
+              "type": "text",
+              "uuid": "397796b1-f966-4fc7-9470-8e14b73484ca"
+            }
+          ]
+        },
+        "url": {
+          "raw": "https://services-fortuna.com/v1/api/login",
+          "protocol": "https",
+          "host": [
+            "services-fortuna",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "sms individual",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJmb3J0dW5hSldUIiwic3ViIjoiYWRtaW4uZm9ydHVuYSIsImF1dGhvcml0aWVzIjpbIlJPTEVfVVNFUiJdLCJpYXQiOjE3Nzc1NzY1NDgsImV4cCI6MTc3NzU3NzE0OH0.2j-MDDaLS6tDeaR7epEHYJNsoBiMlwANKfAAFD9FU6A2eVBcpSnudjg-KbeA3RVZvbMoBUjt7613fTp6j8W_Yw",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"telefono\": \"51967745565\",\r\n    \"mensaje\": \"Buenos días cliente, esto es una prueba individual. Fortuna\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://services-fortuna.com/v1/api/sms/individual",
+          "protocol": "https",
+          "host": [
+            "services-fortuna",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "sms",
+            "individual"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "sms multiple",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJmb3J0dW5hSldUIiwic3ViIjoiYWRtaW4uZm9ydHVuYSIsImF1dGhvcml0aWVzIjpbIlJPTEVfVVNFUiJdLCJpYXQiOjE3Nzc1NzY1NDgsImV4cCI6MTc3NzU3NzE0OH0.2j-MDDaLS6tDeaR7epEHYJNsoBiMlwANKfAAFD9FU6A2eVBcpSnudjg-KbeA3RVZvbMoBUjt7613fTp6j8W_Yw",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"mensaje\": \"Buenos días cliente, esto es una prueba masiva. Fortuna\",\r\n    \"telefonos\": [\r\n        {\"telefono\":\"51967745565\"},\r\n        {\"telefono\":\"51973159333\"}\r\n    ]  \r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://services-fortuna.com/v1/api/sms/multiple",
+          "protocol": "https",
+          "host": [
+            "services-fortuna",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "sms",
+            "multiple"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "sms plantilla",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJmb3J0dW5hSldUIiwic3ViIjoiYWRtaW4uZm9ydHVuYSIsImF1dGhvcml0aWVzIjpbIlJPTEVfVVNFUiJdLCJpYXQiOjE3Nzc1NzY1NDgsImV4cCI6MTc3NzU3NzE0OH0.2j-MDDaLS6tDeaR7epEHYJNsoBiMlwANKfAAFD9FU6A2eVBcpSnudjg-KbeA3RVZvbMoBUjt7613fTp6j8W_Yw",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/C:/Users/FU42575888-EXT/Downloads/plantilla_sms_test.xlsx"
+            }
+          ]
+        },
+        "url": {
+          "raw": "https://services-fortuna.com/v1/api/sms/plantilla",
+          "protocol": "https",
+          "host": [
+            "services-fortuna",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "sms",
+            "plantilla"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

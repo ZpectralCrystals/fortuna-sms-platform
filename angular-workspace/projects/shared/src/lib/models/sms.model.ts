@@ -16,6 +16,7 @@ export interface SmsSendRequest {
   recipients?: string[];
   message: string;
   templateId?: string;
+  idempotency_key?: string;
 }
 
 export interface SmsSendResult {

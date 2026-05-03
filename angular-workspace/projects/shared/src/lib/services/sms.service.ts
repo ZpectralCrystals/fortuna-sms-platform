@@ -23,7 +23,8 @@ export class SmsService {
     const { data, error } = await this.supabase.instance.functions.invoke<SmsSendResult>('send-sms', {
       body: {
         recipient,
-        message: request.message
+        message: request.message,
+        idempotency_key: request.idempotency_key
       }
     });
 
