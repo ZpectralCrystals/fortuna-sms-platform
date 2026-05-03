@@ -1,4 +1,11 @@
 import { Injectable, inject } from '@angular/core';
+import {
+  BackofficeClientDetail,
+  BackofficeClientMessage,
+  BackofficeClientProfile,
+  BackofficeClientRecharge,
+  UpdateClientBasicInfoPayload
+} from '../models/user.model';
 import { SupabaseService } from './supabase.service';
 
 export interface InventoryState {
@@ -113,6 +120,124 @@ export class BackofficeService {
     }
   }
 
+  async listClients(): Promise<BackofficeClientProfile[]> {
+    const [profilesResult, adminsResult] = await Promise.all([
+      this.supabase.instance
+        .from('profiles')
+        .select('id,email,full_name,razon_social,ruc,phone,credits,total_spent,is_active,created_at,updated_at')
+        .order('created_at', { ascending: false }),
+      this.supabase.instance
+        .from('admins')
+        .select('id')
+    ]);
+
+    if (profilesResult.error) {
+      throw new Error(`No se pudieron cargar los clientes: ${profilesResult.error.message}`);
+    }
+
+    if (adminsResult.error) {
+      throw new Error(`No se pudieron validar administradores: ${adminsResult.error.message}`);
+    }
+
+    const adminIds = new Set(((adminsResult.data as unknown[]) ?? [])
+      .map((admin) => String((admin as Record<string, unknown>)['id'] ?? ''))
+      .filter(Boolean));
+
+    return ((profilesResult.data as unknown[]) ?? [])
+      .map((profile) => this.mapClientProfile(profile))
+      .filter((profile) => profile.id && !adminIds.has(profile.id));
+  }
+
+  async getClientDetail(profileId: string): Promise<BackofficeClientDetail> {
+    const [profile, recentRecharges, recentMessages, allRecharges, allMessages] = await Promise.all([
+      this.getClientProfile(profileId),
+      this.listClientRecharges(profileId, 5),
+      this.listClientMessages(profileId, 5),
+      this.listClientRecharges(profileId),
+      this.listClientMessages(profileId)
+    ]);
+
+    return {
+      profile,
+      recentRecharges,
+      recentMessages,
+      counts: {
+        pendingRecharges: allRecharges.filter((recharge) => recharge.status === 'pending').length,
+        approvedRecharges: allRecharges.filter((recharge) => recharge.status === 'approved').length,
+        sentMessages: allMessages.filter((message) => message.status === 'sent' || message.status === 'delivered').length,
+        failedMessages: allMessages.filter((message) => message.status === 'failed').length
+      }
+    };
+  }
+
+  async updateClientBasicInfo(profileId: string, payload: UpdateClientBasicInfoPayload): Promise<void> {
+    const { error } = await this.supabase.instance
+      .from('profiles')
+      .update({
+        full_name: payload.full_name,
+        razon_social: payload.razon_social,
+        ruc: payload.ruc,
+        phone: payload.phone,
+        is_active: payload.is_active
+      })
+      .eq('id', profileId);
+
+    if (error) {
+      throw new Error(`No se pudo actualizar el cliente. Verifica permisos de administrador: ${error.message}`);
+    }
+  }
+
+  async setClientActive(profileId: string, isActive: boolean): Promise<void> {
+    const { error } = await this.supabase.instance
+      .from('profiles')
+      .update({ is_active: isActive })
+      .eq('id', profileId);
+
+    if (error) {
+      throw new Error(`No se pudo cambiar el estado del cliente. Verifica permisos de administrador: ${error.message}`);
+    }
+  }
+
+  async listClientRecharges(profileId: string, limit?: number): Promise<BackofficeClientRecharge[]> {
+    let query = this.supabase.instance
+      .from('recharges')
+      .select('id,sms_credits,amount,payment_method,operation_code,status,created_at')
+      .eq('user_id', profileId)
+      .order('created_at', { ascending: false });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`No se pudieron cargar las recargas del cliente: ${error.message}`);
+    }
+
+    return ((data as unknown[]) ?? []).map((recharge) => this.mapClientRecharge(recharge));
+  }
+
+  async listClientMessages(profileId: string, limit?: number): Promise<BackofficeClientMessage[]> {
+    let query = this.supabase.instance
+      .from('sms_messages')
+      .select('id,recipient,message,segments,cost,status,created_at,sent_at,error_message')
+      .eq('user_id', profileId)
+      .order('created_at', { ascending: false });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`No se pudieron cargar los mensajes del cliente: ${error.message}`);
+    }
+
+    return ((data as unknown[]) ?? []).map((message) => this.mapClientMessage(message));
+  }
+
   async syncUsers(): Promise<void> {
     // TODO: trigger users synchronization.
   }
@@ -131,6 +256,80 @@ export class BackofficeService {
     }
 
     return message;
+  }
+
+  private async getClientProfile(profileId: string): Promise<BackofficeClientProfile> {
+    const { data, error } = await this.supabase.instance
+      .from('profiles')
+      .select('id,email,full_name,razon_social,ruc,phone,credits,total_spent,is_active,created_at,updated_at')
+      .eq('id', profileId)
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Cliente no encontrado.');
+    }
+
+    return this.mapClientProfile(data);
+  }
+
+  private mapClientProfile(value: unknown): BackofficeClientProfile {
+    const profile = value as Record<string, unknown>;
+
+    return {
+      id: this.toSafeString(profile['id']),
+      email: this.toSafeString(profile['email']),
+      full_name: this.toNullableString(profile['full_name']),
+      razon_social: this.toNullableString(profile['razon_social']),
+      ruc: this.toNullableString(profile['ruc']),
+      phone: this.toNullableString(profile['phone']),
+      credits: Number(profile['credits'] ?? 0),
+      total_spent: Number(profile['total_spent'] ?? 0),
+      is_active: Boolean(profile['is_active']),
+      created_at: this.toSafeString(profile['created_at']) || new Date().toISOString(),
+      updated_at: this.toNullableString(profile['updated_at'])
+    };
+  }
+
+  private mapClientRecharge(value: unknown): BackofficeClientRecharge {
+    const recharge = value as Record<string, unknown>;
+
+    return {
+      id: this.toSafeString(recharge['id']),
+      sms_credits: Number(recharge['sms_credits'] ?? 0),
+      amount: Number(recharge['amount'] ?? 0),
+      payment_method: this.toNullableString(recharge['payment_method']),
+      operation_code: this.toNullableString(recharge['operation_code']),
+      status: this.toRechargeStatus(recharge['status']),
+      created_at: this.toSafeString(recharge['created_at']) || new Date().toISOString()
+    };
+  }
+
+  private mapClientMessage(value: unknown): BackofficeClientMessage {
+    const message = value as Record<string, unknown>;
+
+    return {
+      id: this.toSafeString(message['id']),
+      recipient: this.toSafeString(message['recipient']),
+      message: this.toSafeString(message['message']),
+      segments: Number(message['segments'] ?? 0),
+      cost: Number(message['cost'] ?? 0),
+      status: this.toMessageStatus(message['status']),
+      created_at: this.toSafeString(message['created_at']) || new Date().toISOString(),
+      sent_at: this.toNullableString(message['sent_at']),
+      error_message: this.toNullableString(message['error_message'])
+    };
+  }
+
+  private toRechargeStatus(value: unknown): BackofficeClientRecharge['status'] {
+    return value === 'approved' || value === 'rejected' || value === 'pending'
+      ? value
+      : 'pending';
+  }
+
+  private toMessageStatus(value: unknown): BackofficeClientMessage['status'] {
+    return value === 'sent' || value === 'delivered' || value === 'failed' || value === 'pending'
+      ? value
+      : 'pending';
   }
 
   private toSafeString(value: unknown): string {

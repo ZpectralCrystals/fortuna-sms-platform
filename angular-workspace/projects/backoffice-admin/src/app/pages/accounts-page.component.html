@@ -3,40 +3,69 @@
 </div>
 
 <div *ngIf="!loading" class="accounts-page">
-  <div class="search-box">
-    <svg
-      class="search-icon"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-    <input
-      type="text"
-      name="searchTerm"
-      [(ngModel)]="searchTerm"
-      placeholder="Buscar clientes..."
-    />
-  </div>
+  <p *ngIf="errorMessage" class="message-box error">{{ errorMessage }}</p>
+  <p *ngIf="successMessage" class="message-box success">{{ successMessage }}</p>
+
+  <section class="metrics-grid">
+    <article class="metric-card">
+      <span>Total clientes</span>
+      <strong>{{ formatNumber(totalClients) }}</strong>
+    </article>
+    <article class="metric-card active">
+      <span>Activos</span>
+      <strong>{{ formatNumber(activeClients) }}</strong>
+    </article>
+    <article class="metric-card inactive">
+      <span>Inactivos</span>
+      <strong>{{ formatNumber(inactiveClients) }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Créditos totales</span>
+      <strong>{{ formatNumber(totalCredits) }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Total gastado</span>
+      <strong>S/ {{ formatCurrency(totalSpent) }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Más créditos</span>
+      <strong>{{ topCreditClient ? clientName(topCreditClient) : '-' }}</strong>
+      <small *ngIf="topCreditClient">{{ formatNumber(topCreditClient.credits) }} créditos</small>
+    </article>
+  </section>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <input
+        type="text"
+        name="searchTerm"
+        [(ngModel)]="searchTerm"
+        placeholder="Buscar por nombre, email, razón social, RUC o teléfono"
+      />
+    </div>
+
+    <select name="statusFilter" [(ngModel)]="statusFilter" class="status-filter">
+      <option value="all">Todos</option>
+      <option value="active">Activos</option>
+      <option value="inactive">Inactivos</option>
+    </select>
+  </section>
 
   <div class="clients-grid">
     <article
       *ngFor="let client of filteredClients"
       class="client-card"
-      (click)="openClient(client)"
     >
       <div class="client-header">
         <div class="client-title">
-          <h3>{{ client.full_name || '-' }}</h3>
+          <h3>{{ clientName(client) }}</h3>
           <p class="client-email">{{ client.email || '-' }}</p>
-          <p *ngIf="client.company" class="client-company">{{ client.company }}</p>
+          <p *ngIf="clientCompany(client)" class="client-company">{{ clientCompany(client) }}</p>
+          <p *ngIf="client.phone" class="client-phone">{{ client.phone }}</p>
         </div>
         <span class="status-badge" [class.active]="client.is_active" [class.inactive]="!client.is_active">
           {{ client.is_active ? 'Activo' : 'Inactivo' }}
@@ -46,148 +75,218 @@
       <div class="client-metrics">
         <div class="metric-row blue">
           <div class="metric-label">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            <span>Balance SMS</span>
+            <span>Créditos</span>
           </div>
-          <strong>{{ formatNumber(client.sms_balance) }}</strong>
+          <strong>{{ formatNumber(client.credits) }}</strong>
         </div>
 
         <div class="metric-row green">
           <div class="metric-label">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect width="20" height="14" x="2" y="5" rx="2" />
-              <line x1="2" x2="22" y1="10" y2="10" />
-            </svg>
-            <span>Total Gastado</span>
+            <span>Total gastado</span>
           </div>
-          <strong>S/ {{ formatCurrency(client.totalSpent) }}</strong>
-        </div>
-
-        <div class="metric-row purple">
-          <div class="metric-label">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-              <polyline points="16 7 22 7 22 13" />
-            </svg>
-            <span>Recargas</span>
-          </div>
-          <strong>{{ client.totalRecharges }}</strong>
+          <strong>S/ {{ formatCurrency(client.total_spent) }}</strong>
         </div>
 
         <div class="since-row">
-          <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M8 2v4" />
-            <path d="M16 2v4" />
-            <rect width="18" height="18" x="3" y="4" rx="2" />
-            <path d="M3 10h18" />
-          </svg>
-          <span>Desde {{ formatDate(client.created_at) }}</span>
+          <span>Creado {{ formatDate(client.created_at) }}</span>
         </div>
+
+        <div class="since-row">
+          <span>Actualizado {{ formatDate(client.updated_at) }}</span>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button type="button" class="secondary-button" (click)="openClient(client)">
+          Ver detalle
+        </button>
+        <button
+          type="button"
+          class="status-button"
+          [class.deactivate]="client.is_active"
+          [class.activate]="!client.is_active"
+          (click)="toggleClientActive(client)"
+        >
+          {{ client.is_active ? 'Desactivar' : 'Activar' }}
+        </button>
       </div>
     </article>
   </div>
 
   <div *ngIf="filteredClients.length === 0" class="empty-state">
-    <svg
-      class="empty-icon"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
+    <svg class="empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.3-4.3" />
     </svg>
     <p>No se encontraron clientes</p>
   </div>
 
-  <div
-    *ngIf="selectedClient"
-    class="modal-backdrop"
-    (click)="closeClient()"
-  >
-    <div
-      class="client-modal"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="modal-header">
-        <div>
-          <h2>{{ selectedClient.full_name || '-' }}</h2>
-          <p>{{ selectedClient.email || '-' }}</p>
-          <p *ngIf="selectedClient.company" class="modal-company">{{ selectedClient.company }}</p>
-          <p *ngIf="selectedClient.phone" class="modal-phone">{{ selectedClient.phone }}</p>
-        </div>
-        <button
-          type="button"
-          class="modal-close"
-          aria-label="Cerrar"
-          (click)="closeClient()"
-        >
-          <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
-        </button>
+  <div *ngIf="detailLoading || detailError || selectedDetail" class="modal-backdrop" (click)="closeClient()">
+    <div class="client-modal" (click)="$event.stopPropagation()">
+      <div *ngIf="detailLoading" class="modal-loading">
+        Cargando detalle...
       </div>
 
-      <div class="modal-summary-grid">
-        <div class="summary-card blue">
-          <svg class="summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <p class="summary-value">{{ formatNumber(selectedClient.sms_balance) }}</p>
-          <p class="summary-label">SMS</p>
-        </div>
-
-        <div class="summary-card green">
-          <svg class="summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect width="20" height="14" x="2" y="5" rx="2" />
-            <line x1="2" x2="22" y1="10" y2="10" />
-          </svg>
-          <p class="summary-value">S/ {{ formatCurrency(selectedClient.totalSpent) }}</p>
-          <p class="summary-label">Gastado</p>
-        </div>
-
-        <div class="summary-card purple">
-          <svg class="summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-            <polyline points="16 7 22 7 22 13" />
-          </svg>
-          <p class="summary-value">{{ selectedClient.totalRecharges }}</p>
-          <p class="summary-label">Recargas</p>
-        </div>
+      <div *ngIf="detailError && !detailLoading" class="modal-error">
+        {{ detailError }}
       </div>
 
-      <section>
-        <h3>Historial de Recargas</h3>
-        <div class="recharge-list">
-          <div
-            *ngFor="let recharge of selectedClient.recentRecharges"
-            class="recharge-item"
+      <ng-container *ngIf="selectedDetail && !detailLoading">
+        <div class="modal-header">
+          <div>
+            <h2>{{ clientName(selectedDetail.profile) }}</h2>
+            <p>{{ selectedDetail.profile.email || '-' }}</p>
+            <p *ngIf="clientCompany(selectedDetail.profile)" class="modal-company">
+              {{ clientCompany(selectedDetail.profile) }}
+            </p>
+            <p *ngIf="selectedDetail.profile.phone" class="modal-phone">{{ selectedDetail.profile.phone }}</p>
+          </div>
+          <button type="button" class="modal-close" aria-label="Cerrar" (click)="closeClient()">
+            <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-actions-top">
+          <button type="button" class="secondary-button" (click)="startEdit()" [disabled]="editMode">
+            Editar datos
+          </button>
+          <button
+            type="button"
+            class="status-button"
+            [class.deactivate]="selectedDetail.profile.is_active"
+            [class.activate]="!selectedDetail.profile.is_active"
+            (click)="toggleSelectedClientActive()"
           >
-            <div>
-              <p class="recharge-quantity">{{ formatNumber(recharge.quantity) }} SMS</p>
-              <p class="recharge-date">{{ formatDate(recharge.created_at) }}</p>
-            </div>
-            <div class="recharge-side">
-              <p>S/ {{ formatCurrency(recharge.amount) }}</p>
-              <span class="recharge-status" [ngClass]="recharge.status">
-                {{ statusLabel(recharge.status) }}
-              </span>
-            </div>
+            {{ selectedDetail.profile.is_active ? 'Desactivar cliente' : 'Activar cliente' }}
+          </button>
+        </div>
+
+        <p class="inactive-note">
+          Cliente inactivo no podrá entrar al dashboard cliente.
+        </p>
+
+        <p *ngIf="editError" class="message-box error">{{ editError }}</p>
+
+        <form *ngIf="editMode" class="edit-form" (ngSubmit)="saveClient()">
+          <label>
+            <span>Nombre completo</span>
+            <input type="text" name="full_name" [(ngModel)]="editForm.full_name" />
+          </label>
+          <label>
+            <span>Razón social</span>
+            <input type="text" name="razon_social" [(ngModel)]="editForm.razon_social" />
+          </label>
+          <label>
+            <span>RUC</span>
+            <input type="text" name="ruc" [(ngModel)]="editForm.ruc" maxlength="11" />
+          </label>
+          <label>
+            <span>Teléfono</span>
+            <input type="tel" name="phone" [(ngModel)]="editForm.phone" placeholder="+51987654321" />
+          </label>
+          <label class="checkbox-field">
+            <input type="checkbox" name="is_active" [(ngModel)]="editForm.is_active" />
+            <span>Cliente activo</span>
+          </label>
+
+          <div class="edit-note">
+            Créditos, total gastado, ID y email no se editan desde Angular.
           </div>
 
-          <p *ngIf="selectedClient.recentRecharges.length === 0" class="empty-recharges">
-            No hay recargas registradas
-          </p>
+          <div class="edit-actions">
+            <button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="saving">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving">
+              {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+            </button>
+          </div>
+        </form>
+
+        <div class="modal-summary-grid">
+          <div class="summary-card blue">
+            <p class="summary-value">{{ formatNumber(selectedDetail.profile.credits) }}</p>
+            <p class="summary-label">Créditos</p>
+          </div>
+
+          <div class="summary-card green">
+            <p class="summary-value">S/ {{ formatCurrency(selectedDetail.profile.total_spent) }}</p>
+            <p class="summary-label">Total gastado</p>
+          </div>
+
+          <div class="summary-card amber">
+            <p class="summary-value">{{ selectedDetail.counts.pendingRecharges }}</p>
+            <p class="summary-label">Recargas pendientes</p>
+          </div>
+
+          <div class="summary-card purple">
+            <p class="summary-value">{{ selectedDetail.counts.approvedRecharges }}</p>
+            <p class="summary-label">Recargas aprobadas</p>
+          </div>
+
+          <div class="summary-card blue">
+            <p class="summary-value">{{ selectedDetail.counts.sentMessages }}</p>
+            <p class="summary-label">Mensajes enviados</p>
+          </div>
+
+          <div class="summary-card red">
+            <p class="summary-value">{{ selectedDetail.counts.failedMessages }}</p>
+            <p class="summary-label">Mensajes fallidos</p>
+          </div>
         </div>
-      </section>
+
+        <section class="detail-section">
+          <h3>Datos del perfil</h3>
+          <div class="profile-grid">
+            <div><span>ID</span><strong>{{ selectedDetail.profile.id }}</strong></div>
+            <div><span>Email</span><strong>{{ selectedDetail.profile.email || '-' }}</strong></div>
+            <div><span>Creado</span><strong>{{ formatDate(selectedDetail.profile.created_at) }}</strong></div>
+            <div><span>Actualizado</span><strong>{{ formatDate(selectedDetail.profile.updated_at) }}</strong></div>
+          </div>
+        </section>
+
+        <section class="detail-section">
+          <h3>Últimas recargas</h3>
+          <div class="item-list">
+            <article *ngFor="let recharge of selectedDetail.recentRecharges" class="detail-item">
+              <div>
+                <p>{{ formatNumber(recharge.sms_credits) }} créditos</p>
+                <small>{{ formatDate(recharge.created_at) }} · {{ recharge.payment_method || '-' }}</small>
+              </div>
+              <div class="item-side">
+                <strong>S/ {{ formatCurrency(recharge.amount) }}</strong>
+                <span class="status-chip" [ngClass]="recharge.status">{{ rechargeStatusLabel(recharge.status) }}</span>
+              </div>
+            </article>
+            <p *ngIf="selectedDetail.recentRecharges.length === 0" class="empty-recharges">
+              No hay recargas registradas
+            </p>
+          </div>
+        </section>
+
+        <section class="detail-section">
+          <h3>Últimos mensajes</h3>
+          <div class="item-list">
+            <article *ngFor="let message of selectedDetail.recentMessages" class="detail-item">
+              <div>
+                <p>{{ message.recipient }}</p>
+                <small>{{ message.message }}</small>
+                <small *ngIf="message.error_message" class="error-text">{{ message.error_message }}</small>
+              </div>
+              <div class="item-side">
+                <strong>{{ formatNumber(message.segments) }} seg.</strong>
+                <span class="status-chip" [ngClass]="message.status">{{ messageStatusLabel(message.status) }}</span>
+              </div>
+            </article>
+            <p *ngIf="selectedDetail.recentMessages.length === 0" class="empty-recharges">
+              No hay mensajes registrados
+            </p>
+          </div>
+        </section>
+      </ng-container>
     </div>
   </div>
 </div>
