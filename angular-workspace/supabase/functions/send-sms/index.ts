@@ -22,6 +22,40 @@ interface RpcResult {
   test_mode?: boolean;
 }
 
+type SmsProviderMode = "test" | "prod";
+type SupabaseClientInstance = ReturnType<typeof createClient>;
+
+type SmsProviderRequest = {
+  userId: string;
+  recipient: string;
+  message: string;
+  segments: number;
+};
+
+type SmsProviderResult = {
+  success: boolean;
+  provider: string;
+  providerMessageId?: string;
+  providerResponse?: unknown;
+  errorMessage?: string;
+  rawStatus?: string;
+  messageId?: string;
+  recipient?: string;
+  segments?: number;
+  cost?: number;
+  status?: string;
+  testMode?: boolean;
+};
+
+type RealProviderConfig = {
+  apiUrl: string | null;
+  apiKey: string | null;
+  username: string | null;
+  password: string | null;
+  senderId: string | null;
+  timeoutMs: number;
+};
+
 const errorMessages: Record<string, string> = {
   INVALID_PHONE: "Número inválido. Usa formato peruano +51XXXXXXXXX.",
   EMPTY_MESSAGE: "El mensaje no puede estar vacío.",
@@ -29,6 +63,10 @@ const errorMessages: Record<string, string> = {
   PROFILE_INACTIVE: "Tu cuenta está inactiva.",
   PROFILE_NOT_FOUND: "Perfil no encontrado.",
   NOT_AUTHORIZED: "Sesión inválida.",
+  PROVIDER_NOT_CONFIGURED: "Proveedor SMS real aún no configurado.",
+  PROVIDER_REQUEST_FAILED: "No se pudo conectar con el proveedor SMS.",
+  PROVIDER_TIMEOUT: "El proveedor SMS no respondió a tiempo.",
+  PROVIDER_INVALID_RESPONSE: "Respuesta inválida del proveedor SMS.",
 };
 
 Deno.serve(async (req: Request) => {
@@ -87,32 +125,38 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    const { data, error } = await supabaseAdmin.rpc("internal_send_sms_test", {
-      p_user_id: authData.user.id,
-      p_recipient: recipient,
-      p_message: message,
-    });
+    const providerRequest: SmsProviderRequest = {
+      userId: authData.user.id,
+      recipient,
+      message,
+      segments: calculateSmsSegments(message),
+    };
 
-    if (error) {
-      const mappedError = mapRpcError(error.message);
-      console.error("send-sms RPC failed:", {
-        code: error.code,
+    const providerMode = getProviderMode();
+    const providerResult = providerMode === "prod"
+      ? await sendWithRealProvider(providerRequest, getRealProviderConfig())
+      : await sendWithTestProvider(supabaseAdmin, providerRequest);
+
+    if (!providerResult.success) {
+      const mappedError = mapProviderError(providerResult.errorMessage ?? providerResult.rawStatus ?? "");
+      console.error("send-sms provider failed:", {
+        provider: providerResult.provider,
+        mode: providerMode,
+        rawStatus: providerResult.rawStatus ?? null,
         mapped: mappedError,
       });
 
       return jsonResponse({ success: false, error: mappedError }, mappedError === errorMessages.NOT_AUTHORIZED ? 401 : 400);
     }
 
-    const result = normalizeRpcResult(data);
-
     return jsonResponse({
       success: true,
-      message_id: result.message_id ?? result.id ?? null,
-      recipient: result.recipient ?? recipient,
-      segments: Number(result.segments ?? 1),
-      cost: Number(result.cost ?? result.segments ?? 1),
-      status: result.status ?? "sent",
-      test_mode: result.test_mode ?? true,
+      message_id: providerResult.messageId ?? providerResult.providerMessageId ?? null,
+      recipient: providerResult.recipient ?? recipient,
+      segments: Number(providerResult.segments ?? providerRequest.segments),
+      cost: Number(providerResult.cost ?? providerResult.segments ?? providerRequest.segments),
+      status: providerResult.status ?? "sent",
+      test_mode: providerResult.testMode ?? providerMode === "test",
     });
   } catch (error) {
     console.error("send-sms failed:", error instanceof Error ? error.name : "UnknownError");
@@ -148,7 +192,87 @@ function normalizeRpcResult(data: unknown): RpcResult {
   return {};
 }
 
-function mapRpcError(message: string): string {
+async function sendWithTestProvider(
+  supabaseAdmin: SupabaseClientInstance,
+  request: SmsProviderRequest,
+): Promise<SmsProviderResult> {
+  const { data, error } = await supabaseAdmin.rpc("internal_send_sms_test", {
+    p_user_id: request.userId,
+    p_recipient: request.recipient,
+    p_message: request.message,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      provider: "internal_test",
+      errorMessage: error.message,
+      rawStatus: error.code,
+    };
+  }
+
+  const result = normalizeRpcResult(data);
+
+  return {
+    success: true,
+    provider: "internal_test",
+    providerMessageId: result.message_id ?? result.id,
+    providerResponse: { test_mode: result.test_mode ?? true },
+    messageId: result.message_id ?? result.id,
+    recipient: result.recipient ?? request.recipient,
+    segments: Number(result.segments ?? request.segments),
+    cost: Number(result.cost ?? result.segments ?? request.segments),
+    status: result.status ?? "sent",
+    testMode: result.test_mode ?? true,
+  };
+}
+
+async function sendWithRealProvider(
+  _request: SmsProviderRequest,
+  config: RealProviderConfig,
+): Promise<SmsProviderResult> {
+  if (!config.apiUrl || (!config.apiKey && (!config.username || !config.password))) {
+    return {
+      success: false,
+      provider: "real_provider",
+      errorMessage: "PROVIDER_NOT_CONFIGURED",
+      rawStatus: "PROVIDER_NOT_CONFIGURED",
+    };
+  }
+
+  return {
+    success: false,
+    provider: "real_provider",
+    errorMessage: "PROVIDER_NOT_CONFIGURED",
+    rawStatus: "PROVIDER_NOT_CONFIGURED",
+  };
+}
+
+function getProviderMode(): SmsProviderMode {
+  return Deno.env.get("SMS_PROVIDER_MODE") === "prod" ? "prod" : "test";
+}
+
+function getRealProviderConfig(): RealProviderConfig {
+  return {
+    apiUrl: getEnv("SMS_PROVIDER_API_URL"),
+    apiKey: getEnv("SMS_PROVIDER_API_KEY"),
+    username: getEnv("SMS_PROVIDER_USERNAME"),
+    password: getEnv("SMS_PROVIDER_PASSWORD"),
+    senderId: getEnv("SMS_PROVIDER_SENDER_ID"),
+    timeoutMs: Number(Deno.env.get("SMS_PROVIDER_TIMEOUT_MS") ?? 10000),
+  };
+}
+
+function getEnv(name: string): string | null {
+  const value = Deno.env.get(name)?.trim();
+  return value || null;
+}
+
+function calculateSmsSegments(message: string): number {
+  return Math.ceil(message.length / 160) || 1;
+}
+
+function mapProviderError(message: string): string {
   const upperMessage = message.toUpperCase();
   const key = Object.keys(errorMessages).find((item) => upperMessage.includes(item));
 
