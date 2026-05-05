@@ -86,6 +86,7 @@ const errorMessages: Record<string, string> = {
   PROVIDER_NOT_CONFIGURED: "Proveedor SMS real aún no configurado.",
   PROVIDER_AUTH_FAILED: "No se pudo autenticar con el proveedor SMS.",
   PROVIDER_REQUEST_FAILED: "No se pudo conectar con el proveedor SMS.",
+  PROVIDER_ERROR: "No se pudo conectar con el proveedor SMS.",
   PROVIDER_TIMEOUT: "El proveedor SMS no respondió a tiempo.",
   PROVIDER_INVALID_RESPONSE: "Respuesta inválida del proveedor SMS.",
   INVALID_IDEMPOTENCY_KEY: "No se pudo validar este envío. Intenta nuevamente.",
@@ -294,6 +295,17 @@ async function sendWithRealProvider(
 ): Promise<SmsProviderResult> {
   const attempt = await beginSmsSendAttempt(supabaseAdmin, request);
 
+  if (isHardeningUnavailable(attempt)) {
+    logSafe("send-sms hardening unavailable, using legacy flow", {
+      user_id: request.userId,
+      provider: "fortuna_services",
+      status: "legacy_fallback",
+      error_code: normalizeProviderErrorCode(attempt.errorMessage ?? attempt.rawStatus ?? ""),
+    });
+
+    return await sendWithLegacyRealProvider(supabaseAdmin, request, config);
+  }
+
   if (!attempt.success || attempt.alreadyProcessed) {
     return attempt;
   }
@@ -351,6 +363,160 @@ async function sendWithRealProvider(
   return await completeSmsSendSuccess(supabaseAdmin, attempt.attemptId, smsResult);
 }
 
+async function sendWithLegacyRealProvider(
+  supabaseAdmin: SupabaseClientInstance,
+  request: SmsProviderRequest,
+  config: RealProviderConfig,
+): Promise<SmsProviderResult> {
+  if (!config.apiUrl || !config.username || !config.password) {
+    return {
+      success: false,
+      provider: "fortuna_services",
+      errorMessage: "PROVIDER_NOT_CONFIGURED",
+      rawStatus: "PROVIDER_NOT_CONFIGURED",
+    };
+  }
+
+  const validation = await validateSmsSendLegacy(supabaseAdmin, request);
+  if (!validation.success) {
+    return validation;
+  }
+
+  const validatedRequest: SmsProviderRequest = {
+    ...request,
+    recipient: validation.recipient ?? request.recipient,
+    providerRecipient: validation.providerRecipient,
+    segments: validation.segments ?? request.segments,
+    cost: validation.cost ?? request.cost ?? request.segments,
+  };
+
+  const loginResult = await loginRealProvider(config);
+  if (!loginResult.success || !loginResult.token) {
+    return {
+      success: false,
+      provider: "fortuna_services",
+      providerResponse: loginResult.providerResponse,
+      errorMessage: loginResult.errorMessage ?? "PROVIDER_AUTH_FAILED",
+      rawStatus: loginResult.rawStatus ?? "PROVIDER_AUTH_FAILED",
+    };
+  }
+
+  const smsResult = await sendRealProviderSms(validatedRequest, config, loginResult.token);
+
+  if (!smsResult.success) {
+    await registerFailedSmsLegacy(supabaseAdmin, validatedRequest, smsResult);
+    return smsResult;
+  }
+
+  return await registerSuccessfulSmsLegacy(supabaseAdmin, validatedRequest, smsResult);
+}
+
+async function validateSmsSendLegacy(
+  supabaseAdmin: SupabaseClientInstance,
+  request: SmsProviderRequest,
+): Promise<SmsProviderResult> {
+  const { data, error } = await supabaseAdmin.rpc("internal_validate_sms_send", {
+    p_user_id: request.userId,
+    p_recipient: request.recipient,
+    p_message: request.message,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      provider: "fortuna_services",
+      errorMessage: error.message,
+      rawStatus: error.code,
+    };
+  }
+
+  const result = normalizeRpcResult(data);
+
+  return {
+    success: true,
+    provider: "fortuna_services",
+    recipient: typeof result.recipient === "string" ? result.recipient : request.recipient,
+    providerResponse: { legacy_flow: true },
+    rawStatus: "PREVALIDATED_LEGACY",
+    segments: Number(result.segments ?? request.segments),
+    cost: Number(result.cost ?? request.cost ?? request.segments),
+    providerRecipient: typeof result.provider_recipient === "string" ? result.provider_recipient : undefined,
+  };
+}
+
+async function registerSuccessfulSmsLegacy(
+  supabaseAdmin: SupabaseClientInstance,
+  request: SmsProviderRequest,
+  providerResult: SmsProviderResult,
+): Promise<SmsProviderResult> {
+  const { data, error } = await supabaseAdmin.rpc("internal_send_sms_provider_success", {
+    p_user_id: request.userId,
+    p_recipient: request.recipient,
+    p_message: request.message,
+    p_segments: request.segments,
+    p_cost: request.cost ?? request.segments,
+    p_provider: providerResult.provider,
+    p_provider_message_id: providerResult.providerMessageId ?? null,
+    p_provider_response: sanitizeProviderResponse({
+      ...sanitizeProviderResponse(providerResult.providerResponse),
+      legacy_flow: true,
+    }),
+  });
+
+  if (error) {
+    return {
+      success: false,
+      provider: providerResult.provider,
+      providerResponse: providerResult.providerResponse,
+      errorMessage: error.message,
+      rawStatus: error.code,
+    };
+  }
+
+  const result = normalizeRpcResult(data);
+
+  return {
+    success: true,
+    provider: providerResult.provider,
+    providerMessageId: providerResult.providerMessageId,
+    providerResponse: providerResult.providerResponse,
+    messageId: result.message_id ?? result.id,
+    recipient: result.recipient ?? request.recipient,
+    segments: Number(result.segments ?? request.segments),
+    cost: Number(result.cost ?? request.cost ?? request.segments),
+    status: result.status ?? "sent",
+    testMode: false,
+  };
+}
+
+async function registerFailedSmsLegacy(
+  supabaseAdmin: SupabaseClientInstance,
+  request: SmsProviderRequest,
+  providerResult: SmsProviderResult,
+): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("internal_register_sms_failed", {
+    p_user_id: request.userId,
+    p_recipient: request.recipient,
+    p_message: request.message,
+    p_segments: request.segments,
+    p_cost: request.cost ?? request.segments,
+    p_provider: providerResult.provider,
+    p_provider_response: sanitizeProviderResponse({
+      ...sanitizeProviderResponse(providerResult.providerResponse),
+      legacy_flow: true,
+    }),
+    p_error_message: mapProviderError(providerResult.errorMessage ?? providerResult.rawStatus ?? ""),
+  });
+
+  if (error) {
+    logSafe("send-sms legacy failed registration failed", {
+      provider: providerResult.provider,
+      status: "failed",
+      error_code: error.code,
+    });
+  }
+}
+
 async function beginSmsSendAttempt(
   supabaseAdmin: SupabaseClientInstance,
   request: SmsProviderRequest,
@@ -388,6 +554,21 @@ async function beginSmsSendAttempt(
     rawStatus: result.already_processed ? "DUPLICATE_SEND_ATTEMPT" : "ATTEMPT_STARTED",
     providerResponse: sanitizeProviderResponse(result),
   };
+}
+
+function isHardeningUnavailable(result: SmsProviderResult): boolean {
+  if (result.success) {
+    return false;
+  }
+
+  const raw = `${result.rawStatus ?? ""} ${result.errorMessage ?? ""}`.toLowerCase();
+
+  return raw.includes("pgrst202")
+    || raw.includes("schema cache")
+    || raw.includes("could not find the function")
+    || raw.includes("internal_begin_sms_send_attempt")
+    || raw.includes("sms_send_attempts")
+    || raw.includes("does not exist");
 }
 
 async function completeSmsSendSuccess(

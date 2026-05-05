@@ -236,7 +236,7 @@
       <div class="sales-note">
         <p>¿Necesitas un plan personalizado o tienes dudas sobre precios?</p>
         <a
-          href="https://wa.me/51982165728?text=Hola%2C%20me%20interesa%20conocer%20m%C3%A1s%20sobre%20los%20servicios%20de%20Fortuna%20SMS.%20Me%20gustar%C3%ADa%20recibir%20informaci%C3%B3n%20sobre%20planes%20y%20precios."
+          [href]="whatsappUrl(whatsappMessages.custom)"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -314,7 +314,7 @@
             <li>
               <span aria-hidden="true">☎</span>
               <a
-                href="https://wa.me/51982165728?text=Hola%2C%20me%20interesa%20conocer%20m%C3%A1s%20sobre%20Fortuna%20SMS."
+                [href]="whatsappUrl(whatsappMessages.support)"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -336,4 +336,6 @@
       </div>
     </div>
   </footer>
+
+  <app-whatsapp-widget></app-whatsapp-widget>
 </main>

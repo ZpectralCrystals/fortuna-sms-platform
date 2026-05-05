@@ -12,6 +12,7 @@ import { MarketingPageComponent } from './pages/marketing-page.component';
 import { MessagesPageComponent } from './pages/messages-page.component';
 import { RechargesPageComponent } from './pages/recharges-page.component';
 import { SyncPageComponent } from './pages/sync-page.component';
+import { UsersPageComponent } from './pages/users-page.component';
 
 export const backofficeAdminRoutes: Routes = [
   { path: 'login', component: LoginPageComponent },
@@ -23,7 +24,7 @@ export const backofficeAdminRoutes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardPageComponent },
-      { path: 'users', redirectTo: 'accounts', pathMatch: 'full' },
+      { path: 'users', component: UsersPageComponent },
       { path: 'recharges', component: RechargesPageComponent },
       { path: 'accounts', component: AccountsPageComponent },
       { path: 'messages', component: MessagesPageComponent },

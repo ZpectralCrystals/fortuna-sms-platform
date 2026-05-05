@@ -1,0 +1,97 @@
+<section class="whatsapp-widget" aria-label="WhatsApp SMS Fortuna">
+  <div *ngIf="isOpen" class="whatsapp-panel" role="dialog" aria-label="Chat WhatsApp SMS Fortuna">
+    <header class="whatsapp-panel__header">
+      <div class="whatsapp-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M20.5 11.8a8.3 8.3 0 0 1-12.3 7.3L4 20.3l1.3-4A8.3 8.3 0 1 1 20.5 11.8Z"></path>
+          <path d="M9 8.8c.2-.5.4-.5.7-.5h.5c.2 0 .4 0 .6.4l.6 1.4c.1.3.1.5 0 .7l-.4.5c-.1.1-.2.3 0 .6.2.4.8 1.2 1.5 1.8.9.8 1.6 1 2 1.2.3.1.5.1.7-.1l.8-.9c.2-.2.4-.2.7-.1l1.4.7c.4.2.5.3.5.5 0 .3-.2 1-.7 1.5-.4.5-1.1.8-1.8.8-.5 0-1.1-.1-2.1-.5a9.5 9.5 0 0 1-4.1-3.1c-.8-1-1.5-2.2-1.5-3.2 0-.9.4-1.4.6-1.7Z"></path>
+        </svg>
+      </div>
+      <div>
+        <h2>SMS Fortuna</h2>
+        <p>Normalmente responde en minutos</p>
+      </div>
+      <button type="button" class="whatsapp-panel__close" aria-label="Cerrar WhatsApp" (click)="closeWidget()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+    </header>
+
+    <div class="whatsapp-panel__body">
+      <div class="chat-message">
+        <p>Hola! Bienvenido a SMS Fortuna. Selecciona una opción para ayudarte rápidamente.</p>
+        <span>Ahora</span>
+      </div>
+
+      <ng-container *ngIf="view === 'menu'; else plansView">
+        <div class="option-list">
+          <button type="button" class="option-card" (click)="showPlans()">
+            <strong>Planes de recarga</strong>
+            <span>Ver paquetes de SMS disponibles</span>
+          </button>
+          <button type="button" class="option-card" (click)="openCustomConsultation()">
+            <strong>Consulta personalizada</strong>
+            <span>Habla con un asesor</span>
+          </button>
+          <button type="button" class="option-card" (click)="openSupport()">
+            <strong>Soporte técnico</strong>
+            <span>Necesito ayuda con mi cuenta</span>
+          </button>
+        </div>
+      </ng-container>
+
+      <ng-template #plansView>
+        <button type="button" class="back-button" (click)="showMenu()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5"></path>
+            <path d="m12 19-7-7 7-7"></path>
+          </svg>
+          Volver
+        </button>
+
+        <div class="plans-heading">
+          <h3>Paquetes de recarga SMS</h3>
+          <p>Selecciona un plan y te atenderemos por WhatsApp</p>
+        </div>
+
+        <div class="plan-list">
+          <button type="button" class="plan-card" *ngFor="let plan of plans" (click)="openWhatsApp(plan.message)">
+            <span class="plan-card__price">{{ plan.label }}</span>
+            <span class="plan-card__sms">{{ plan.sms }}</span>
+            <span *ngIf="plan.popular" class="plan-card__badge">POPULAR</span>
+          </button>
+        </div>
+
+        <div class="plans-footnote">
+          <p>Todos los precios incluyen IGV.</p>
+          <p>Para volúmenes mayores, contacta a ventas</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <footer class="whatsapp-panel__footer">
+      Al contactarnos aceptas nuestra política de privacidad
+    </footer>
+  </div>
+
+  <button
+    type="button"
+    class="whatsapp-toggle"
+    [class.whatsapp-toggle--open]="isOpen"
+    [attr.aria-label]="isOpen ? 'Cerrar WhatsApp' : 'Abrir WhatsApp'"
+    (click)="toggleWidget()"
+  >
+    <svg *ngIf="!isOpen; else closeIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20.5 11.8a8.3 8.3 0 0 1-12.3 7.3L4 20.3l1.3-4A8.3 8.3 0 1 1 20.5 11.8Z"></path>
+      <path d="M9 8.8c.2-.5.4-.5.7-.5h.5c.2 0 .4 0 .6.4l.6 1.4c.1.3.1.5 0 .7l-.4.5c-.1.1-.2.3 0 .6.2.4.8 1.2 1.5 1.8.9.8 1.6 1 2 1.2.3.1.5.1.7-.1l.8-.9c.2-.2.4-.2.7-.1l1.4.7c.4.2.5.3.5.5 0 .3-.2 1-.7 1.5-.4.5-1.1.8-1.8.8-.5 0-1.1-.1-2.1-.5a9.5 9.5 0 0 1-4.1-3.1c-.8-1-1.5-2.2-1.5-3.2 0-.9.4-1.4.6-1.7Z"></path>
+    </svg>
+    <ng-template #closeIcon>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18 6 6 18"></path>
+        <path d="m6 6 12 12"></path>
+      </svg>
+    </ng-template>
+  </button>
+</section>

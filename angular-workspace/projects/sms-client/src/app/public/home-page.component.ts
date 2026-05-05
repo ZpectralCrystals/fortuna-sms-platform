@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { WhatsappWidgetComponent } from './components/whatsapp-widget/whatsapp-widget.component';
 
 interface FeatureItem {
   icon: string;
@@ -34,15 +35,27 @@ interface PlanItem {
   externalUrl?: string;
 }
 
+const WHATSAPP_NUMBER = '51982165728';
+const WHATSAPP_MESSAGES = {
+  plan50: 'Hola, quiero información sobre el plan de S/ 50 de SMS Fortuna con 530 SMS incluidos.',
+  plan100: 'Hola, quiero información sobre el plan popular de S/ 100 de SMS Fortuna con 1,060 SMS incluidos.',
+  plan200: 'Hola, quiero información sobre el plan de S/ 200 de SMS Fortuna con 2,120 SMS incluidos.',
+  plan500: 'Hola, quiero información sobre el plan de S/ 500 de SMS Fortuna con 5,300 SMS incluidos.',
+  plan1000: 'Hola, quiero información sobre el plan de S/ 1,000 de SMS Fortuna con 10,600 SMS incluidos.',
+  custom: 'Hola, quiero una consulta personalizada para contratar SMS Fortuna para mi empresa.',
+  support: 'Hola, necesito soporte técnico con mi cuenta SMS Fortuna.'
+} as const;
+
 @Component({
   selector: 'sms-home-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, WhatsappWidgetComponent],
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss'
 })
 export class HomePageComponent {
   readonly currentYear = new Date().getFullYear();
+  readonly whatsappMessages = WHATSAPP_MESSAGES;
 
   readonly heroCode = `{
   "to": "+51999999999",
@@ -226,7 +239,11 @@ export class HomePageComponent {
       ],
       cta: 'Contactar ventas',
       popular: false,
-      externalUrl: 'https://wa.me/51982165728?text=Hola%2C%20me%20interesa%20conocer%20m%C3%A1s%20sobre%20el%20plan%20Enterprise%20de%20Fortuna%20SMS.%20Me%20gustar%C3%ADa%20recibir%20informaci%C3%B3n%20sobre%20soluciones%20personalizadas.'
+      externalUrl: this.whatsappUrl(WHATSAPP_MESSAGES.custom)
     }
   ];
+
+  whatsappUrl(message: string): string {
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  }
 }
