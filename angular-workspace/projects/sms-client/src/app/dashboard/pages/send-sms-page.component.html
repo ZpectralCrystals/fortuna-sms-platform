@@ -216,7 +216,20 @@
         </select>
       </div>
 
-      <div *ngIf="mode !== 'file' && !isTemplateMode" class="field">
+      <section *ngIf="mode === 'single' && isTemplateMode" class="template-base-card">
+        <div class="template-base-card__header">
+          <div>
+            <span>Plantilla cargada</span>
+            <h3>{{ selectedTemplate?.name }}</h3>
+          </div>
+          <button type="button" class="link-button" (click)="removeTemplate()">
+            Quitar plantilla
+          </button>
+        </div>
+        <small>Puedes editar el mensaje antes de enviarlo. No se enviará automáticamente.</small>
+      </section>
+
+      <div *ngIf="mode !== 'file'" class="field">
         <label for="message">Mensaje</label>
         <textarea
           id="message"
@@ -224,6 +237,7 @@
           required
           rows="5"
           [(ngModel)]="manualMessage"
+          (ngModelChange)="handleMessageChange()"
           placeholder="Escribe tu mensaje aquí..."
         ></textarea>
         <div class="field-meta">
@@ -232,42 +246,17 @@
         </div>
       </div>
 
-      <section *ngIf="mode === 'single' && isTemplateMode" class="template-base-card">
-        <div class="template-base-card__header">
-          <div>
-            <span>Mensaje base de plantilla</span>
-            <h3>{{ selectedTemplate?.name }}</h3>
-          </div>
-          <button type="button" class="link-button" (click)="removeTemplate()">
-            Quitar plantilla y escribir manualmente
-          </button>
-        </div>
-        <p>{{ templateBaseContent }}</p>
-        <small>Para modificar este texto, edita la plantilla en Plantillas SMS.</small>
-      </section>
-
       <section *ngIf="mode === 'single' && hasTemplateVariables" class="variables-card">
         <div class="variables-card__header">
-          <h3>Variables de la plantilla</h3>
-          <p>Completa estos valores antes de enviar.</p>
+          <h3>Variables detectadas</h3>
+          <p>Reemplázalas editando el mensaje si corresponde.</p>
         </div>
 
-        <div class="variables-grid">
-          <label *ngFor="let variable of templateVariables" class="field">
-            <span>{{ variable }}</span>
-            <input
-              type="text"
-              [name]="'templateVariable_' + variable"
-              [(ngModel)]="templateVariableValues[variable]"
-              [placeholder]="variable"
-            />
-          </label>
+        <div class="variable-chip-row">
+          <span *ngFor="let variable of templateVariables" class="variable-chip">
+            {{ variable }}
+          </span>
         </div>
-      </section>
-
-      <section *ngIf="mode === 'single' && isTemplateMode" class="preview-final-card">
-        <span>Vista previa final</span>
-        <p>{{ renderedFinalMessage }}</p>
       </section>
 
       <div class="summary-card">

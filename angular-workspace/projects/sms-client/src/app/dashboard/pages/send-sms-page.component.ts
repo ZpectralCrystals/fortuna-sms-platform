@@ -107,9 +107,7 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   get renderedFinalMessage(): string {
-    return this.isTemplateMode
-      ? this.renderTemplate(this.templateBaseContent, this.templateVariableValues)
-      : this.manualMessage;
+    return this.manualMessage;
   }
 
   get hasTemplateVariables(): boolean {
@@ -182,8 +180,14 @@ export class SendSmsPageComponent implements OnInit {
     }
   }
 
+  handleMessageChange(): void {
+    if (this.isTemplateMode) {
+      this.templateVariables = this.smsService.extractTemplateVariables(this.manualMessage);
+    }
+  }
+
   removeTemplate(useRenderedMessage = true): void {
-    const rendered = this.renderedFinalMessage.trim();
+    const rendered = this.manualMessage.trim();
     this.selectedTemplateId = '';
     this.selectedTemplate = null;
     this.templateVariables = [];
@@ -425,6 +429,7 @@ export class SendSmsPageComponent implements OnInit {
   private selectTemplate(template: SmsTemplate): void {
     this.selectedTemplate = template;
     this.selectedTemplateId = template.id;
+    this.manualMessage = template.content;
     this.templateVariables = template.variables.length > 0
       ? template.variables
       : this.smsService.extractTemplateVariables(template.content);
@@ -441,7 +446,7 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   getMissingTemplateVariables(): string[] {
-    return this.templateVariables.filter((variable) => !this.templateVariableValues[variable]?.trim());
+    return [];
   }
 
   hasUnresolvedPlaceholders(message: string): boolean {
@@ -449,7 +454,7 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   getMessageToSend(): string {
-    return this.renderedFinalMessage.trim();
+    return this.manualMessage.trim();
   }
 
   getSendDisabledReason(): string | null {
@@ -466,15 +471,6 @@ export class SendSmsPageComponent implements OnInit {
 
     if (!message) {
       return 'El mensaje no puede estar vacío.';
-    }
-
-    const missingVariables = this.getMissingTemplateVariables();
-    if (this.isTemplateMode && missingVariables.length > 0) {
-      return `Completa las variables: ${missingVariables.join(', ')}.`;
-    }
-
-    if (this.hasUnresolvedPlaceholders(message)) {
-      return 'Completa todas las variables de la plantilla.';
     }
 
     if (this.credits < this.requiredCredits) {

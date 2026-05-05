@@ -562,6 +562,21 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.variable-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.variable-chip {
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .field span {
   display: block;
   margin-bottom: 8px;
