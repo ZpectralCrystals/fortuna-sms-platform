@@ -3,6 +3,7 @@ import {
   AdminSmsMessage,
   AdminSmsMessageFilters,
   AdminSmsMessageProfile,
+  AdminSmsSendAttempt,
   CreateSmsTemplateRequest,
   SmsProviderResponse,
   SmsSendRequest,
@@ -61,6 +62,7 @@ export class SmsService {
         provider_response,
         error_message,
         sent_at,
+        delivered_at,
         created_at,
         profile:profiles (
           full_name,
@@ -75,13 +77,34 @@ export class SmsService {
       query = query.eq('status', filters.status);
     }
 
+    if (filters.dateFrom) {
+      query = query.gte('created_at', `${filters.dateFrom}T00:00:00`);
+    }
+
+    if (filters.dateTo) {
+      query = query.lte('created_at', `${filters.dateTo}T23:59:59.999`);
+    }
+
+    query = query.limit(filters.limit ?? 100);
+
     const { data, error } = await query;
 
     if (error) {
       throw new Error('No se pudieron cargar los mensajes. Verifica permisos de administrador.');
     }
 
-    return ((data as unknown[]) ?? []).map((item) => this.mapAdminMessage(item));
+    const messages = ((data as unknown[]) ?? []).map((item) => this.mapAdminMessage(item));
+    const attempts = await this.listAttemptsForMessages(messages.map((message) => message.id));
+    const attemptsByMessageId = new Map(
+      attempts
+        .filter((attempt) => attempt.sms_message_id)
+        .map((attempt) => [attempt.sms_message_id as string, attempt])
+    );
+
+    return messages.map((message) => ({
+      ...message,
+      attempt: attemptsByMessageId.get(message.id) ?? null
+    }));
   }
 
   async uploadCampaign(_file: File): Promise<void> {
@@ -273,8 +296,61 @@ export class SmsService {
       provider_response: this.toProviderResponse(row['provider_response']),
       error_message: this.toNullableString(row['error_message']),
       sent_at: this.toNullableString(row['sent_at']),
+      delivered_at: this.toNullableString(row['delivered_at']),
       created_at: String(row['created_at'] ?? ''),
-      profile: this.toProfile(row['profile'])
+      profile: this.toProfile(row['profile']),
+      attempt: null
+    };
+  }
+
+  private async listAttemptsForMessages(messageIds: string[]): Promise<AdminSmsSendAttempt[]> {
+    if (messageIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await this.supabase.instance
+      .from('sms_send_attempts')
+      .select(`
+        id,
+        sms_message_id,
+        idempotency_key,
+        provider_recipient,
+        status,
+        provider,
+        provider_response,
+        error_message,
+        started_at,
+        completed_at,
+        expires_at,
+        created_at,
+        updated_at
+      `)
+      .in('sms_message_id', messageIds);
+
+    if (error) {
+      return [];
+    }
+
+    return ((data as unknown[]) ?? []).map((item) => this.mapAdminSmsAttempt(item));
+  }
+
+  private mapAdminSmsAttempt(item: unknown): AdminSmsSendAttempt {
+    const row = item as Record<string, unknown>;
+
+    return {
+      id: String(row['id'] ?? ''),
+      sms_message_id: this.toNullableString(row['sms_message_id']),
+      idempotency_key: String(row['idempotency_key'] ?? ''),
+      provider_recipient: this.toNullableString(row['provider_recipient']),
+      status: this.toAttemptStatus(row['status']),
+      provider: this.toNullableString(row['provider']),
+      provider_response: this.toProviderResponse(row['provider_response']),
+      error_message: this.toNullableString(row['error_message']),
+      started_at: this.toNullableString(row['started_at']),
+      completed_at: this.toNullableString(row['completed_at']),
+      expires_at: this.toNullableString(row['expires_at']),
+      created_at: String(row['created_at'] ?? ''),
+      updated_at: this.toNullableString(row['updated_at'])
     };
   }
 
@@ -320,6 +396,12 @@ export class SmsService {
     return value === 'pending' || value === 'sent' || value === 'delivered' || value === 'failed'
       ? value
       : 'pending';
+  }
+
+  private toAttemptStatus(value: unknown): AdminSmsSendAttempt['status'] {
+    return value === 'processing' || value === 'sent' || value === 'failed'
+      ? value
+      : 'processing';
   }
 
   private toProviderResponse(value: unknown): SmsProviderResponse | null {

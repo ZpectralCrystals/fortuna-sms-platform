@@ -16,7 +16,7 @@
       </div>
       <div>
         <h1>Mensajes SMS</h1>
-        <p>Historial completo de mensajes enviados</p>
+        <p>Auditoría de mensajes enviados, fallidos y pendientes</p>
       </div>
     </div>
   </div>
@@ -26,21 +26,21 @@
       <div class="stat-label">Total</div>
       <div class="stat-value">{{ stats.total }}</div>
     </div>
-    <div class="stat-card pending">
-      <div class="stat-label">Pendientes</div>
-      <div class="stat-value">{{ stats.pending }}</div>
-    </div>
     <div class="stat-card sent">
       <div class="stat-label">Enviados</div>
       <div class="stat-value">{{ stats.sent }}</div>
     </div>
-    <div class="stat-card delivered">
-      <div class="stat-label">Entregados</div>
-      <div class="stat-value">{{ stats.delivered }}</div>
-    </div>
     <div class="stat-card failed">
       <div class="stat-label">Fallidos</div>
       <div class="stat-value">{{ stats.failed }}</div>
+    </div>
+    <div class="stat-card sms">
+      <div class="stat-label">SMS consumidos</div>
+      <div class="stat-value">{{ formatNumber(stats.consumedSms) }}</div>
+    </div>
+    <div class="stat-card cost">
+      <div class="stat-label">Costo total</div>
+      <div class="stat-value">S/ {{ formatCost(stats.totalCost) }}</div>
     </div>
   </div>
 
@@ -73,7 +73,24 @@
               <option value="failed">Fallido</option>
             </select>
           </div>
+          <input
+            class="date-select"
+            type="date"
+            [(ngModel)]="dateFrom"
+            (ngModelChange)="onDateFilterChange()"
+            aria-label="Fecha desde"
+          />
+          <input
+            class="date-select"
+            type="date"
+            [(ngModel)]="dateTo"
+            (ngModelChange)="onDateFilterChange()"
+            aria-label="Fecha hasta"
+          />
         </div>
+      </div>
+      <div class="limit-note">
+        Mostrando últimos {{ messageLimit }} mensajes según los filtros activos.
       </div>
     </div>
 
@@ -82,28 +99,30 @@
         <thead>
           <tr>
             <th>Cliente</th>
+            <th>Email</th>
             <th>Destinatario</th>
             <th>Mensaje</th>
             <th>Segmentos</th>
             <th>Costo</th>
             <th>Estado</th>
-            <th>Modo</th>
             <th>Proveedor</th>
+            <th>Error</th>
             <th>Creado</th>
             <th>Enviado</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="filteredMessages.length === 0">
-            <td class="empty-cell" colspan="10">Aún no hay mensajes enviados.</td>
+            <td class="empty-cell" colspan="12">Aún no hay mensajes enviados.</td>
           </tr>
 
           <tr *ngFor="let item of filteredMessages" class="message-row">
             <td>
               <div class="client-name">{{ clientName(item) }}</div>
-              <div class="client-email">{{ clientEmail(item) }}</div>
               <div *ngIf="clientCompany(item) as company" class="client-company">{{ company }}</div>
             </td>
+            <td class="email-cell">{{ clientEmail(item) }}</td>
             <td>
               <div class="recipient">{{ item.recipient }}</div>
             </td>
@@ -112,7 +131,7 @@
               <div *ngIf="item.error_message" class="error-text">{{ item.error_message }}</div>
             </td>
             <td class="number-cell">{{ formatNumber(item.segments) }}</td>
-            <td class="number-cell">{{ formatCost(item.cost) }}</td>
+            <td class="number-cell">S/ {{ formatCost(item.cost) }}</td>
             <td>
               <span class="status-badge" [ngClass]="item.status">
                 <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -140,19 +159,139 @@
               </span>
             </td>
             <td>
-              <span *ngIf="isTestMode(item); else prodMode" class="mode-badge mode-badge--test">
-                Test
-              </span>
-              <ng-template #prodMode>
-                <span class="mode-badge">Prod</span>
-              </ng-template>
+              <div class="provider-stack">
+                <span class="provider-cell">{{ provider(item) }}</span>
+                <span class="mode-badge" [ngClass]="{ 'mode-badge--test': isTestMode(item) }">
+                  {{ modeLabel(item) }}
+                </span>
+              </div>
             </td>
-            <td class="provider-cell">{{ provider(item) }}</td>
+            <td class="error-cell">
+              <span [title]="errorLabel(item)">{{ errorLabel(item) }}</span>
+            </td>
             <td class="date-cell">{{ formatDate(item.created_at) }}</td>
             <td class="date-cell">{{ formatDate(item.sent_at) }}</td>
+            <td>
+              <button class="detail-button" type="button" (click)="openDetail(item)">
+                Ver detalle
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+  </div>
+
+  <div *ngIf="selectedMessage as detail" class="modal-backdrop" (click)="closeDetail()">
+    <section class="detail-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Detalle de mensaje SMS">
+      <div class="detail-header">
+        <div>
+          <h2>Detalle de mensaje</h2>
+          <p>{{ detail.id }}</p>
+        </div>
+        <button class="close-button" type="button" (click)="closeDetail()" aria-label="Cerrar detalle">
+          X
+        </button>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-card">
+          <span>Cliente</span>
+          <strong>{{ clientName(detail) }}</strong>
+          <small>{{ clientEmail(detail) }}</small>
+        </div>
+        <div class="detail-card">
+          <span>Destino</span>
+          <strong>{{ detail.recipient }}</strong>
+          <small>Proveedor: {{ provider(detail) }}</small>
+        </div>
+        <div class="detail-card">
+          <span>Estado</span>
+          <strong>{{ statusLabel(detail.status) }}</strong>
+          <small>{{ modeLabel(detail) }}</small>
+        </div>
+        <div class="detail-card">
+          <span>Consumo</span>
+          <strong>{{ formatNumber(detail.segments) }} SMS</strong>
+          <small>S/ {{ formatCost(detail.cost) }}</small>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3>Mensaje completo</h3>
+        <p class="full-message">{{ detail.message }}</p>
+      </div>
+
+      <div class="detail-section">
+        <h3>Datos técnicos</h3>
+        <dl class="definition-grid">
+          <div>
+            <dt>Provider message id</dt>
+            <dd>{{ detail.provider_message_id || 'No registrado' }}</dd>
+          </div>
+          <div>
+            <dt>Error</dt>
+            <dd>{{ errorLabel(detail) }}</dd>
+          </div>
+          <div>
+            <dt>Creado</dt>
+            <dd>{{ formatDate(detail.created_at) }}</dd>
+          </div>
+          <div>
+            <dt>Enviado</dt>
+            <dd>{{ formatDate(detail.sent_at) }}</dd>
+          </div>
+          <div>
+            <dt>Entregado</dt>
+            <dd>{{ formatDate(detail.delivered_at) }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="detail-section">
+        <h3>Intento de envío</h3>
+        <ng-container *ngIf="detail.attempt; else noAttempt">
+          <dl class="definition-grid">
+            <div>
+              <dt>Idempotency key</dt>
+              <dd>{{ detail.attempt.idempotency_key }}</dd>
+            </div>
+            <div>
+              <dt>Destinatario proveedor</dt>
+              <dd>{{ detail.attempt.provider_recipient || 'No registrado' }}</dd>
+            </div>
+            <div>
+              <dt>Estado intento</dt>
+              <dd>{{ detail.attempt.status }}</dd>
+            </div>
+            <div>
+              <dt>Inicio</dt>
+              <dd>{{ formatDate(detail.attempt.started_at) }}</dd>
+            </div>
+            <div>
+              <dt>Finalizado</dt>
+              <dd>{{ formatDate(detail.attempt.completed_at) }}</dd>
+            </div>
+            <div>
+              <dt>Expira</dt>
+              <dd>{{ formatDate(detail.attempt.expires_at) }}</dd>
+            </div>
+          </dl>
+        </ng-container>
+        <ng-template #noAttempt>
+          <p class="empty-detail">Sin intento asociado.</p>
+        </ng-template>
+      </div>
+
+      <div class="detail-section">
+        <h3>Provider response</h3>
+        <pre>{{ providerResponseJson(detail) }}</pre>
+      </div>
+
+      <div class="detail-section" *ngIf="detail.attempt">
+        <h3>Attempt provider response</h3>
+        <pre>{{ attemptResponseJson(detail) }}</pre>
+      </div>
+    </section>
   </div>
 </div>

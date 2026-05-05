@@ -59,12 +59,33 @@ export interface AdminSmsMessage {
   provider_response: SmsProviderResponse | null;
   error_message: string | null;
   sent_at: string | null;
+  delivered_at: string | null;
   created_at: string;
   profile: AdminSmsMessageProfile | null;
+  attempt: AdminSmsSendAttempt | null;
+}
+
+export interface AdminSmsSendAttempt {
+  id: string;
+  sms_message_id: string | null;
+  idempotency_key: string;
+  provider_recipient: string | null;
+  status: 'processing' | 'sent' | 'failed';
+  provider: string | null;
+  provider_response: SmsProviderResponse | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string | null;
 }
 
 export interface AdminSmsMessageFilters {
   status?: SmsMessageStatus | 'all';
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  limit?: number;
 }
 
 export type SmsTemplateCategory =

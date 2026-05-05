@@ -21,14 +21,20 @@ export class MessagesPageComponent implements OnInit {
   errorMessage = '';
   searchTerm = '';
   statusFilter: StatusFilter = 'all';
+  dateFrom = '';
+  dateTo = '';
+  selectedMessage: AdminSmsMessage | null = null;
+  readonly messageLimit = 100;
 
   get stats() {
     return {
       total: this.messages.length,
-      pending: this.messages.filter((message) => message.status === 'pending').length,
       sent: this.messages.filter((message) => message.status === 'sent').length,
-      delivered: this.messages.filter((message) => message.status === 'delivered').length,
-      failed: this.messages.filter((message) => message.status === 'failed').length
+      failed: this.messages.filter((message) => message.status === 'failed').length,
+      consumedSms: this.messages
+        .filter((message) => message.status === 'sent' || message.status === 'delivered')
+        .reduce((total, message) => total + message.segments, 0),
+      totalCost: this.messages.reduce((total, message) => total + message.cost, 0)
     };
   }
 
@@ -41,7 +47,12 @@ export class MessagesPageComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      this.messages = await this.smsService.listAdminMessages({ status: this.statusFilter });
+      this.messages = await this.smsService.listAdminMessages({
+        status: this.statusFilter,
+        dateFrom: this.dateFrom || null,
+        dateTo: this.dateTo || null,
+        limit: this.messageLimit
+      });
       this.applyFilters();
     } catch (error) {
       this.errorMessage = error instanceof Error
@@ -88,6 +99,18 @@ export class MessagesPageComponent implements OnInit {
     await this.loadMessages();
   }
 
+  async onDateFilterChange(): Promise<void> {
+    await this.loadMessages();
+  }
+
+  openDetail(message: AdminSmsMessage): void {
+    this.selectedMessage = message;
+  }
+
+  closeDetail(): void {
+    this.selectedMessage = null;
+  }
+
   clientName(message: AdminSmsMessage): string {
     return message.profile?.full_name
       || message.profile?.email
@@ -109,11 +132,28 @@ export class MessagesPageComponent implements OnInit {
   provider(message: AdminSmsMessage): string {
     return message.provider_response?.provider
       || message.provider_response?.provider_name
-      || (this.isTestMode(message) ? 'test' : '-');
+      || message.attempt?.provider
+      || 'No registrado';
   }
 
   isTestMode(message: AdminSmsMessage): boolean {
     return message.provider_response?.test_mode === true;
+  }
+
+  modeLabel(message: AdminSmsMessage): string {
+    if (message.provider_response?.test_mode === true) {
+      return 'Test';
+    }
+
+    if (message.provider_response?.test_mode === false) {
+      return 'Real';
+    }
+
+    return 'No registrado';
+  }
+
+  errorLabel(message: AdminSmsMessage): string {
+    return message.error_message || message.attempt?.error_message || '-';
   }
 
   formatNumber(value: number): string {
@@ -122,8 +162,8 @@ export class MessagesPageComponent implements OnInit {
 
   formatCost(value: number): string {
     return value.toLocaleString('es-PE', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4
     });
   }
 
@@ -140,5 +180,43 @@ export class MessagesPageComponent implements OnInit {
       minute: '2-digit',
       hour12: true
     });
+  }
+
+  providerResponseJson(message: AdminSmsMessage): string {
+    return this.toPrettyJson(message.provider_response);
+  }
+
+  attemptResponseJson(message: AdminSmsMessage): string {
+    return this.toPrettyJson(message.attempt?.provider_response ?? null);
+  }
+
+  private toPrettyJson(value: unknown): string {
+    if (!value || typeof value !== 'object') {
+      return 'Sin datos';
+    }
+
+    return JSON.stringify(this.sanitizeSensitiveData(value), null, 2);
+  }
+
+  private sanitizeSensitiveData(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sanitizeSensitiveData(item));
+    }
+
+    if (!value || typeof value !== 'object') {
+      return value;
+    }
+
+    const sensitiveKeys = ['token', 'password', 'authorization', 'api_key', 'apikey', 'secret', `service_${'role'}`];
+    const result: Record<string, unknown> = {};
+
+    for (const [key, entryValue] of Object.entries(value)) {
+      const normalizedKey = key.toLowerCase().replace(/[-\s]/g, '_');
+      result[key] = sensitiveKeys.some((sensitiveKey) => normalizedKey.includes(sensitiveKey))
+        ? '[oculto]'
+        : this.sanitizeSensitiveData(entryValue);
+    }
+
+    return result;
   }
 }
