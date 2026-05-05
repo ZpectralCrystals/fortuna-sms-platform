@@ -30,9 +30,7 @@ export class AdminLayoutComponent implements OnInit {
     { name: 'API Keys', path: '/api-keys', icon: 'apiKeys' },
     { name: 'Alertas SMS', path: '/alerts', icon: 'alerts' },
     { name: 'Facturas', path: '/invoices', icon: 'invoices' },
-    { name: 'Marketing', path: '/marketing', icon: 'marketing' },
-    { name: 'Sincronización', path: '/sync', icon: 'sync' },
-    { name: 'Kit Integración', path: '/integration-kit', icon: 'integrationKit' }
+    { name: 'Marketing', path: '/marketing', icon: 'marketing' }
   ];
 
   loading = false;
