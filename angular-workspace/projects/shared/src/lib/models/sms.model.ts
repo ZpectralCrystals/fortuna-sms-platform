@@ -33,6 +33,28 @@ export interface SmsSendResult {
   error?: string;
 }
 
+export interface SmsMultipleSimpleRequest {
+  recipients: string[];
+  message: string;
+}
+
+export interface SmsMultipleSimpleItemResult {
+  recipient: string;
+  success: boolean;
+  message_id?: string;
+  status?: string;
+  segments?: number;
+  cost?: number;
+  error?: string;
+}
+
+export interface SmsMultipleSimpleResult {
+  total: number;
+  sent: number;
+  failed: number;
+  results: SmsMultipleSimpleItemResult[];
+}
+
 export interface AdminSmsMessageProfile {
   full_name: string | null;
   email: string | null;

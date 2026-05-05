@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
+import { SmsMultipleSimpleResult, SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
 
 type SendMode = 'single' | 'multiple' | 'file';
 
@@ -14,6 +14,12 @@ interface FileMessage {
 interface SendProfile {
   id: string;
   credits: number | null;
+}
+
+interface ParsedRecipients {
+  validRecipients: string[];
+  invalidRecipients: string[];
+  duplicatesRemoved: string[];
 }
 
 @Component({
@@ -44,6 +50,7 @@ export class SendSmsPageComponent implements OnInit {
   error = '';
   profile: SendProfile | null = null;
   sendResult: SmsSendResult | null = null;
+  multipleResult: SmsMultipleSimpleResult | null = null;
   currentIdempotencyKey = '';
 
   async ngOnInit(): Promise<void> {
@@ -63,6 +70,10 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   get phoneCount(): number {
+    if (this.mode === 'multiple') {
+      return this.parsedMultipleRecipients.validRecipients.length;
+    }
+
     return this.mode === 'file' ? this.fileMessages.length : this.getPhonesList().length;
   }
 
@@ -75,7 +86,7 @@ export class SendSmsPageComponent implements OnInit {
       return this.fileMessages.reduce((total, fm) => total + this.smsSegments(fm.message) * 0.08, 0);
     }
 
-    return this.getPhonesList().length * this.smsCount * 0.08;
+    return this.phoneCount * this.smsCount * 0.08;
   }
 
   get requiredCredits(): number {
@@ -83,7 +94,7 @@ export class SendSmsPageComponent implements OnInit {
       return this.totalFileSms;
     }
 
-    return this.smsCount;
+    return this.phoneCount * this.smsCount;
   }
 
   get credits(): number {
@@ -116,6 +127,25 @@ export class SendSmsPageComponent implements OnInit {
 
   get sendDisabledReason(): string | null {
     return this.getSendDisabledReason();
+  }
+
+  get parsedMultipleRecipients(): ParsedRecipients {
+    return this.parseRecipients(this.multiplePhones);
+  }
+
+  get multipleSuccessDetail(): string {
+    if (!this.multipleResult) {
+      return '';
+    }
+
+    const usedCredits = this.multipleResult.results
+      .filter((result) => result.success)
+      .reduce((total, result) => total + Number(result.segments ?? 0), 0);
+    const cost = this.multipleResult.results
+      .filter((result) => result.success)
+      .reduce((total, result) => total + Number(result.cost ?? 0), 0);
+
+    return `${this.multipleResult.sent} enviados · ${this.multipleResult.failed} fallidos · ${usedCredits} SMS descontados · S/ ${this.formatCurrency(cost)}`;
   }
 
   get successTitle(): string {
@@ -168,6 +198,7 @@ export class SendSmsPageComponent implements OnInit {
     this.error = '';
     this.success = false;
     this.sendResult = null;
+    this.multipleResult = null;
   }
 
   handleTemplateSelect(templateId: string): void {
@@ -299,13 +330,13 @@ export class SendSmsPageComponent implements OnInit {
     this.error = '';
     this.success = false;
     this.sendResult = null;
+    this.multipleResult = null;
 
-    if (this.mode !== 'single') {
-      this.error = 'Envío múltiple se implementará en siguiente fase';
+    if (this.mode === 'file') {
+      this.error = 'Envío desde fichero se implementará en siguiente fase';
       return;
     }
 
-    const recipient = this.recipient.trim();
     const message = this.getMessageToSend();
     const disabledReason = this.getSendDisabledReason();
 
@@ -314,6 +345,12 @@ export class SendSmsPageComponent implements OnInit {
       return;
     }
 
+    if (this.mode === 'multiple') {
+      await this.handleMultipleSend(message);
+      return;
+    }
+
+    const recipient = this.recipient.trim();
     this.currentIdempotencyKey = this.createIdempotencyKey();
     this.sending = true;
 
@@ -340,13 +377,82 @@ export class SendSmsPageComponent implements OnInit {
     return value.trim() ? this.smsService.calculateSegments(value) : 0;
   }
 
+  formatCurrency(value: number): string {
+    return value.toLocaleString('es-PE', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4
+    });
+  }
+
+  statusLabel(status?: string): string {
+    switch (status) {
+      case 'delivered':
+        return 'entregado';
+      case 'failed':
+        return 'fallido';
+      case 'pending':
+        return 'pendiente';
+      case 'sent':
+        return 'enviado';
+      default:
+        return 'procesado';
+    }
+  }
+
   renderTemplate(content: string, values: Record<string, string>): string {
     return this.smsService.renderTemplatePreview(content, values);
   }
 
   private validatePhone(phone: string): boolean {
-    const cleanPhone = phone.trim();
-    return /^\+51\d{9}$/.test(cleanPhone);
+    return /^\+519\d{8}$/.test(phone.trim());
+  }
+
+  private normalizePhone(phone: string): string | null {
+    const cleanPhone = phone.trim().replace(/[^\d+]/g, '');
+
+    if (/^9\d{8}$/.test(cleanPhone)) {
+      return `+51${cleanPhone}`;
+    }
+
+    if (/^519\d{8}$/.test(cleanPhone)) {
+      return `+${cleanPhone}`;
+    }
+
+    if (/^\+519\d{8}$/.test(cleanPhone)) {
+      return cleanPhone;
+    }
+
+    return null;
+  }
+
+  private parseRecipients(input: string): ParsedRecipients {
+    const tokens = input
+      .split(/[\s,;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const seen = new Set<string>();
+    const validRecipients: string[] = [];
+    const invalidRecipients: string[] = [];
+    const duplicatesRemoved: string[] = [];
+
+    for (const token of tokens) {
+      const normalized = this.normalizePhone(token);
+
+      if (!normalized || !this.validatePhone(normalized)) {
+        invalidRecipients.push(token);
+        continue;
+      }
+
+      if (seen.has(normalized)) {
+        duplicatesRemoved.push(normalized);
+        continue;
+      }
+
+      seen.add(normalized);
+      validRecipients.push(normalized);
+    }
+
+    return { validRecipients, invalidRecipients, duplicatesRemoved };
   }
 
   private createIdempotencyKey(): string {
@@ -374,6 +480,27 @@ export class SendSmsPageComponent implements OnInit {
       .split('\n')
       .map((phone) => phone.trim())
       .filter((phone) => phone.length > 0);
+  }
+
+  private async handleMultipleSend(message: string): Promise<void> {
+    const recipients = this.parsedMultipleRecipients.validRecipients;
+    this.sending = true;
+
+    try {
+      const result = await this.smsService.sendMultipleSimple({
+        recipients,
+        message
+      });
+      this.multipleResult = result;
+      this.success = true;
+      await this.loadProfileCredits();
+    } catch (error) {
+      this.error = error instanceof Error
+        ? error.message
+        : 'No se pudo completar el envío múltiple.';
+    } finally {
+      this.sending = false;
+    }
   }
 
   private async loadProfileCredits(): Promise<void> {
@@ -458,15 +585,18 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   getSendDisabledReason(): string | null {
-    if (this.mode !== 'single') {
-      return 'Envío múltiple se implementará en siguiente fase';
+    if (this.mode === 'file') {
+      return 'Envío desde fichero se implementará en siguiente fase';
     }
 
-    const recipient = this.recipient.trim();
     const message = this.getMessageToSend();
 
-    if (!recipient || !this.validatePhone(recipient)) {
+    if (this.mode === 'single' && (!this.recipient.trim() || !this.validatePhone(this.recipient))) {
       return 'Ingresa un número válido.';
+    }
+
+    if (this.mode === 'multiple' && this.parsedMultipleRecipients.validRecipients.length === 0) {
+      return 'Ingresa al menos un número válido.';
     }
 
     if (!message) {

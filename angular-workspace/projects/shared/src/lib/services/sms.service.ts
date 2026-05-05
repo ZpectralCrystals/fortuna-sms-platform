@@ -7,6 +7,8 @@ import {
   ClientSmsMessage,
   ClientSmsStats,
   CreateSmsTemplateRequest,
+  SmsMultipleSimpleRequest,
+  SmsMultipleSimpleResult,
   SmsProviderResponse,
   SmsSendRequest,
   SmsSendResult,
@@ -46,6 +48,48 @@ export class SmsService {
     return {
       success: false,
       error: 'Envío múltiple se implementará en siguiente fase'
+    };
+  }
+
+  async sendMultipleSimple(request: SmsMultipleSimpleRequest): Promise<SmsMultipleSimpleResult> {
+    const results: SmsMultipleSimpleResult['results'] = [];
+
+    for (const recipient of request.recipients) {
+      try {
+        const result = await this.sendSingle({
+          recipient,
+          message: request.message,
+          idempotency_key: this.createIdempotencyKey()
+        });
+
+        results.push({
+          recipient,
+          success: true,
+          message_id: result.message_id,
+          status: result.status,
+          segments: result.segments,
+          cost: result.cost
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'No se pudo enviar el SMS.';
+
+        if (this.isSessionError(message)) {
+          throw error;
+        }
+
+        results.push({
+          recipient,
+          success: false,
+          error: message
+        });
+      }
+    }
+
+    return {
+      total: request.recipients.length,
+      sent: results.filter((result) => result.success).length,
+      failed: results.filter((result) => !result.success).length,
+      results
     };
   }
 
@@ -360,6 +404,25 @@ export class SmsService {
     return error instanceof Error
       ? error.message
       : 'No se pudo enviar el SMS.';
+  }
+
+  private createIdempotencyKey(): string {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    const values = new Uint32Array(4);
+    globalThis.crypto?.getRandomValues(values);
+    const randomPart = Array.from(values, (value) => value.toString(36)).join('');
+    return `sms_${Date.now().toString(36)}_${randomPart}`;
+  }
+
+  private isSessionError(message: string): boolean {
+    const normalized = message.toLowerCase();
+    return normalized.includes('sesión') ||
+      normalized.includes('session') ||
+      normalized.includes('not_authorized') ||
+      normalized.includes('no tienes permisos');
   }
 
   private mapAdminMessage(item: unknown): AdminSmsMessage {

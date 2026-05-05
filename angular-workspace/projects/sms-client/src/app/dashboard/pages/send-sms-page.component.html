@@ -1,7 +1,7 @@
 <div class="send-page">
   <div>
     <h1>Enviar SMS</h1>
-    <p class="page-subtitle">Envía SMS individuales desde tu saldo disponible</p>
+    <p class="page-subtitle">Envía SMS individuales o múltiples desde tu saldo disponible</p>
   </div>
 
   <div *ngIf="success" class="alert alert--success">
@@ -10,9 +10,12 @@
       <circle cx="12" cy="12" r="10"></circle>
     </svg>
     <div>
-      <p>{{ successTitle }}</p>
-      <span>{{ successDetail }}</span>
+      <p>{{ multipleResult ? 'Envío múltiple procesado' : successTitle }}</p>
+      <span>{{ multipleResult ? multipleSuccessDetail : successDetail }}</span>
       <a routerLink="/dashboard/history" class="alert-link">Ver historial</a>
+      <button *ngIf="multipleResult" type="button" class="alert-action" (click)="multipleResult = null; success = false">
+        Enviar otro múltiple
+      </button>
     </div>
   </div>
 
@@ -56,13 +59,13 @@
     </div>
 
     <form class="send-form" (ngSubmit)="handleSend()">
-      <div *ngIf="mode !== 'single'" class="alert alert--error">
+      <div *ngIf="mode === 'file'" class="alert alert--error">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="10"></circle>
           <path d="M12 8v4"></path>
           <path d="M12 16h.01"></path>
         </svg>
-        <p>Envío múltiple se implementará en siguiente fase</p>
+        <p>Envío desde fichero se implementará en siguiente fase</p>
       </div>
 
       <ng-container *ngIf="mode === 'file'">
@@ -175,28 +178,48 @@
 
       <ng-container *ngIf="mode === 'multiple'">
         <div class="field">
-          <div class="field__header">
-            <label for="multiplePhones">Números de teléfono (uno por línea)</label>
-            <label class="file-inline">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <path d="M17 8 12 3 7 8"></path>
-                <path d="M12 3v12"></path>
-              </svg>
-              Cargar archivo
-              <input type="file" accept=".txt,.csv" (change)="handleFileUpload($event)" hidden />
-            </label>
-          </div>
+          <label for="multiplePhones">Números de teléfono</label>
           <textarea
             id="multiplePhones"
             name="multiplePhones"
             required
             rows="6"
             [(ngModel)]="multiplePhones"
-            placeholder="+51987654321&#10;+51976543210"
+            placeholder="Pega un número por línea. Ejemplo:&#10;956062256&#10;51956062256&#10;+51987654321"
             class="mono"
           ></textarea>
-          <small>{{ phoneCount }} números ingresados</small>
+          <small>Separadores permitidos: salto de línea, coma, punto y coma o espacio.</small>
+        </div>
+
+        <div class="multiple-validation-card">
+          <div>
+            <span>Destinatarios válidos</span>
+            <strong>{{ parsedMultipleRecipients.validRecipients.length }}</strong>
+          </div>
+          <div>
+            <span>Números inválidos</span>
+            <strong>{{ parsedMultipleRecipients.invalidRecipients.length }}</strong>
+          </div>
+          <div>
+            <span>Duplicados removidos</span>
+            <strong>{{ parsedMultipleRecipients.duplicatesRemoved.length }}</strong>
+          </div>
+        </div>
+
+        <div *ngIf="parsedMultipleRecipients.validRecipients.length > 0" class="recipient-preview">
+          <span>Normalizados</span>
+          <div>
+            <small *ngFor="let phone of parsedMultipleRecipients.validRecipients">{{ phone }}</small>
+          </div>
+        </div>
+
+        <div *ngIf="parsedMultipleRecipients.invalidRecipients.length > 0 || parsedMultipleRecipients.duplicatesRemoved.length > 0" class="multiple-warning">
+          <p *ngIf="parsedMultipleRecipients.invalidRecipients.length > 0">
+            Inválidos: {{ parsedMultipleRecipients.invalidRecipients.join(', ') }}
+          </p>
+          <p *ngIf="parsedMultipleRecipients.duplicatesRemoved.length > 0">
+            Duplicados removidos: {{ parsedMultipleRecipients.duplicatesRemoved.join(', ') }}
+          </p>
         </div>
 
         <div class="example-card example-card--green">
@@ -216,7 +239,7 @@
         </select>
       </div>
 
-      <section *ngIf="mode === 'single' && isTemplateMode" class="template-base-card">
+      <section *ngIf="mode !== 'file' && isTemplateMode" class="template-base-card">
         <div class="template-base-card__header">
           <div>
             <span>Plantilla cargada</span>
@@ -246,7 +269,7 @@
         </div>
       </div>
 
-      <section *ngIf="mode === 'single' && hasTemplateVariables" class="variables-card">
+      <section *ngIf="mode !== 'file' && hasTemplateVariables" class="variables-card">
         <div class="variables-card__header">
           <h3>Variables detectadas</h3>
           <p>Reemplázalas editando el mensaje si corresponde.</p>
@@ -286,8 +309,24 @@
             <p>Créditos después</p>
             <strong>{{ afterCredits.toFixed(0) }}</strong>
           </div>
+          <div *ngIf="mode === 'multiple'">
+            <p>Números inválidos</p>
+            <strong>{{ parsedMultipleRecipients.invalidRecipients.length }}</strong>
+          </div>
+          <div *ngIf="mode === 'multiple'">
+            <p>Duplicados removidos</p>
+            <strong>{{ parsedMultipleRecipients.duplicatesRemoved.length }}</strong>
+          </div>
+          <div *ngIf="mode === 'multiple'">
+            <p>Costo estimado</p>
+            <strong>S/ {{ formatCurrency(totalCost) }}</strong>
+          </div>
         </div>
       </div>
+
+      <p *ngIf="mode === 'multiple' && credits < requiredCredits && phoneCount > 0" class="credit-warning">
+        Tus créditos podrían ser insuficientes para este envío múltiple.
+      </p>
 
       <button
         type="submit"
@@ -303,7 +342,7 @@
             <path d="m22 2-7 20-4-9-9-4Z"></path>
             <path d="M22 2 11 13"></path>
           </svg>
-          {{ mode === 'single' ? 'Enviar 1 SMS' : 'Envío bloqueado' }}
+          {{ mode === 'single' ? 'Enviar 1 SMS' : mode === 'multiple' ? 'Enviar a ' + phoneCount + ' destinatarios' : 'Envío bloqueado' }}
         </ng-template>
       </button>
       <p *ngIf="sendDisabledReason && !sending" class="disabled-reason">
@@ -312,13 +351,38 @@
     </form>
   </section>
 
+  <section *ngIf="multipleResult" class="batch-results-card">
+    <div class="batch-results-card__header">
+      <div>
+        <h3>Resultados del envío múltiple</h3>
+        <p>{{ multipleResult.total }} procesados · {{ multipleResult.sent }} enviados · {{ multipleResult.failed }} fallidos</p>
+      </div>
+      <a routerLink="/dashboard/history">Ver historial</a>
+    </div>
+
+    <div class="batch-results-list">
+      <div *ngFor="let result of multipleResult.results" class="batch-result-row" [ngClass]="{ 'batch-result-row--failed': !result.success }">
+        <div>
+          <strong>{{ result.recipient }}</strong>
+          <span>{{ result.success ? statusLabel(result.status) : 'fallido' }}</span>
+        </div>
+        <p *ngIf="result.success">
+          {{ result.segments || 0 }} SMS · S/ {{ formatCurrency(result.cost || 0) }}
+        </p>
+        <p *ngIf="!result.success" class="result-error">
+          {{ result.error || 'No se pudo enviar.' }}
+        </p>
+      </div>
+    </div>
+  </section>
+
   <section class="info-card">
     <h3>Información importante</h3>
     <ul>
       <li><span>•</span>Cada SMS admite 160 caracteres (mensajes largos se dividen automáticamente)</li>
       <li><span>•</span>El envío se procesa mediante Edge Function y RPC segura</li>
       <li><span>•</span>Angular no inserta mensajes ni descuenta créditos directamente</li>
-      <li><span>•</span><strong>Múltiple:</strong> pendiente para siguiente fase</li>
+      <li><span>•</span><strong>Múltiple:</strong> envía secuencialmente un SMS por destinatario</li>
       <li><span>•</span><strong>Desde Fichero:</strong> pendiente para siguiente fase</li>
     </ul>
   </section>
