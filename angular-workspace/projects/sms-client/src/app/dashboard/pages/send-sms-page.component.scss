@@ -65,8 +65,18 @@ h1 {
 }
 
 .alert--success span {
+  display: block;
   color: #15803d;
   font-size: 14px;
+}
+
+.alert-link {
+  display: inline-flex;
+  margin-top: 8px;
+  color: #166534;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 .alert--error {

@@ -4,6 +4,8 @@ import {
   AdminSmsMessageFilters,
   AdminSmsMessageProfile,
   AdminSmsSendAttempt,
+  ClientSmsMessage,
+  ClientSmsStats,
   CreateSmsTemplateRequest,
   SmsProviderResponse,
   SmsSendRequest,
@@ -105,6 +107,85 @@ export class SmsService {
       ...message,
       attempt: attemptsByMessageId.get(message.id) ?? null
     }));
+  }
+
+  async listMyMessages(limit = 100): Promise<ClientSmsMessage[]> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.supabase.instance
+      .from('sms_messages')
+      .select(`
+        id,
+        user_id,
+        recipient,
+        message,
+        segments,
+        cost,
+        status,
+        provider_message_id,
+        provider_response,
+        error_message,
+        sent_at,
+        delivered_at,
+        created_at
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error('No se pudo cargar tu historial de SMS.');
+    }
+
+    const messages = ((data as unknown[]) ?? []).map((item) => this.mapClientMessage(item));
+    const attempts = await this.listAttemptsForMessages(messages.map((message) => message.id));
+    const attemptsByMessageId = new Map(
+      attempts
+        .filter((attempt) => attempt.sms_message_id)
+        .map((attempt) => [attempt.sms_message_id as string, attempt])
+    );
+
+    return messages.map((message) => ({
+      ...message,
+      attempt: attemptsByMessageId.get(message.id) ?? null
+    }));
+  }
+
+  async getRecentMyMessages(limit = 5): Promise<ClientSmsMessage[]> {
+    return this.listMyMessages(limit);
+  }
+
+  async getMySmsStats(): Promise<ClientSmsStats> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.supabase.instance
+      .from('sms_messages')
+      .select('status, segments, cost')
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new Error('No se pudo cargar tu historial de SMS.');
+    }
+
+    const rows = ((data as unknown[]) ?? []).map((item) => {
+      const row = item as Record<string, unknown>;
+      return {
+        status: this.toMessageStatus(row['status']),
+        segments: Number(row['segments'] ?? 0),
+        cost: Number(row['cost'] ?? 0)
+      };
+    });
+    const billableMessages = rows.filter((message) => message.status === 'sent' || message.status === 'delivered');
+
+    return {
+      total: rows.length,
+      sent: rows.filter((message) => message.status === 'sent').length,
+      delivered: rows.filter((message) => message.status === 'delivered').length,
+      failed: rows.filter((message) => message.status === 'failed').length,
+      pending: rows.filter((message) => message.status === 'pending').length,
+      consumedSegments: billableMessages.reduce((total, message) => total + message.segments, 0),
+      totalCost: billableMessages.reduce((total, message) => total + message.cost, 0)
+    };
   }
 
   async uploadCampaign(_file: File): Promise<void> {
@@ -299,6 +380,27 @@ export class SmsService {
       delivered_at: this.toNullableString(row['delivered_at']),
       created_at: String(row['created_at'] ?? ''),
       profile: this.toProfile(row['profile']),
+      attempt: null
+    };
+  }
+
+  private mapClientMessage(item: unknown): ClientSmsMessage {
+    const row = item as Record<string, unknown>;
+
+    return {
+      id: String(row['id'] ?? ''),
+      user_id: String(row['user_id'] ?? ''),
+      recipient: String(row['recipient'] ?? ''),
+      message: String(row['message'] ?? ''),
+      segments: Number(row['segments'] ?? 0),
+      cost: Number(row['cost'] ?? 0),
+      status: this.toMessageStatus(row['status']),
+      provider_message_id: this.toNullableString(row['provider_message_id']),
+      provider_response: this.toProviderResponse(row['provider_response']),
+      error_message: this.toNullableString(row['error_message']),
+      sent_at: this.toNullableString(row['sent_at']),
+      delivered_at: this.toNullableString(row['delivered_at']),
+      created_at: String(row['created_at'] ?? ''),
       attempt: null
     };
   }

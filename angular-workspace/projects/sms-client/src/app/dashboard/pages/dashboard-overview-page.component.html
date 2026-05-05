@@ -3,10 +3,14 @@
 </div>
 
 <div *ngIf="!loading" class="dashboard-page">
+  <div *ngIf="errorMessage" class="error-box">
+    {{ errorMessage }}
+  </div>
+
   <header class="dashboard-header">
     <div>
       <h1>Dashboard</h1>
-      <p>Bienvenido, {{ profile?.full_name }}</p>
+      <p>Bienvenido, {{ profile?.full_name || profile?.email || 'cliente' }}</p>
     </div>
     <a routerLink="/dashboard/send" class="primary-action">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -26,10 +30,6 @@
               <path d="m22 2-7 20-4-9-9-4Z"></path>
               <path d="M22 2 11 13"></path>
             </svg>
-            <svg *ngSwitchCase="'check'" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 12l2 2 4-4"></path>
-              <circle cx="12" cy="12" r="10"></circle>
-            </svg>
             <svg *ngSwitchCase="'x'" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="10"></circle>
               <path d="m15 9-6 6"></path>
@@ -38,6 +38,10 @@
             <svg *ngSwitchCase="'credit'" viewBox="0 0 24 24" aria-hidden="true">
               <rect x="2" y="5" width="20" height="14" rx="2"></rect>
               <path d="M2 10h20"></path>
+            </svg>
+            <svg *ngSwitchCase="'cost'" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 1v22"></path>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
           </ng-container>
         </div>
@@ -107,8 +111,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
         </svg>
-        <p>Aún no has enviado ningún SMS</p>
-        <a routerLink="/dashboard/send">Enviar tu primer SMS</a>
+        <p>Aún no has enviado SMS. Empieza enviando tu primer mensaje.</p>
+        <a routerLink="/dashboard/send">Enviar SMS</a>
       </div>
 
       <article *ngFor="let message of recentMessages" class="message-row">
@@ -127,7 +131,7 @@
             </svg>
             {{ formatDate(message.created_at) }}
           </div>
-          <p>S/ {{ formatCurrency(message.cost ?? 0) }}</p>
+          <p>{{ message.segments }} SMS · S/ {{ formatCurrency(message.cost) }}</p>
         </div>
       </article>
     </div>

@@ -1,22 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SupabaseService } from '@sms-fortuna/shared';
+import { ClientSmsMessage, SmsMessageStatus, SmsService } from '@sms-fortuna/shared';
 
-type StatusFilter = 'all' | 'delivered' | 'sent' | 'pending' | 'failed';
-
-interface SmsHistoryMessage {
-  id: string;
-  user_id: string;
-  recipient: string;
-  message: string;
-  segments: number | null;
-  status: string;
-  cost: number | null;
-  created_at: string;
-  sent_at: string | null;
-  error_message: string | null;
-}
+type StatusFilter = SmsMessageStatus | 'all';
 
 @Component({
   selector: 'sms-history-page',
@@ -26,18 +13,23 @@ interface SmsHistoryMessage {
   styleUrl: './history-page.component.scss'
 })
 export class HistoryPageComponent implements OnInit {
-  private readonly supabase = inject(SupabaseService);
+  private readonly smsService = inject(SmsService);
 
-  messages: SmsHistoryMessage[] = [];
+  messages: ClientSmsMessage[] = [];
   searchTerm = '';
   statusFilter: StatusFilter = 'all';
+  dateFrom = '';
+  dateTo = '';
   loading = true;
+  errorMessage = '';
+  selectedMessage: ClientSmsMessage | null = null;
+  readonly messageLimit = 100;
 
   async ngOnInit(): Promise<void> {
     await this.fetchMessages();
   }
 
-  get filteredMessages(): SmsHistoryMessage[] {
+  get filteredMessages(): ClientSmsMessage[] {
     let filtered = this.messages;
 
     if (this.statusFilter !== 'all') {
@@ -47,15 +39,23 @@ export class HistoryPageComponent implements OnInit {
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.trim().toLowerCase();
       filtered = filtered.filter((message) =>
-        message.recipient.includes(term) ||
+        message.recipient.toLowerCase().includes(term) ||
         message.message.toLowerCase().includes(term)
       );
+    }
+
+    if (this.dateFrom) {
+      filtered = filtered.filter((message) => message.created_at >= `${this.dateFrom}T00:00:00`);
+    }
+
+    if (this.dateTo) {
+      filtered = filtered.filter((message) => message.created_at <= `${this.dateTo}T23:59:59.999`);
     }
 
     return filtered;
   }
 
-  statusText(status: string): string {
+  statusText(status: SmsMessageStatus): string {
     switch (status) {
       case 'delivered':
         return 'Entregado';
@@ -68,7 +68,7 @@ export class HistoryPageComponent implements OnInit {
     }
   }
 
-  statusIconClass(status: string): string {
+  statusIconClass(status: SmsMessageStatus): string {
     switch (status) {
       case 'delivered':
         return 'status-icon--delivered';
@@ -81,7 +81,7 @@ export class HistoryPageComponent implements OnInit {
     }
   }
 
-  statusBadgeClass(status: string): string {
+  statusBadgeClass(status: SmsMessageStatus): string {
     switch (status) {
       case 'delivered':
         return 'badge--delivered';
@@ -95,13 +95,15 @@ export class HistoryPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return value.toLocaleString('en-US', {
+    return value.toLocaleString('es-PE', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 4
     });
   }
 
-  formatDate(value: string): string {
+  formatDate(value: string | null): string {
+    if (!value) return '-';
+
     return new Date(value).toLocaleString('es-PE', {
       day: '2-digit',
       month: '2-digit',
@@ -111,7 +113,9 @@ export class HistoryPageComponent implements OnInit {
     });
   }
 
-  formatTime(value: string): string {
+  formatTime(value: string | null): string {
+    if (!value) return '-';
+
     return new Date(value).toLocaleTimeString('es-PE', {
       hour: '2-digit',
       minute: '2-digit'
@@ -119,13 +123,15 @@ export class HistoryPageComponent implements OnInit {
   }
 
   exportToCSV(): void {
-    const headers = ['Fecha', 'Teléfono', 'Mensaje', 'Estado', 'Costo'];
+    const headers = ['Fecha', 'Teléfono', 'Mensaje', 'Estado', 'Segmentos', 'Costo', 'Proveedor'];
     const rows = this.filteredMessages.map((message) => [
       new Date(message.created_at).toLocaleString('es-PE'),
       message.recipient,
       message.message.replace(/,/g, ';'),
       this.statusText(message.status),
-      `S/ ${this.formatCurrency(message.cost ?? 0)}`
+      String(message.segments),
+      `S/ ${this.formatCurrency(message.cost)}`,
+      this.provider(message)
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
@@ -138,23 +144,71 @@ export class HistoryPageComponent implements OnInit {
     window.URL.revokeObjectURL(url);
   }
 
+  openDetail(message: ClientSmsMessage): void {
+    this.selectedMessage = message;
+  }
+
+  closeDetail(): void {
+    this.selectedMessage = null;
+  }
+
+  provider(message: ClientSmsMessage): string {
+    return message.provider_response?.provider
+      || message.provider_response?.provider_name
+      || message.attempt?.provider
+      || 'No registrado';
+  }
+
+  modeLabel(message: ClientSmsMessage): string {
+    if (message.provider_response?.test_mode === true) return 'Test';
+    if (message.provider_response?.test_mode === false) return 'Real';
+    return 'No registrado';
+  }
+
+  providerResponseJson(message: ClientSmsMessage): string {
+    return this.toPrettyJson(message.provider_response);
+  }
+
+  private toPrettyJson(value: unknown): string {
+    if (!value || typeof value !== 'object') {
+      return 'Sin datos';
+    }
+
+    return JSON.stringify(this.sanitizeSensitiveData(value), null, 2);
+  }
+
+  private sanitizeSensitiveData(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sanitizeSensitiveData(item));
+    }
+
+    if (!value || typeof value !== 'object') {
+      return value;
+    }
+
+    const sensitiveKeys = ['token', 'password', 'authorization', 'api_key', 'apikey', 'secret', `service_${'role'}`];
+    const result: Record<string, unknown> = {};
+
+    for (const [key, entryValue] of Object.entries(value)) {
+      const normalizedKey = key.toLowerCase().replace(/[-\s]/g, '_');
+      result[key] = sensitiveKeys.some((sensitiveKey) => normalizedKey.includes(sensitiveKey))
+        ? '[oculto]'
+        : this.sanitizeSensitiveData(entryValue);
+    }
+
+    return result;
+  }
+
   private async fetchMessages(): Promise<void> {
+    this.loading = true;
+    this.errorMessage = '';
+
     try {
-      const { data: sessionData } = await this.supabase.instance.auth.getSession();
-      const user = sessionData.session?.user;
-
-      if (!user) {
-        return;
-      }
-
-      const { data } = await this.supabase.instance
-        .from('sms_messages')
-        .select('id, user_id, recipient, message, segments, cost, status, created_at, sent_at, error_message')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      this.messages = (data as SmsHistoryMessage[] | null) ?? [];
-    } catch {
+      this.messages = await this.smsService.listMyMessages(this.messageLimit);
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo cargar tu historial de SMS.';
       this.messages = [];
     } finally {
       this.loading = false;

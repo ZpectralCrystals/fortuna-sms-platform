@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
 
 type SendMode = 'single' | 'multiple' | 'file';
@@ -19,7 +19,7 @@ interface SendProfile {
 @Component({
   selector: 'sms-send-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './send-sms-page.component.html',
   styleUrl: './send-sms-page.component.scss'
 })
@@ -132,7 +132,7 @@ export class SendSmsPageComponent implements OnInit {
     }
 
     const recipient = this.sendResult?.recipient || this.recipient.trim();
-    return `${recipient} · ${this.successSmsLabel} · estado ${this.successStatusLabel}`;
+    return `${recipient} · ${this.successSmsLabel} · S/ ${this.successCostLabel} · estado ${this.successStatusLabel}`;
   }
 
   get successCreditsUsed(): number {
@@ -142,6 +142,13 @@ export class SendSmsPageComponent implements OnInit {
   get successSmsLabel(): string {
     const count = this.successCreditsUsed;
     return count === 1 ? '1 SMS descontado' : `${count} SMS descontados`;
+  }
+
+  get successCostLabel(): string {
+    return Number(this.sendResult?.cost ?? this.successCreditsUsed * 0.08).toLocaleString('es-PE', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4
+    });
   }
 
   get successStatusLabel(): string {

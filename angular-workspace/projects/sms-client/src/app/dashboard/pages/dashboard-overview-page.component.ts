@@ -1,29 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SupabaseService, formatNumber as sharedFormatNumber, formatPercent } from '@sms-fortuna/shared';
-
-interface DashboardProfile {
-  id: string;
-  full_name: string | null;
-  credits: number | null;
-}
-
-interface SmsMessage {
-  id: string;
-  recipient: string;
-  message: string;
-  status: 'pending' | 'sent' | 'delivered' | 'failed' | string;
-  cost: number | null;
-  created_at: string;
-}
-
-interface DashboardStats {
-  totalSent: number;
-  delivered: number;
-  failed: number;
-  pending: number;
-}
+import {
+  AuthProfile,
+  AuthService,
+  ClientSmsMessage,
+  ClientSmsStats,
+  SmsMessageStatus,
+  SmsService,
+  formatNumber as sharedFormatNumber,
+  formatPercent
+} from '@sms-fortuna/shared';
 
 interface ChartPoint {
   date: string;
@@ -34,7 +21,7 @@ interface ChartPoint {
 interface StatCard {
   name: string;
   value: string;
-  icon: 'send' | 'check' | 'x' | 'credit';
+  icon: 'send' | 'x' | 'credit' | 'cost';
   colorClass: string;
   change?: string;
   percentage?: string;
@@ -49,17 +36,22 @@ interface StatCard {
   styleUrl: './dashboard-overview-page.component.scss'
 })
 export class DashboardOverviewPageComponent implements OnInit {
-  private readonly supabase = inject(SupabaseService);
+  private readonly authService = inject(AuthService);
+  private readonly smsService = inject(SmsService);
 
-  profile: DashboardProfile | null = null;
+  profile: AuthProfile | null = null;
   loading = true;
-  stats: DashboardStats = {
-    totalSent: 0,
+  errorMessage = '';
+  stats: ClientSmsStats = {
+    total: 0,
+    sent: 0,
     delivered: 0,
     failed: 0,
-    pending: 0
+    pending: 0,
+    consumedSegments: 0,
+    totalCost: 0
   };
-  recentMessages: SmsMessage[] = [];
+  recentMessages: ClientSmsMessage[] = [];
   chartData: ChartPoint[] = this.createEmptyChartData();
 
   async ngOnInit(): Promise<void> {
@@ -77,32 +69,39 @@ export class DashboardOverviewPageComponent implements OnInit {
   get statCards(): StatCard[] {
     return [
       {
-        name: 'Total Enviados',
-        value: this.formatNumber(this.stats.totalSent),
-        icon: 'send',
-        colorClass: 'stat-icon--blue',
-        change: '+12.5%'
+        name: 'Créditos disponibles',
+        value: this.formatCredits(this.credits),
+        icon: 'credit',
+        colorClass: this.balanceIconClass,
+        subtitle: `Saldo aprox. S/ ${this.formatCurrency(this.balanceInSoles)}`
       },
       {
-        name: 'Entregados',
-        value: this.formatNumber(this.stats.delivered),
-        icon: 'check',
-        colorClass: 'stat-icon--green',
+        name: 'SMS enviados',
+        value: this.formatNumber(this.sentOrDeliveredCount),
+        icon: 'send',
+        colorClass: 'stat-icon--blue',
         percentage: this.deliveryPercentage
       },
       {
-        name: 'Fallidos',
+        name: 'SMS fallidos',
         value: this.formatNumber(this.stats.failed),
         icon: 'x',
         colorClass: 'stat-icon--red',
         percentage: this.failedPercentage
       },
       {
-        name: 'Saldo disponible',
-        value: `S/ ${this.formatCurrency(this.balanceInSoles)}`,
+        name: 'SMS consumidos',
+        value: this.formatNumber(this.stats.consumedSegments),
         icon: 'credit',
-        colorClass: this.balanceIconClass,
-        subtitle: `${this.formatCredits(this.credits)} SMS disponibles`
+        colorClass: 'stat-icon--green',
+        subtitle: 'Créditos debitados'
+      },
+      {
+        name: 'Costo total estimado',
+        value: `S/ ${this.formatCurrency(this.stats.totalCost)}`,
+        icon: 'cost',
+        colorClass: 'stat-icon--orange',
+        subtitle: 'Mensajes enviados/entregados'
       }
     ];
   }
@@ -147,21 +146,23 @@ export class DashboardOverviewPageComponent implements OnInit {
     return this.formatNumber(value, 0);
   }
 
-  statusLabel(status: string): string {
+  statusLabel(status: SmsMessageStatus): string {
     if (status === 'delivered') return 'Entregado';
     if (status === 'failed') return 'Fallido';
     if (status === 'sent') return 'Enviado';
     return 'Pendiente';
   }
 
-  statusClass(status: string): string {
+  statusClass(status: SmsMessageStatus): string {
     if (status === 'delivered') return 'status--delivered';
     if (status === 'failed') return 'status--failed';
     if (status === 'sent') return 'status--sent';
     return 'status--pending';
   }
 
-  formatDate(value: string): string {
+  formatDate(value: string | null): string {
+    if (!value) return '-';
+
     return new Date(value).toLocaleString('es-PE', {
       day: '2-digit',
       month: '2-digit',
@@ -171,15 +172,19 @@ export class DashboardOverviewPageComponent implements OnInit {
   }
 
   private get deliveryPercentage(): string {
-    return this.stats.totalSent > 0
-      ? formatPercent((this.stats.delivered / this.stats.totalSent) * 100, 'en-US')
+    return this.sentOrDeliveredCount > 0
+      ? formatPercent((this.stats.delivered / this.sentOrDeliveredCount) * 100, 'en-US')
       : '0%';
   }
 
   private get failedPercentage(): string {
-    return this.stats.totalSent > 0
-      ? formatPercent((this.stats.failed / this.stats.totalSent) * 100, 'en-US')
+    return this.stats.total > 0
+      ? formatPercent((this.stats.failed / this.stats.total) * 100, 'en-US')
       : '0%';
+  }
+
+  private get sentOrDeliveredCount(): number {
+    return this.stats.sent + this.stats.delivered;
   }
 
   private get balanceIconClass(): string {
@@ -190,48 +195,46 @@ export class DashboardOverviewPageComponent implements OnInit {
 
   private async loadDashboardData(): Promise<void> {
     try {
-      const { data: sessionData } = await this.supabase.instance.auth.getSession();
-      const user = sessionData.session?.user;
+      const [profile, stats, recentMessages, chartMessages] = await Promise.all([
+        this.authService.getCurrentProfile(),
+        this.smsService.getMySmsStats(),
+        this.smsService.getRecentMyMessages(5),
+        this.smsService.listMyMessages(200)
+      ]);
 
-      if (!user) {
-        return;
-      }
-
-      const { data: profileData } = await this.supabase.instance
-        .from('profiles')
-        .select('id, full_name, credits')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      this.profile = (profileData as DashboardProfile | null) ?? null;
-
-      const { data: messagesData } = await this.supabase.instance
-        .from('sms_messages')
-        .select('id, recipient, message, status, cost, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      const messages = (messagesData as SmsMessage[] | null) ?? [];
-      this.applyMessages(messages);
-    } catch {
+      this.profile = profile;
+      this.stats = stats;
+      this.recentMessages = recentMessages;
+      this.chartData = this.createChartData(chartMessages);
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo cargar tu dashboard.';
       this.applyMessages([]);
     } finally {
       this.loading = false;
     }
   }
 
-  private applyMessages(messages: SmsMessage[]): void {
+  private applyMessages(messages: ClientSmsMessage[]): void {
     this.stats = {
-      totalSent: messages.length,
+      total: messages.length,
+      sent: messages.filter((message) => message.status === 'sent').length,
       delivered: messages.filter((message) => message.status === 'delivered').length,
       failed: messages.filter((message) => message.status === 'failed').length,
-      pending: messages.filter((message) => message.status === 'pending').length
+      pending: messages.filter((message) => message.status === 'pending').length,
+      consumedSegments: messages
+        .filter((message) => message.status === 'sent' || message.status === 'delivered')
+        .reduce((total, message) => total + message.segments, 0),
+      totalCost: messages
+        .filter((message) => message.status === 'sent' || message.status === 'delivered')
+        .reduce((total, message) => total + message.cost, 0)
     };
     this.recentMessages = messages.slice(0, 5);
     this.chartData = this.createChartData(messages);
   }
 
-  private createChartData(messages: SmsMessage[]): ChartPoint[] {
+  private createChartData(messages: ClientSmsMessage[]): ChartPoint[] {
     const last7Days = Array.from({ length: 7 }, (_value, index) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - index));

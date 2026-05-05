@@ -88,6 +88,33 @@ export interface AdminSmsMessageFilters {
   limit?: number;
 }
 
+export interface ClientSmsMessage {
+  id: string;
+  user_id: string;
+  recipient: string;
+  message: string;
+  segments: number;
+  cost: number;
+  status: SmsMessageStatus;
+  provider_message_id: string | null;
+  provider_response: SmsProviderResponse | null;
+  error_message: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+  attempt: AdminSmsSendAttempt | null;
+}
+
+export interface ClientSmsStats {
+  total: number;
+  sent: number;
+  delivered: number;
+  failed: number;
+  pending: number;
+  consumedSegments: number;
+  totalCost: number;
+}
+
 export type SmsTemplateCategory =
   | 'general'
   | 'marketing'

@@ -3,10 +3,14 @@
 </div>
 
 <div *ngIf="!loading" class="history-page">
+  <div *ngIf="errorMessage" class="error-box">
+    {{ errorMessage }}
+  </div>
+
   <header class="history-header">
     <div>
       <h1>Historial de SMS</h1>
-      <p>Revisa todos los mensajes enviados</p>
+      <p>Revisa estado, costo y trazabilidad básica de tus mensajes</p>
     </div>
     <button type="button" class="export-button" (click)="exportToCSV()">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -44,6 +48,16 @@
           <option value="pending">Pendientes</option>
           <option value="failed">Fallidos</option>
         </select>
+      </label>
+
+      <label class="filter-field filter-field--plain">
+        <span>Desde</span>
+        <input type="date" name="dateFrom" [(ngModel)]="dateFrom" />
+      </label>
+
+      <label class="filter-field filter-field--plain">
+        <span>Hasta</span>
+        <input type="date" name="dateTo" [(ngModel)]="dateTo" />
       </label>
     </div>
   </section>
@@ -101,9 +115,11 @@
               <span *ngIf="message.sent_at">
                 Enviado: {{ formatTime(message.sent_at) }}
               </span>
-              <span *ngIf="message.segments">
+              <span>
                 {{ message.segments }} SMS
               </span>
+              <span>S/ {{ formatCurrency(message.cost) }}</span>
+              <span>Proveedor: {{ provider(message) }}</span>
             </div>
 
             <p *ngIf="message.error_message" class="message-error">
@@ -112,10 +128,85 @@
           </div>
         </div>
 
-        <div class="message-cost">
-          <p>S/ {{ formatCurrency(message.cost ?? 0) }}</p>
+        <div class="message-actions">
+          <p>{{ modeLabel(message) }}</p>
+          <button type="button" (click)="openDetail(message)">Ver detalle</button>
         </div>
       </article>
     </div>
   </section>
+
+  <div *ngIf="selectedMessage as detail" class="modal-backdrop" (click)="closeDetail()">
+    <section class="detail-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Detalle de SMS">
+      <div class="detail-header">
+        <div>
+          <h2>Detalle de SMS</h2>
+          <p>{{ detail.id }}</p>
+        </div>
+        <button type="button" class="close-button" (click)="closeDetail()" aria-label="Cerrar">X</button>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-card">
+          <span>Destinatario</span>
+          <strong>{{ detail.recipient }}</strong>
+        </div>
+        <div class="detail-card">
+          <span>Estado</span>
+          <strong>{{ statusText(detail.status) }}</strong>
+          <small>{{ modeLabel(detail) }}</small>
+        </div>
+        <div class="detail-card">
+          <span>Consumo</span>
+          <strong>{{ detail.segments }} SMS</strong>
+          <small>S/ {{ formatCurrency(detail.cost) }}</small>
+        </div>
+        <div class="detail-card">
+          <span>Proveedor</span>
+          <strong>{{ provider(detail) }}</strong>
+          <small>{{ detail.provider_message_id || 'Sin provider id' }}</small>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3>Mensaje completo</h3>
+        <p class="full-message">{{ detail.message }}</p>
+      </div>
+
+      <div class="detail-section">
+        <h3>Trazabilidad</h3>
+        <dl class="definition-grid">
+          <div>
+            <dt>Creado</dt>
+            <dd>{{ formatDate(detail.created_at) }}</dd>
+          </div>
+          <div>
+            <dt>Enviado</dt>
+            <dd>{{ formatDate(detail.sent_at) }}</dd>
+          </div>
+          <div>
+            <dt>Entregado</dt>
+            <dd>{{ formatDate(detail.delivered_at) }}</dd>
+          </div>
+          <div>
+            <dt>Error</dt>
+            <dd>{{ detail.error_message || detail.attempt?.error_message || 'Sin error' }}</dd>
+          </div>
+          <div>
+            <dt>Idempotency key</dt>
+            <dd>{{ detail.attempt?.idempotency_key || 'Sin intento asociado' }}</dd>
+          </div>
+          <div>
+            <dt>Destinatario proveedor</dt>
+            <dd>{{ detail.attempt?.provider_recipient || 'No registrado' }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="detail-section">
+        <h3>Provider response</h3>
+        <pre>{{ providerResponseJson(detail) }}</pre>
+      </div>
+    </section>
+  </div>
 </div>
