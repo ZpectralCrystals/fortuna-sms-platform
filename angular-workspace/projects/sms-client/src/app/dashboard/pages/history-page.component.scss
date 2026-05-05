@@ -101,53 +101,59 @@ h1 {
 }
 
 .filter-card {
-  padding: 24px;
+  padding: 20px 22px;
 }
 
 .filters-grid {
   display: grid;
+  align-items: end;
   gap: 16px;
 }
 
 .filter-field {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .filter-field span {
   display: block;
-  margin-bottom: 6px;
+  margin: 0 0 6px;
   color: #4b5563;
   font-size: 13px;
   font-weight: 600;
+  line-height: 16px;
 }
 
 .filter-field svg {
   position: absolute;
-  top: 50%;
+  bottom: 12px;
   left: 12px;
   width: 20px;
   height: 20px;
   color: #9ca3af;
-  transform: translateY(-50%);
   pointer-events: none;
 }
 
 .filter-field input,
 .filter-field select {
   width: 100%;
+  height: 44px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   background: #ffffff;
   color: #111827;
   font: inherit;
+  line-height: 20px;
   outline: none;
-  padding: 8px 16px 8px 40px;
+  padding: 0 16px 0 40px;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .filter-field--plain input {
-  padding-left: 16px;
+  padding: 0 16px;
 }
 
 .filter-field select {
@@ -200,11 +206,11 @@ h1 {
 
 .message-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   border-top: 1px solid #e5e7eb;
-  padding: 16px 24px;
+  padding: 18px 24px;
   transition: background 160ms ease;
 }
 
@@ -219,16 +225,26 @@ h1 {
 .message-row__main {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 14px;
   min-width: 0;
   flex: 1;
 }
 
 .status-icon {
-  width: 20px;
-  height: 20px;
-  margin-top: 4px;
-  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: #f8fafc;
+  flex: 0 0 32px;
+}
+
+.status-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .status-icon--delivered {
@@ -250,13 +266,14 @@ h1 {
 .message-row__content {
   min-width: 0;
   flex: 1;
+  padding-top: 1px;
 }
 
 .message-row__headline {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
+  gap: 10px;
+  margin-bottom: 6px;
   min-width: 0;
 }
 
@@ -298,18 +315,21 @@ h1 {
 }
 
 .message-text {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: #4b5563;
   font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .message-meta {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px 14px;
   color: #6b7280;
   flex-wrap: wrap;
   font-size: 12px;
+  line-height: 1.35;
 }
 
 .message-error {
@@ -319,16 +339,22 @@ h1 {
 }
 
 .message-actions {
-  margin-left: 16px;
+  display: flex;
+  min-width: 116px;
+  margin-left: 8px;
+  align-items: flex-end;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
   text-align: right;
-  flex: 0 0 auto;
+  flex: 0 0 116px;
 }
 
 .message-actions p {
-  margin-bottom: 8px;
   color: #111827;
   font-size: 14px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .message-actions button,
@@ -345,6 +371,7 @@ h1 {
   padding: 7px 10px;
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .message-actions button:hover {
@@ -500,7 +527,7 @@ pre {
 
 @media (min-width: 768px) {
   .filters-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: 1.2fr 1.2fr 1fr 1fr;
   }
 
   .detail-grid,
@@ -516,13 +543,35 @@ pre {
     flex-direction: column;
   }
 
+  .filter-card {
+    padding: 16px;
+  }
+
   .export-button {
     justify-content: center;
     width: 100%;
   }
 
   .message-actions {
-    margin-left: 36px;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    align-items: flex-start;
     text-align: left;
+    flex: 0 0 auto;
+  }
+
+  .message-row__main {
+    gap: 12px;
+  }
+
+  .status-icon {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .message-actions button {
+    width: 100%;
   }
 }
