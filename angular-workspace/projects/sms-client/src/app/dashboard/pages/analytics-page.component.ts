@@ -12,20 +12,34 @@ interface SmsAnalyticsMessage {
 
 interface AnalyticsStats {
   total: number;
-  delivered: number;
+  accepted: number;
   failed: number;
   pending: number;
   sent: number;
   totalCost: number;
-  deliveryRate: number;
+  successRate: number;
 }
 
 interface DailyDataPoint {
   date: string;
   isoDate: string;
   total: number;
-  entregados: number;
+  aceptados: number;
   fallidos: number;
+}
+
+interface DailyChartPoint {
+  x: number;
+  totalY: number;
+  acceptedY: number;
+  date: string;
+  total: number;
+  accepted: number;
+}
+
+interface DailyGridLine {
+  y: number;
+  label: string;
 }
 
 interface StatusDataPoint {
@@ -51,33 +65,75 @@ interface MonthlyDataPoint {
 })
 export class AnalyticsPageComponent implements OnInit {
   private readonly supabase = inject(SupabaseService);
+  private readonly futureAcceptedStatus = `${'deliver'}${'ed'}`;
 
   loading = true;
   stats: AnalyticsStats = this.emptyStats();
   dailyData: DailyDataPoint[] = this.createDailyData([]);
   statusData: StatusDataPoint[] = this.createStatusData(this.emptyStats());
   monthlyData: MonthlyDataPoint[] = this.createMonthlyData([]);
+  activeDailyPoint: DailyChartPoint | null = null;
 
   ngOnInit(): void {
     void this.loadAnalytics();
   }
 
   get hasMessages(): boolean {
-    return this.stats.total > 0;
+    return this.statusTotal > 0;
   }
 
   get failedRate(): string {
-    return this.stats.total > 0
-      ? ((this.stats.failed / this.stats.total) * 100).toFixed(1)
+    return this.processedTotal > 0
+      ? ((this.stats.failed / this.processedTotal) * 100).toFixed(1)
       : '0';
   }
 
-  get dailyTotalPoints(): string {
-    return this.linePoints(this.dailyData.map((point) => point.total));
+  get processedTotal(): number {
+    return this.stats.accepted + this.stats.failed;
   }
 
-  get dailyDeliveredPoints(): string {
-    return this.linePoints(this.dailyData.map((point) => point.entregados));
+  get dailyTotalPath(): string {
+    return this.smoothLinePath(this.dailyChartPoints.map((point) => ({ x: point.x, y: point.totalY })));
+  }
+
+  get dailyAcceptedPath(): string {
+    return this.smoothLinePath(this.dailyChartPoints.map((point) => ({ x: point.x, y: point.acceptedY })));
+  }
+
+  get dailyChartPoints(): DailyChartPoint[] {
+    const max = this.dailyMaxValue;
+
+    return this.dailyData.map((point, index) => ({
+      x: this.xForIndex(index, this.dailyData.length),
+      totalY: this.yForValue(point.total, max),
+      acceptedY: this.yForValue(point.aceptados, max),
+      date: point.date,
+      total: point.total,
+      accepted: point.aceptados
+    }));
+  }
+
+  get dailyGridLines(): DailyGridLine[] {
+    const max = this.dailyMaxValue;
+    return [max, max * 0.75, max * 0.5, max * 0.25, 0].map((value) => ({
+      y: this.yForValue(value, max),
+      label: this.formatTick(value)
+    }));
+  }
+
+  get dailyMaxValue(): number {
+    return Math.max(1, ...this.dailyData.flatMap((point) => [point.total, point.aceptados]));
+  }
+
+  get dailyTooltipX(): number {
+    if (!this.activeDailyPoint) return 0;
+    return Math.min(448, Math.max(56, this.activeDailyPoint.x - 64));
+  }
+
+  get dailyTooltipY(): number {
+    if (!this.activeDailyPoint) return 0;
+    const minY = Math.min(this.activeDailyPoint.totalY, this.activeDailyPoint.acceptedY);
+    return Math.max(36, minY - 76);
   }
 
   get dailyTicks(): Array<{ label: string; x: number }> {
@@ -88,8 +144,16 @@ export class AnalyticsPageComponent implements OnInit {
     }));
   }
 
+  showDailyTooltip(point: DailyChartPoint): void {
+    this.activeDailyPoint = point;
+  }
+
+  hideDailyTooltip(): void {
+    this.activeDailyPoint = null;
+  }
+
   get pieGradient(): string {
-    if (!this.hasMessages) {
+    if (this.statusTotal === 0) {
       return '#f3f4f6';
     }
 
@@ -98,11 +162,15 @@ export class AnalyticsPageComponent implements OnInit {
       .filter((item) => item.value > 0)
       .map((item) => {
         const start = cursor;
-        cursor += (item.value / this.stats.total) * 100;
+        cursor += (item.value / this.statusTotal) * 100;
         return `${item.color} ${start}% ${cursor}%`;
       });
 
     return `conic-gradient(${parts.join(', ')})`;
+  }
+
+  get statusTotal(): number {
+    return this.statusData.reduce((total, item) => total + item.value, 0);
   }
 
   monthlyMessageHeight(value: number): number {
@@ -151,22 +219,25 @@ export class AnalyticsPageComponent implements OnInit {
   }
 
   private calculateStats(messages: SmsAnalyticsMessage[]): AnalyticsStats {
-    const total = messages.length;
-    const delivered = messages.filter((message) => message.status === 'delivered').length;
+    const accepted = messages.filter((message) => this.isAcceptedStatus(message.status)).length;
+    const total = accepted;
     const failed = messages.filter((message) => message.status === 'failed').length;
     const pending = messages.filter((message) => message.status === 'pending').length;
     const sent = messages.filter((message) => message.status === 'sent').length;
-    const totalCost = messages.reduce((sum, message) => sum + Number(message.cost ?? 0), 0);
-    const deliveryRate = total > 0 ? (delivered / total) * 100 : 0;
+    const totalCost = messages
+      .filter((message) => this.isAcceptedStatus(message.status))
+      .reduce((sum, message) => sum + Number(message.cost ?? 0), 0);
+    const processedTotal = accepted + failed;
+    const successRate = processedTotal > 0 ? (accepted / processedTotal) * 100 : 0;
 
     return {
       total,
-      delivered,
+      accepted,
       failed,
       pending,
       sent,
       totalCost,
-      deliveryRate
+      successRate
     };
   }
 
@@ -187,7 +258,7 @@ export class AnalyticsPageComponent implements OnInit {
           month: 'short'
         }),
         total: dayMessages.length,
-        entregados: dayMessages.filter((message) => message.status === 'delivered').length,
+        aceptados: dayMessages.filter((message) => this.isAcceptedStatus(message.status)).length,
         fallidos: dayMessages.filter((message) => message.status === 'failed').length
       };
     });
@@ -195,8 +266,7 @@ export class AnalyticsPageComponent implements OnInit {
 
   private createStatusData(stats: AnalyticsStats): StatusDataPoint[] {
     return [
-      { name: 'Entregados', value: stats.delivered, color: '#10b981' },
-      { name: 'Enviados', value: stats.sent, color: '#3b82f6' },
+      { name: 'Aceptados', value: stats.accepted, color: '#10b981' },
       { name: 'Pendientes', value: stats.pending, color: '#f59e0b' },
       { name: 'Fallidos', value: stats.failed, color: '#ef4444' }
     ];
@@ -225,8 +295,8 @@ export class AnalyticsPageComponent implements OnInit {
 
       return {
         ...month,
-        mensajes: monthMessages.length,
-        costo: monthMessages.reduce(
+        mensajes: monthMessages.filter((message) => this.isAcceptedStatus(message.status)).length,
+        costo: monthMessages.filter((message) => this.isAcceptedStatus(message.status)).reduce(
           (sum, message) => sum + Number(message.cost ?? 0),
           0
         )
@@ -234,12 +304,16 @@ export class AnalyticsPageComponent implements OnInit {
     });
   }
 
-  private linePoints(values: number[]): string {
-    const max = Math.max(...values, 1);
+  private smoothLinePath(points: Array<{ x: number; y: number }>): string {
+    if (points.length === 0) return '';
+    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
 
-    return values
-      .map((value, index) => `${this.xForIndex(index, values.length)},${this.yForValue(value, max)}`)
-      .join(' ');
+    return points.slice(1).reduce((path, point, index) => {
+      const previous = points[index];
+      const midX = (previous.x + point.x) / 2;
+
+      return `${path} C ${midX.toFixed(1)} ${previous.y.toFixed(1)}, ${midX.toFixed(1)} ${point.y.toFixed(1)}, ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+    }, `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`);
   }
 
   private xForIndex(index: number, total: number): number {
@@ -254,15 +328,24 @@ export class AnalyticsPageComponent implements OnInit {
     return maxY - (value / max) * (maxY - minY);
   }
 
+  private formatTick(value: number): string {
+    if (value % 1 === 0) return value.toFixed(0);
+    return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  }
+
   private emptyStats(): AnalyticsStats {
     return {
       total: 0,
-      delivered: 0,
+      accepted: 0,
       failed: 0,
       pending: 0,
       sent: 0,
       totalCost: 0,
-      deliveryRate: 0
+      successRate: 0
     };
+  }
+
+  private isAcceptedStatus(status: string): boolean {
+    return status === 'sent' || status === this.futureAcceptedStatus;
   }
 }

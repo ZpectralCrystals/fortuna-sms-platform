@@ -154,11 +154,19 @@ header p {
   display: block;
   height: 300px;
   width: 100%;
+  overflow: visible;
 }
 
 .grid-lines path {
   color: #e5e7eb;
   stroke-dasharray: 3 3;
+}
+
+.grid-lines text {
+  fill: #6b7280;
+  font-size: 12px;
+  stroke: none;
+  text-anchor: end;
 }
 
 .axis {
@@ -167,15 +175,62 @@ header p {
 
 .line {
   fill: none;
-  stroke-width: 3;
+  stroke-width: 2;
 }
 
 .line--total {
   stroke: #3b82f6;
 }
 
-.line--delivered {
+.line--accepted {
   stroke: #10b981;
+}
+
+.point-dot {
+  fill: #ffffff;
+  stroke-width: 2;
+}
+
+.point-dot--total {
+  stroke: #3b82f6;
+}
+
+.point-dot--accepted {
+  stroke: #10b981;
+}
+
+.hover-zone {
+  cursor: crosshair;
+  fill: transparent;
+  stroke: none;
+}
+
+.hover-zone:focus {
+  outline: none;
+}
+
+.hover-guide {
+  stroke: #d1d5db;
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.chart-tooltip rect {
+  fill: #ffffff;
+  stroke: #e5e7eb;
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.16));
+}
+
+.chart-tooltip text {
+  fill: #111827;
+  font-size: 12px;
+  font-weight: 600;
+  stroke: none;
+}
+
+.chart-tooltip text + text {
+  fill: #4b5563;
+  font-weight: 500;
 }
 
 .x-labels {
@@ -215,6 +270,10 @@ header p {
 
 .legend-dot--green {
   background: #10b981;
+}
+
+.legend-dot--red {
+  background: #ef4444;
 }
 
 .pie-wrap {

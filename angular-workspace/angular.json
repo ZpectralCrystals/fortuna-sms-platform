@@ -10,11 +10,11 @@
       "prefix": "sms",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:application",
+          "builder": "@angular-devkit/build-angular:browser",
           "options": {
             "outputPath": "dist/sms-client",
             "index": "projects/sms-client/src/index.html",
-            "browser": "projects/sms-client/src/main.ts",
+            "main": "projects/sms-client/src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "projects/sms-client/tsconfig.app.json",
             "assets": [
@@ -67,11 +67,11 @@
       "prefix": "bo",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:application",
+          "builder": "@angular-devkit/build-angular:browser",
           "options": {
             "outputPath": "dist/backoffice-admin",
             "index": "projects/backoffice-admin/src/index.html",
-            "browser": "projects/backoffice-admin/src/main.ts",
+            "main": "projects/backoffice-admin/src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "projects/backoffice-admin/tsconfig.app.json",
             "assets": [],
