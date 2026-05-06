@@ -30,14 +30,7 @@ export class UsersPageComponent implements OnInit {
   users: BackofficeClientProfile[] = [];
   loading = true;
   searchTerm = '';
-  showAddModal = false;
-  message = '';
-  newUser = {
-    email: '',
-    full_name: '',
-    company: '',
-    phone: ''
-  };
+  errorMessage = '';
 
   get filteredUsers(): BackofficeClientProfile[] {
     const search = this.searchTerm.trim().toLowerCase();
@@ -61,6 +54,7 @@ export class UsersPageComponent implements OnInit {
 
   async loadUsers(): Promise<void> {
     this.loading = true;
+    this.errorMessage = '';
 
     try {
       const adminIds = await this.loadAdminIds();
@@ -99,28 +93,10 @@ export class UsersPageComponent implements OnInit {
     } catch (error) {
       console.warn('Error loading profile users:', error);
       this.users = [];
+      this.errorMessage = 'No se pudieron cargar los usuarios. Verifica permisos del administrador.';
     } finally {
       this.loading = false;
     }
-  }
-
-  openAddModal(): void {
-    this.message = '';
-    this.showAddModal = true;
-  }
-
-  closeAddModal(): void {
-    this.showAddModal = false;
-  }
-
-  handleAddUser(): void {
-    this.message = 'La creación segura de usuarios se conectará en la siguiente fase.';
-    this.showAddModal = false;
-    this.newUser = { email: '', full_name: '', company: '', phone: '' };
-  }
-
-  showActivationNotice(): void {
-    this.message = 'La activación de usuarios se conectará en la siguiente fase.';
   }
 
   formatNumber(value: number): string {
