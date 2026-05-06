@@ -7,6 +7,8 @@ import {
   ClientSmsMessage,
   ClientSmsStats,
   CreateSmsTemplateRequest,
+  SmsFileRow,
+  SmsFileSendResult,
   SmsMultipleSimpleRequest,
   SmsMultipleSimpleResult,
   SmsProviderResponse,
@@ -89,6 +91,56 @@ export class SmsService {
       total: request.recipients.length,
       sent: results.filter((result) => result.success).length,
       failed: results.filter((result) => !result.success).length,
+      results
+    };
+  }
+
+  async sendFileRowsSimple(rows: SmsFileRow[]): Promise<SmsFileSendResult> {
+    const results: SmsFileSendResult['results'] = [];
+
+    for (const row of rows) {
+      try {
+        const result = await this.sendSingle({
+          recipient: row.recipient,
+          message: row.message,
+          idempotency_key: this.createIdempotencyKey()
+        });
+
+        results.push({
+          recipient: row.recipient,
+          message: row.message,
+          sourceRow: row.sourceRow,
+          success: true,
+          message_id: result.message_id,
+          status: result.status,
+          segments: result.segments,
+          cost: result.cost
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'No se pudo enviar el SMS.';
+
+        if (this.isSessionError(message)) {
+          throw error;
+        }
+
+        results.push({
+          recipient: row.recipient,
+          message: row.message,
+          sourceRow: row.sourceRow,
+          success: false,
+          error: message
+        });
+      }
+    }
+
+    const successfulResults = results.filter((result) => result.success);
+
+    return {
+      total: rows.length,
+      sent: successfulResults.length,
+      failed: results.filter((result) => !result.success).length,
+      totalSegments: successfulResults.reduce((total, result) => total + Number(result.segments ?? 0), 0),
+      totalCost: successfulResults.reduce((total, result) => total + Number(result.cost ?? 0), 0),
       results
     };
   }

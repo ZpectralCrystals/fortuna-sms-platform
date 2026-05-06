@@ -2,13 +2,15 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { SmsMultipleSimpleResult, SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
+import * as XLSX from 'xlsx';
+import { SmsFileRow, SmsMultipleSimpleResult, SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
 
 type SendMode = 'single' | 'multiple' | 'file';
 
 interface FileMessage {
   phone: string;
   message: string;
+  sourceRow?: number;
 }
 
 interface SendProfile {
@@ -20,6 +22,14 @@ interface ParsedRecipients {
   validRecipients: string[];
   invalidRecipients: string[];
   duplicatesRemoved: string[];
+}
+
+interface FileParseResult {
+  messages: FileMessage[];
+  invalidRecipients: string[];
+  duplicatesRemoved: string[];
+  rowsRead: number;
+  error?: string;
 }
 
 @Component({
@@ -39,6 +49,13 @@ export class SendSmsPageComponent implements OnInit {
   manualMessage = '';
   multiplePhones = '';
   campaignName = '';
+  fileName = '';
+  fileType = '';
+  fileRowsRead = 0;
+  fileRecipientsText = '';
+  fileParseError = '';
+  fileInvalidRecipients: string[] = [];
+  fileDuplicatesRemoved: string[] = [];
   fileMessages: FileMessage[] = [];
   templates: SmsTemplate[] = [];
   selectedTemplateId = '';
@@ -74,16 +91,22 @@ export class SendSmsPageComponent implements OnInit {
       return this.parsedMultipleRecipients.validRecipients.length;
     }
 
-    return this.mode === 'file' ? this.fileMessages.length : this.getPhonesList().length;
+    if (this.mode === 'file') {
+      return this.fileMessages.length;
+    }
+
+    return this.getPhonesList().length;
   }
 
   get totalFileSms(): number {
-    return this.fileMessages.reduce((total, fm) => total + this.smsSegments(fm.message), 0);
+    return this.fileMessages.reduce((total, fileMessage) =>
+      total + this.smsSegments(this.getFileMessageToSend(fileMessage)), 0
+    );
   }
 
   get totalCost(): number {
     if (this.mode === 'file') {
-      return this.fileMessages.reduce((total, fm) => total + this.smsSegments(fm.message) * 0.08, 0);
+      return this.totalFileSms * 0.08;
     }
 
     return this.phoneCount * this.smsCount * 0.08;
@@ -131,6 +154,24 @@ export class SendSmsPageComponent implements OnInit {
 
   get parsedMultipleRecipients(): ParsedRecipients {
     return this.parseRecipients(this.multiplePhones);
+  }
+
+  get parsedFileRecipients(): ParsedRecipients {
+    return this.parseRecipients(this.fileRecipientsText);
+  }
+
+  get fileEntryCount(): number {
+    return this.fileRowsRead || this.fileMessages.length + this.fileInvalidRecipients.length + this.fileDuplicatesRemoved.length;
+  }
+
+  get fileUsesCustomMessages(): boolean {
+    return this.fileMessages.some((fileMessage) => !!fileMessage.message.trim());
+  }
+
+  get fileMessageModeLabel(): string {
+    return this.fileUsesCustomMessages
+      ? 'Mensajes personalizados por fila'
+      : 'Mensaje general aplicado a todos';
   }
 
   get multipleSuccessDetail(): string {
@@ -256,6 +297,14 @@ export class SendSmsPageComponent implements OnInit {
     if (!file) return;
 
     this.error = '';
+    this.fileParseError = '';
+    this.fileName = '';
+    this.fileType = '';
+    this.fileRowsRead = 0;
+    this.fileRecipientsText = '';
+    this.fileMessages = [];
+    this.fileInvalidRecipients = [];
+    this.fileDuplicatesRemoved = [];
 
     if (file.size > 500 * 1024) {
       this.error = 'El archivo excede el tamaño máximo de 500KB';
@@ -263,65 +312,133 @@ export class SendSmsPageComponent implements OnInit {
       return;
     }
 
+    const lowerName = file.name.toLowerCase();
+    const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls');
+    const isCsv = lowerName.endsWith('.csv');
+    const isTxt = lowerName.endsWith('.txt');
+
+    if (!isExcel && !isCsv && !isTxt) {
+      this.fileParseError = 'Archivo no soportado. Usa Excel, CSV o TXT.';
+      input.value = '';
+      return;
+    }
+
+    if (isExcel) {
+      this.readExcelFile(file);
+      input.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result ?? '');
-      const rows = text
-        .split(/\r?\n/)
-        .map((row) => row.trim())
-        .filter((row) => row.length > 0)
-        .map((row) => row.split(/,|;/).map((cell) => cell.trim()));
 
-      if (rows.length < 2) {
-        this.error = 'El archivo debe contener al menos una fila de datos además de los encabezados';
+      if (!text.trim()) {
+        this.fileParseError = 'Archivo vacío.';
         return;
       }
 
-      const messages = rows.slice(1).reduce<FileMessage[]>((items, row) => {
-        if (row.length >= 2 && row[0] && row[1]) {
-          items.push({
-            phone: String(row[0]).trim(),
-            message: String(row.slice(1).join(', ')).trim()
-          });
-        }
+      this.fileName = file.name;
+      this.fileType = isCsv ? 'CSV' : 'TXT';
+      this.fileRecipientsText = text;
+      const parsed = this.parseFileMessages(text);
+      this.fileRowsRead = parsed.rowsRead;
+      this.fileMessages = parsed.messages;
+      this.fileInvalidRecipients = parsed.invalidRecipients;
+      this.fileDuplicatesRemoved = parsed.duplicatesRemoved;
 
-        return items;
-      }, []);
-
-      if (messages.length === 0) {
-        this.error = 'No se encontraron datos válidos en el archivo';
+      if (this.fileMessages.length === 0) {
+        this.fileParseError = 'No se encontraron números válidos.';
         return;
       }
 
-      this.fileMessages = messages;
       this.error = '';
     };
     reader.onerror = () => {
-      this.error = 'Error al procesar el archivo';
+      this.fileParseError = 'Error al procesar el archivo';
     };
     reader.readAsText(file);
     input.value = '';
   }
 
+  private readExcelFile(file: File): void {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = new Uint8Array(reader.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+
+        if (!sheetName) {
+          this.fileParseError = 'Archivo Excel vacío.';
+          return;
+        }
+
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+          header: 1,
+          defval: '',
+          blankrows: false,
+          raw: false
+        }) as unknown[][];
+
+        if (rows.length === 0) {
+          this.fileParseError = 'Archivo Excel vacío.';
+          return;
+        }
+
+        const parsed = this.parseExcelRows(rows);
+
+        if (parsed.error) {
+          this.fileParseError = parsed.error;
+          return;
+        }
+
+        this.fileName = file.name;
+        this.fileType = 'Excel';
+        this.fileRecipientsText = '';
+        this.fileRowsRead = parsed.rowsRead;
+        this.fileMessages = parsed.messages;
+        this.fileInvalidRecipients = parsed.invalidRecipients;
+        this.fileDuplicatesRemoved = parsed.duplicatesRemoved;
+
+        if (this.fileMessages.length === 0) {
+          this.fileParseError = 'No se encontraron números válidos.';
+        }
+      } catch {
+        this.fileParseError = 'Error al procesar el archivo Excel.';
+      }
+    };
+    reader.onerror = () => {
+      this.fileParseError = 'Error al procesar el archivo Excel.';
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
   downloadTemplate(): void {
     const template = [
-      ['Telefono', 'Mensaje'],
-      ['+51987654321', 'Hola Juan, tenemos una promoción especial para ti'],
-      ['+51976543210', 'Hola María, tu pedido está listo para recoger'],
-      ['+51965432109', 'Estimado cliente, le recordamos su cita del día de mañana']
+      ['Teléfono', 'Mensaje'],
+      ['956062256', 'Hola Juan, este es un SMS de prueba personalizado.'],
+      ['51956062256', 'Hola María, recuerda tu cita mañana.'],
+      ['+51987654321', 'Hola Carlos, este mensaje viene desde archivo.']
     ];
 
-    const csv = template.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'plantilla_sms.csv';
-    link.click();
-    URL.revokeObjectURL(link.href);
+    const worksheet = XLSX.utils.aoa_to_sheet(template);
+    worksheet['!cols'] = [{ wch: 18 }, { wch: 64 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla SMS');
+    XLSX.writeFile(workbook, 'plantilla_sms.xlsx');
   }
 
   clearFileMessages(): void {
     this.fileMessages = [];
+    this.fileName = '';
+    this.fileType = '';
+    this.fileRowsRead = 0;
+    this.fileRecipientsText = '';
+    this.fileParseError = '';
+    this.fileInvalidRecipients = [];
+    this.fileDuplicatesRemoved = [];
   }
 
   async handleSend(): Promise<void> {
@@ -332,11 +449,6 @@ export class SendSmsPageComponent implements OnInit {
     this.sendResult = null;
     this.multipleResult = null;
 
-    if (this.mode === 'file') {
-      this.error = 'Envío desde fichero se implementará en siguiente fase';
-      return;
-    }
-
     const message = this.getMessageToSend();
     const disabledReason = this.getSendDisabledReason();
 
@@ -346,7 +458,12 @@ export class SendSmsPageComponent implements OnInit {
     }
 
     if (this.mode === 'multiple') {
-      await this.handleMultipleSend(message);
+      await this.handleMultipleSend(message, this.parsedMultipleRecipients.validRecipients);
+      return;
+    }
+
+    if (this.mode === 'file') {
+      await this.handleFileSend();
       return;
     }
 
@@ -403,6 +520,10 @@ export class SendSmsPageComponent implements OnInit {
     return this.smsService.renderTemplatePreview(content, values);
   }
 
+  getFileMessageToSend(fileMessage: FileMessage): string {
+    return (fileMessage.message || this.manualMessage).trim();
+  }
+
   private validatePhone(phone: string): boolean {
     return /^\+519\d{8}$/.test(phone.trim());
   }
@@ -426,10 +547,7 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   private parseRecipients(input: string): ParsedRecipients {
-    const tokens = input
-      .split(/[\s,;]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const tokens = this.getRecipientTokens(input);
     const seen = new Set<string>();
     const validRecipients: string[] = [];
     const invalidRecipients: string[] = [];
@@ -453,6 +571,213 @@ export class SendSmsPageComponent implements OnInit {
     }
 
     return { validRecipients, invalidRecipients, duplicatesRemoved };
+  }
+
+  private parseFileMessages(input: string): FileParseResult {
+    const rows = input
+      .split(/\r?\n/)
+      .map((row) => row.trim())
+      .filter(Boolean);
+    const messages: FileMessage[] = [];
+    const invalidRecipients: string[] = [];
+    const duplicatesRemoved: string[] = [];
+    const seen = new Set<string>();
+    let phoneIndex = 0;
+    let messageIndex = 1;
+    let hasHeader = false;
+
+    for (const [index, row] of rows.entries()) {
+      const cells = this.parseFileRow(row);
+
+      if (index === 0 && this.isFileHeader(cells)) {
+        hasHeader = true;
+        phoneIndex = this.findHeaderIndex(cells, this.phoneHeaderNames(), 0);
+        messageIndex = this.findHeaderIndex(cells, this.messageHeaderNames(), 1);
+        continue;
+      }
+
+      if (!hasHeader && cells.length >= 2 && this.looksLikePhone(cells[1])) {
+        for (const cell of cells) {
+          this.addParsedFileMessage(cell, '', index + 1, messages, invalidRecipients, duplicatesRemoved, seen);
+        }
+        continue;
+      }
+
+      if (hasHeader || cells.length >= 2) {
+        const phoneValue = String(cells[phoneIndex] ?? '').trim();
+        const messageValue = String(cells[messageIndex] ?? cells.slice(1).join(', ') ?? '').trim();
+        this.addParsedFileMessage(phoneValue, messageValue, index + 1, messages, invalidRecipients, duplicatesRemoved, seen);
+        continue;
+      }
+
+      for (const token of this.getRecipientTokens(row)) {
+        this.addParsedFileMessage(token, '', index + 1, messages, invalidRecipients, duplicatesRemoved, seen);
+      }
+    }
+
+    return { messages, invalidRecipients, duplicatesRemoved, rowsRead: rows.length - (hasHeader ? 1 : 0) };
+  }
+
+  private parseExcelRows(rows: unknown[][]): FileParseResult {
+    const nonEmptyRows = rows
+      .map((row) => row.map((cell) => String(cell ?? '').trim()))
+      .filter((row) => row.some(Boolean));
+
+    if (nonEmptyRows.length === 0) {
+      return this.emptyFileParseResult('Archivo Excel vacío.');
+    }
+
+    const header = nonEmptyRows[0];
+    const phoneIndex = this.findHeaderIndex(header, this.phoneHeaderNames(), -1);
+    const messageIndex = this.findHeaderIndex(header, this.messageHeaderNames(), -1);
+
+    if (phoneIndex < 0) {
+      return this.emptyFileParseResult('No se encontró una columna de teléfono. Usa una columna llamada telefono o celular.');
+    }
+
+    const messages: FileMessage[] = [];
+    const invalidRecipients: string[] = [];
+    const duplicatesRemoved: string[] = [];
+    const seen = new Set<string>();
+
+    for (let rowIndex = 1; rowIndex < nonEmptyRows.length; rowIndex++) {
+      const row = nonEmptyRows[rowIndex];
+      const phoneValue = String(row[phoneIndex] ?? '').trim();
+      const messageValue = messageIndex >= 0 ? String(row[messageIndex] ?? '').trim() : '';
+
+      if (!phoneValue && !messageValue) {
+        continue;
+      }
+
+      this.addParsedFileMessage(phoneValue, messageValue, rowIndex + 1, messages, invalidRecipients, duplicatesRemoved, seen);
+    }
+
+    return {
+      messages,
+      invalidRecipients,
+      duplicatesRemoved,
+      rowsRead: Math.max(0, nonEmptyRows.length - 1)
+    };
+  }
+
+  private emptyFileParseResult(error: string): FileParseResult {
+    return {
+      messages: [],
+      invalidRecipients: [],
+      duplicatesRemoved: [],
+      rowsRead: 0,
+      error
+    };
+  }
+
+  private addParsedFileMessage(
+    phone: string,
+    message: string,
+    sourceRow: number,
+    messages: FileMessage[],
+    invalidRecipients: string[],
+    duplicatesRemoved: string[],
+    seen: Set<string>
+  ): void {
+    const normalized = this.normalizePhone(phone);
+
+    if (!normalized || !this.validatePhone(normalized)) {
+      invalidRecipients.push(phone || '(vacío)');
+      return;
+    }
+
+    if (seen.has(normalized)) {
+      duplicatesRemoved.push(normalized);
+      return;
+    }
+
+    seen.add(normalized);
+    messages.push({ phone: normalized, message, sourceRow });
+  }
+
+  private parseFileRow(row: string): string[] {
+    const delimiter = row.includes('\t')
+      ? '\t'
+      : row.includes(';')
+        ? ';'
+        : row.includes(',')
+          ? ','
+          : null;
+
+    if (!delimiter) {
+      return [row.trim()];
+    }
+
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let index = 0; index < row.length; index++) {
+      const char = row[index];
+      const next = row[index + 1];
+
+      if (char === '"' && next === '"') {
+        current += '"';
+        index++;
+        continue;
+      }
+
+      if (char === '"') {
+        inQuotes = !inQuotes;
+        continue;
+      }
+
+      if (char === delimiter && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+        continue;
+      }
+
+      current += char;
+    }
+
+    values.push(current.trim());
+    return values;
+  }
+
+  private isFileHeader(cells: string[]): boolean {
+    const headerNames = [...this.phoneHeaderNames(), ...this.messageHeaderNames()];
+    return cells.some((cell) => headerNames.includes(this.normalizeHeader(cell)));
+  }
+
+  private findHeaderIndex(cells: string[], names: string[], fallback: number): number {
+    const found = cells.findIndex((cell) => names.includes(this.normalizeHeader(cell)));
+    return found >= 0 ? found : fallback;
+  }
+
+  private normalizeHeader(header: string): string {
+    return header
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  private phoneHeaderNames(): string[] {
+    return ['telefono', 'phone', 'celular', 'numero', 'nro', 'mobile'];
+  }
+
+  private messageHeaderNames(): string[] {
+    return ['mensaje', 'message', 'texto', 'contenido', 'sms'];
+  }
+
+  private looksLikePhone(value: string): boolean {
+    const normalized = this.normalizePhone(value);
+    return !!normalized && this.validatePhone(normalized);
+  }
+
+  private getRecipientTokens(input: string): string[] {
+    return input
+      .split(/[\s,;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .filter((item) => ![...this.phoneHeaderNames(), ...this.messageHeaderNames()].includes(this.normalizeHeader(item)));
   }
 
   private createIdempotencyKey(): string {
@@ -482,8 +807,7 @@ export class SendSmsPageComponent implements OnInit {
       .filter((phone) => phone.length > 0);
   }
 
-  private async handleMultipleSend(message: string): Promise<void> {
-    const recipients = this.parsedMultipleRecipients.validRecipients;
+  private async handleMultipleSend(message: string, recipients: string[]): Promise<void> {
     this.sending = true;
 
     try {
@@ -498,6 +822,28 @@ export class SendSmsPageComponent implements OnInit {
       this.error = error instanceof Error
         ? error.message
         : 'No se pudo completar el envío múltiple.';
+    } finally {
+      this.sending = false;
+    }
+  }
+
+  private async handleFileSend(): Promise<void> {
+    this.sending = true;
+
+    try {
+      const rows: SmsFileRow[] = this.fileMessages.map((fileMessage) => ({
+        recipient: fileMessage.phone,
+        message: this.getFileMessageToSend(fileMessage),
+        sourceRow: fileMessage.sourceRow
+      }));
+
+      this.multipleResult = await this.smsService.sendFileRowsSimple(rows);
+      this.success = true;
+      await this.loadProfileCredits();
+    } catch (error) {
+      this.error = error instanceof Error
+        ? error.message
+        : 'No se pudo completar el envío desde fichero.';
     } finally {
       this.sending = false;
     }
@@ -585,10 +931,6 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   getSendDisabledReason(): string | null {
-    if (this.mode === 'file') {
-      return 'Envío desde fichero se implementará en siguiente fase';
-    }
-
     const message = this.getMessageToSend();
 
     if (this.mode === 'single' && (!this.recipient.trim() || !this.validatePhone(this.recipient))) {
@@ -599,7 +941,25 @@ export class SendSmsPageComponent implements OnInit {
       return 'Ingresa al menos un número válido.';
     }
 
-    if (!message) {
+    if (this.mode === 'file') {
+      if (this.fileParseError) {
+        return this.fileParseError;
+      }
+
+      if (!this.fileName) {
+        return 'Carga un archivo Excel, CSV o TXT.';
+      }
+
+      if (this.fileMessages.length === 0) {
+        return 'No se encontraron números válidos.';
+      }
+
+      if (this.fileMessages.some((fileMessage) => !this.getFileMessageToSend(fileMessage))) {
+        return 'Cada fila debe tener mensaje o escribe un mensaje general.';
+      }
+    }
+
+    if (this.mode !== 'file' && !message) {
       return 'El mensaje no puede estar vacío.';
     }
 

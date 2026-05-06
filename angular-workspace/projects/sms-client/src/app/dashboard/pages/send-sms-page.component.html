@@ -1,7 +1,7 @@
 <div class="send-page">
   <div>
     <h1>Enviar SMS</h1>
-    <p class="page-subtitle">Envía SMS individuales o múltiples desde tu saldo disponible</p>
+    <p class="page-subtitle">Envía mensajes individuales o campañas masivas</p>
   </div>
 
   <div *ngIf="success" class="alert alert--success">
@@ -10,11 +10,11 @@
       <circle cx="12" cy="12" r="10"></circle>
     </svg>
     <div>
-      <p>{{ multipleResult ? 'Envío múltiple procesado' : successTitle }}</p>
+      <p>{{ multipleResult ? mode === 'file' ? 'Envío desde fichero procesado' : 'Envío múltiple procesado' : successTitle }}</p>
       <span>{{ multipleResult ? multipleSuccessDetail : successDetail }}</span>
       <a routerLink="/dashboard/history" class="alert-link">Ver historial</a>
       <button *ngIf="multipleResult" type="button" class="alert-action" (click)="multipleResult = null; success = false">
-        Enviar otro múltiple
+        {{ mode === 'file' ? 'Enviar otro fichero' : 'Enviar otro múltiple' }}
       </button>
     </div>
   </div>
@@ -59,15 +59,6 @@
     </div>
 
     <form class="send-form" (ngSubmit)="handleSend()">
-      <div *ngIf="mode === 'file'" class="alert alert--error">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M12 8v4"></path>
-          <path d="M12 16h.01"></path>
-        </svg>
-        <p>Envío desde fichero se implementará en siguiente fase</p>
-      </div>
-
       <ng-container *ngIf="mode === 'file'">
         <div class="field">
           <label for="campaignName">Nombre de la campaña</label>
@@ -107,7 +98,7 @@
                   <path d="M7 10l5 5 5-5"></path>
                   <path d="M12 15V3"></path>
                 </svg>
-                Descargar plantilla
+                Descargar plantilla Excel
               </button>
             </div>
           </div>
@@ -115,20 +106,26 @@
           <div class="format-info">
             <p>Información del formato:</p>
             <ul>
-              <li><strong>Columna 1:</strong> Número de teléfono (Ej: +51987654321)</li>
-              <li><strong>Columna 2:</strong> Mensaje personalizado para cada destinatario</li>
+              <li><strong>Columna 1:</strong> Teléfono</li>
+              <li><strong>Columna 2:</strong> Mensaje</li>
+              <li>También acepta encabezados telefono, teléfono, phone, celular, numero, número, nro, mobile, mensaje, message, texto, contenido o sms</li>
+              <li>Si la fila trae mensaje, se usa ese mensaje; si no, se usa el mensaje general</li>
+              <li>Ejemplos válidos: 956062256, 51956062256, +51987654321</li>
               <li>Tamaño máximo: 500KB</li>
               <li>Formatos compatibles: Excel (.xlsx, .xls), CSV (.csv), Texto (.txt)</li>
-              <li>Un mensaje por línea, cada uno puede ser diferente</li>
             </ul>
           </div>
         </div>
 
-        <div *ngIf="fileMessages.length > 0" class="preview-card">
+        <p *ngIf="fileParseError" class="multiple-warning">
+          {{ fileParseError }}
+        </p>
+
+        <div *ngIf="fileName" class="preview-card">
           <div class="preview-card__header">
             <div>
-              <h3>Vista previa de mensajes</h3>
-              <p>{{ fileMessages.length }} mensajes cargados</p>
+              <h3>Preview de archivo</h3>
+              <p>{{ fileName }} <span *ngIf="fileType">· {{ fileType }}</span></p>
             </div>
             <button type="button" (click)="clearFileMessages()" title="Limpiar archivo" aria-label="Limpiar archivo">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -138,17 +135,49 @@
             </button>
           </div>
 
-          <div class="preview-list">
-            <div *ngFor="let fm of previewMessages" class="preview-row">
-              <div class="preview-row__phone">{{ fm.phone }}</div>
+          <div class="file-stats-grid">
+            <div>
+              <span>Filas leídas</span>
+              <strong>{{ fileEntryCount }}</strong>
+            </div>
+            <div>
+              <span>Números válidos</span>
+              <strong>{{ fileMessages.length }}</strong>
+            </div>
+            <div>
+              <span>Inválidos</span>
+              <strong>{{ fileInvalidRecipients.length }}</strong>
+            </div>
+            <div>
+              <span>Duplicados removidos</span>
+              <strong>{{ fileDuplicatesRemoved.length }}</strong>
+            </div>
+          </div>
+
+          <p *ngIf="fileMessages.length > 0" class="file-mode-badge">
+            {{ fileMessageModeLabel }}
+          </p>
+
+          <div *ngIf="fileMessages.length > 0" class="preview-list">
+            <div *ngFor="let fileMessage of previewMessages" class="preview-row">
+              <div class="preview-row__phone">{{ fileMessage.phone }}</div>
               <div class="preview-row__message">
-                <p>{{ fm.message }}</p>
-                <span>{{ smsSegments(fm.message) }} SMS • {{ fm.message.length }} caracteres</span>
+                <p>{{ getFileMessageToSend(fileMessage) || 'Usará el mensaje general' }}</p>
+                <span>{{ smsSegments(getFileMessageToSend(fileMessage)) }} SMS • {{ getFileMessageToSend(fileMessage).length }} caracteres</span>
               </div>
             </div>
             <div *ngIf="fileMessages.length > 10" class="preview-more">
               ... y {{ fileMessages.length - 10 }} mensajes más
             </div>
+          </div>
+
+          <div *ngIf="fileInvalidRecipients.length > 0 || fileDuplicatesRemoved.length > 0" class="multiple-warning multiple-warning--in-card">
+            <p *ngIf="fileInvalidRecipients.length > 0">
+              Inválidos: {{ fileInvalidRecipients.join(', ') }}
+            </p>
+            <p *ngIf="fileDuplicatesRemoved.length > 0">
+              Duplicados removidos: {{ fileDuplicatesRemoved.join(', ') }}
+            </p>
           </div>
         </div>
       </ng-container>
@@ -239,7 +268,7 @@
         </select>
       </div>
 
-      <section *ngIf="mode !== 'file' && isTemplateMode" class="template-base-card">
+      <section *ngIf="isTemplateMode && mode !== 'file'" class="template-base-card">
         <div class="template-base-card__header">
           <div>
             <span>Plantilla cargada</span>
@@ -252,12 +281,12 @@
         <small>Puedes editar el mensaje antes de enviarlo. No se enviará automáticamente.</small>
       </section>
 
-      <div *ngIf="mode !== 'file'" class="field">
+      <div *ngIf="mode !== 'file' || (fileName && !fileUsesCustomMessages)" class="field">
         <label for="message">Mensaje</label>
         <textarea
           id="message"
           name="message"
-          required
+          [required]="mode !== 'file'"
           rows="5"
           [(ngModel)]="manualMessage"
           (ngModelChange)="handleMessageChange()"
@@ -267,9 +296,10 @@
           <small>{{ manualMessage.length }} caracteres</small>
           <small>{{ smsCount }} SMS {{ messageLength > 160 ? '(mensaje largo)' : '' }}</small>
         </div>
+        <small *ngIf="mode === 'file'">Se usará como mensaje general para las filas sin columna Mensaje.</small>
       </div>
 
-      <section *ngIf="mode !== 'file' && hasTemplateVariables" class="variables-card">
+      <section *ngIf="hasTemplateVariables && mode !== 'file'" class="variables-card">
         <div class="variables-card__header">
           <h3>Variables detectadas</h3>
           <p>Reemplázalas editando el mensaje si corresponde.</p>
@@ -285,7 +315,7 @@
       <div class="summary-card">
         <div class="summary-card__top">
           <span>Resumen de envío</span>
-          <strong>{{ requiredCredits }} crédito(s)</strong>
+          <strong>S/ {{ formatCurrency(totalCost) }}</strong>
         </div>
 
         <div class="summary-grid">
@@ -309,23 +339,11 @@
             <p>Créditos después</p>
             <strong>{{ afterCredits.toFixed(0) }}</strong>
           </div>
-          <div *ngIf="mode === 'multiple'">
-            <p>Números inválidos</p>
-            <strong>{{ parsedMultipleRecipients.invalidRecipients.length }}</strong>
-          </div>
-          <div *ngIf="mode === 'multiple'">
-            <p>Duplicados removidos</p>
-            <strong>{{ parsedMultipleRecipients.duplicatesRemoved.length }}</strong>
-          </div>
-          <div *ngIf="mode === 'multiple'">
-            <p>Costo estimado</p>
-            <strong>S/ {{ formatCurrency(totalCost) }}</strong>
-          </div>
         </div>
       </div>
 
-      <p *ngIf="mode === 'multiple' && credits < requiredCredits && phoneCount > 0" class="credit-warning">
-        Tus créditos podrían ser insuficientes para este envío múltiple.
+      <p *ngIf="(mode === 'multiple' || mode === 'file') && credits < requiredCredits && phoneCount > 0" class="credit-warning">
+        Tus créditos podrían ser insuficientes para este envío.
       </p>
 
       <button
@@ -342,7 +360,7 @@
             <path d="m22 2-7 20-4-9-9-4Z"></path>
             <path d="M22 2 11 13"></path>
           </svg>
-          {{ mode === 'single' ? 'Enviar 1 SMS' : mode === 'multiple' ? 'Enviar a ' + phoneCount + ' destinatarios' : 'Envío bloqueado' }}
+          {{ mode === 'single' ? 'Enviar 1 SMS' : mode === 'multiple' ? 'Enviar a ' + phoneCount + ' destinatarios' : 'Enviar ' + requiredCredits + ' SMS' }}
         </ng-template>
       </button>
       <p *ngIf="sendDisabledReason && !sending" class="disabled-reason">
@@ -380,10 +398,11 @@
     <h3>Información importante</h3>
     <ul>
       <li><span>•</span>Cada SMS admite 160 caracteres (mensajes largos se dividen automáticamente)</li>
-      <li><span>•</span>El envío se procesa mediante Edge Function y RPC segura</li>
-      <li><span>•</span>Angular no inserta mensajes ni descuenta créditos directamente</li>
-      <li><span>•</span><strong>Múltiple:</strong> envía secuencialmente un SMS por destinatario</li>
-      <li><span>•</span><strong>Desde Fichero:</strong> pendiente para siguiente fase</li>
+      <li><span>•</span>Costo: S/ 0.08 por SMS - El mejor precio del Perú</li>
+      <li><span>•</span>Entrega en menos de 5 segundos con tasa de éxito del 99.9%</li>
+      <li><span>•</span><strong>Múltiple:</strong> Sube archivos .txt o .csv con números para enviar el mismo mensaje a todos</li>
+      <li><span>•</span><strong>Desde Fichero:</strong> Sube un Excel con columnas Teléfono y Mensaje para enviar mensajes personalizados</li>
+      <li><span>•</span>Los envíos desde fichero quedan registrados en el historial para consulta futura</li>
     </ul>
   </section>
 </div>

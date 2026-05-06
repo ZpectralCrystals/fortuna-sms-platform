@@ -55,6 +55,26 @@ export interface SmsMultipleSimpleResult {
   results: SmsMultipleSimpleItemResult[];
 }
 
+export interface SmsFileRow {
+  recipient: string;
+  message: string;
+  sourceRow?: number;
+}
+
+export interface SmsFileSendItemResult extends SmsMultipleSimpleItemResult {
+  message: string;
+  sourceRow?: number;
+}
+
+export interface SmsFileSendResult {
+  total: number;
+  sent: number;
+  failed: number;
+  totalSegments: number;
+  totalCost: number;
+  results: SmsFileSendItemResult[];
+}
+
 export interface AdminSmsMessageProfile {
   full_name: string | null;
   email: string | null;
