@@ -53,6 +53,10 @@
         <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
       </div>
 
+      <p class="verification-hint">
+        ¿Ya validaste tu correo? Inicia sesión con tus credenciales.
+      </p>
+
       <button type="submit" [disabled]="loading">
         {{ loading ? 'Iniciando sesión...' : 'Iniciar sesión' }}
       </button>

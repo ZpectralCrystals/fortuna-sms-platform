@@ -36,7 +36,7 @@ export class AuthService {
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error(this.mapAuthError(error.message));
     }
   }
 
@@ -56,7 +56,7 @@ export class AuthService {
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error(this.mapAuthError(error.message));
     }
   }
 
@@ -179,5 +179,43 @@ export class AuthService {
     }
 
     return data.session.user.id;
+  }
+
+  private mapAuthError(message: string): string {
+    const normalized = message.toLowerCase();
+
+    if (
+      normalized.includes('already registered') ||
+      normalized.includes('already been registered') ||
+      normalized.includes('user already registered') ||
+      normalized.includes('email address is already')
+    ) {
+      return 'Este correo ya está registrado. Inicia sesión o recupera tu contraseña.';
+    }
+
+    if (
+      normalized.includes('password') &&
+      (normalized.includes('weak') || normalized.includes('short') || normalized.includes('6 characters'))
+    ) {
+      return 'La contraseña es demasiado débil. Usa al menos 6 caracteres.';
+    }
+
+    if (normalized.includes('rate limit') || normalized.includes('too many')) {
+      return 'Has intentado demasiadas veces. Espera unos minutos y vuelve a intentar.';
+    }
+
+    if (normalized.includes('invalid login credentials')) {
+      return 'Correo o contraseña incorrectos.';
+    }
+
+    if (normalized.includes('email not confirmed') || normalized.includes('not confirmed')) {
+      return 'Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada o spam.';
+    }
+
+    if (normalized.includes('invalid email') || normalized.includes('email')) {
+      return 'Ingresa un correo electrónico válido.';
+    }
+
+    return message;
   }
 }

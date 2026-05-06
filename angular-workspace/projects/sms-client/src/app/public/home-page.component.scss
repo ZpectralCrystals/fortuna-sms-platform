@@ -59,6 +59,13 @@ a {
   padding: 24px 0;
 }
 
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
@@ -955,6 +962,16 @@ pre {
 
   .topbar {
     align-items: flex-start;
+  }
+
+  .topbar__actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .topbar__actions .btn {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .brand__name {

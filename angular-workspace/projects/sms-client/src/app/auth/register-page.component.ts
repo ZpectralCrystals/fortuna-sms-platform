@@ -26,10 +26,12 @@ export class RegisterPageComponent {
   loading = false;
   errorMessage = '';
   successMessage = '';
+  registrationCompleted = false;
 
   async submit(): Promise<void> {
     this.errorMessage = '';
     this.successMessage = '';
+    this.registrationCompleted = false;
 
     if (
       !this.fullName ||
@@ -76,7 +78,8 @@ export class RegisterPageComponent {
         phone: this.normalizePeruPhone(this.phone)
       });
 
-      this.successMessage = 'Cuenta creada correctamente. Ahora puedes iniciar sesión.';
+      this.registrationCompleted = true;
+      this.successMessage = 'Cuenta creada correctamente';
       this.fullName = '';
       this.companyName = '';
       this.ruc = '';

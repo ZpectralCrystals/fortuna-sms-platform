@@ -31,10 +31,34 @@
       </p>
     </header>
 
-    <div class="bonus-box">
+    <div *ngIf="!registrationCompleted" class="bonus-box">
       Obtén 10 SMS gratis al registrarte
     </div>
 
+    <section *ngIf="registrationCompleted; else registerForm" class="verification-card" aria-live="polite">
+      <div class="verification-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5"></path>
+        </svg>
+      </div>
+
+      <h2>Cuenta creada correctamente</h2>
+      <p>
+        Te enviamos un correo de verificación. Revisa tu bandeja de entrada o spam y confirma tu correo para activar tu cuenta.
+      </p>
+      <p>
+        Después de validar tu correo podrás iniciar sesión en SMS Fortuna.
+      </p>
+      <p>
+        Tu cuenta Starter incluye 10 SMS gratis para probar el servicio.
+      </p>
+
+      <a class="submit-button verification-button" routerLink="/login">
+        Ir a iniciar sesión
+      </a>
+    </section>
+
+    <ng-template #registerForm>
     <form class="register-form" (ngSubmit)="submit()">
       <p *ngIf="errorMessage" class="alert alert-error">
         {{ errorMessage }}
@@ -149,5 +173,6 @@
         <a routerLink="/privacy">Política de Privacidad</a>
       </p>
     </form>
+    </ng-template>
   </section>
 </main>

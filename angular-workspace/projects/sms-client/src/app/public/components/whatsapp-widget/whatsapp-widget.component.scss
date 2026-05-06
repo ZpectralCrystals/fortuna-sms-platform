@@ -11,7 +11,7 @@
   height: 64px;
   border: 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, #18c266, #0d8f74);
+  background: #25d366;
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -32,11 +32,15 @@
 .whatsapp-toggle svg {
   width: 30px;
   height: 30px;
+  fill: currentColor;
+}
+
+.whatsapp-toggle--open svg {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .whatsapp-panel {
@@ -68,7 +72,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
+  background: #25d366;
   display: grid;
   place-items: center;
 }
@@ -76,11 +80,7 @@
 .whatsapp-avatar svg {
   width: 24px;
   height: 24px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: currentColor;
 }
 
 .whatsapp-panel__header h2,
