@@ -25,18 +25,47 @@ export interface AuthAdmin {
   updated_at: string | null;
 }
 
+export class AccountDeactivatedError extends Error {
+  constructor() {
+    super('ACCOUNT_DEACTIVATED');
+    this.name = 'AccountDeactivatedError';
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly supabase = inject(SupabaseService);
 
   async login(request: LoginRequest): Promise<void> {
-    const { error } = await this.supabase.instance.auth.signInWithPassword({
+    const { data, error } = await this.supabase.instance.auth.signInWithPassword({
       email: request.email,
       password: request.password
     });
 
     if (error) {
       throw new Error(this.mapAuthError(error.message));
+    }
+
+    const userId = data.user?.id;
+
+    if (!userId) {
+      return;
+    }
+
+    const { data: profile, error: profileError } = await this.supabase.instance
+      .from('profiles')
+      .select('id,is_active')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profileError) {
+      await this.supabase.instance.auth.signOut();
+      throw new Error('No se pudo validar el estado de tu cuenta.');
+    }
+
+    if (profile && profile.is_active === false) {
+      await this.supabase.instance.auth.signOut();
+      throw new AccountDeactivatedError();
     }
   }
 

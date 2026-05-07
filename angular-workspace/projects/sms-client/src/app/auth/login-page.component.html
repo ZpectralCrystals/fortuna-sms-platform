@@ -19,6 +19,21 @@
     </div>
 
     <form class="login-form" (ngSubmit)="submit()">
+      <section *ngIf="deactivatedAccount" class="account-state" aria-live="polite">
+        <h2>Cuenta desactivada</h2>
+        <p>
+          Tu cuenta ha sido desactivada temporalmente. Si necesitas ayuda o deseas solicitar la reactivación, comunícate con soporte por WhatsApp.
+        </p>
+        <div class="account-state__actions">
+          <a class="support-button" [href]="supportWhatsAppUrl" target="_blank" rel="noopener noreferrer">
+            Contactar por WhatsApp
+          </a>
+          <a class="home-button" routerLink="/">
+            Volver al inicio
+          </a>
+        </div>
+      </section>
+
       <div *ngIf="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>

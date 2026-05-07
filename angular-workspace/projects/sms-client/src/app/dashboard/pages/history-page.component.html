@@ -43,8 +43,8 @@
         </svg>
         <select name="statusFilter" [(ngModel)]="statusFilter">
           <option value="all">Todos los estados</option>
-          <option value="delivered">Entregados</option>
-          <option value="sent">Enviados</option>
+          <option value="delivered">Aceptados</option>
+          <option value="sent">Aceptados</option>
           <option value="pending">Pendientes</option>
           <option value="failed">Fallidos</option>
         </select>
@@ -185,7 +185,7 @@
             <dd>{{ formatDate(detail.sent_at) }}</dd>
           </div>
           <div>
-            <dt>Entregado</dt>
+            <dt>Aceptado</dt>
             <dd>{{ formatDate(detail.delivered_at) }}</dd>
           </div>
           <div>

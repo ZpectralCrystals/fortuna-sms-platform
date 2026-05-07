@@ -3,7 +3,11 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
-import { AuthService } from '../../../../shared/src/lib/services/auth.service';
+import { AccountDeactivatedError, AuthService } from '../../../../shared/src/lib/services/auth.service';
+
+const SUPPORT_WHATSAPP_URL = `https://wa.me/51982165728?text=${encodeURIComponent(
+  'Hola, necesito soporte técnico con mi cuenta SMS Fortuna.'
+)}`;
 
 @Component({
   selector: 'sms-login-page',
@@ -20,9 +24,12 @@ export class LoginPageComponent {
   password = '';
   loading = false;
   errorMessage = '';
+  deactivatedAccount = false;
+  readonly supportWhatsAppUrl = SUPPORT_WHATSAPP_URL;
 
   async submit(): Promise<void> {
     this.errorMessage = '';
+    this.deactivatedAccount = false;
 
     if (!this.email || !this.password) {
       this.errorMessage = 'Ingresa correo y contraseña.';
@@ -39,6 +46,11 @@ export class LoginPageComponent {
 
       await this.router.navigate(['/dashboard']);
     } catch (error) {
+      if (error instanceof AccountDeactivatedError) {
+        this.deactivatedAccount = true;
+        return;
+      }
+
       this.errorMessage =
         error instanceof Error
           ? error.message

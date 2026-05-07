@@ -40,6 +40,20 @@
   gap: 1.5rem;
 }
 
+.marketing-header {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.section-label {
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
 h1 {
   color: #0f172a;
   font-size: 1.875rem;
@@ -133,6 +147,10 @@ h2 {
   margin: 0 0 1rem;
 }
 
+.recommendations-card h2 {
+  margin-bottom: 1rem;
+}
+
 .recommendations-list {
   display: flex;
   flex-direction: column;
@@ -140,14 +158,9 @@ h2 {
 }
 
 .recommendation {
-  background: #f0fdf4;
   border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
   padding: 1rem;
-}
-
-.recommendation-card {
-  margin: 0;
 }
 
 .recommendation-inner {
@@ -157,7 +170,6 @@ h2 {
 }
 
 .recommendation-icon {
-  color: #16a34a;
   flex: 0 0 auto;
   height: 1.5rem;
   margin-top: 0.125rem;
@@ -165,7 +177,6 @@ h2 {
 }
 
 .recommendation h3 {
-  color: #16a34a;
   font-weight: 600;
   margin: 0 0 0.25rem;
 }
@@ -175,6 +186,56 @@ h2 {
   font-size: 0.875rem;
   line-height: 1.25rem;
   margin: 0;
+}
+
+.recommendation--red {
+  background: #fef2f2;
+}
+
+.recommendation--red,
+.recommendation--red h3,
+.recommendation--red .recommendation-icon {
+  color: #dc2626;
+}
+
+.recommendation--orange {
+  background: #fff7ed;
+}
+
+.recommendation--orange,
+.recommendation--orange h3,
+.recommendation--orange .recommendation-icon {
+  color: #ea580c;
+}
+
+.recommendation--blue {
+  background: #eff6ff;
+}
+
+.recommendation--blue,
+.recommendation--blue h3,
+.recommendation--blue .recommendation-icon {
+  color: #2563eb;
+}
+
+.recommendation--green {
+  background: #f0fdf4;
+}
+
+.recommendation--green,
+.recommendation--green h3,
+.recommendation--green .recommendation-icon {
+  color: #16a34a;
+}
+
+.recommendation--neutral {
+  background: #f8fafc;
+}
+
+.recommendation--neutral,
+.recommendation--neutral h3,
+.recommendation--neutral .recommendation-icon {
+  color: #475569;
 }
 
 .trend-card h2,
@@ -216,7 +277,7 @@ h2 {
   width: 100%;
 }
 
-.bar[style*='0%'] {
+.bar[style*='0'] {
   min-height: 0.25rem;
 }
 
@@ -262,6 +323,18 @@ h2 {
   color: #94a3b8;
   font-size: 0.75rem;
   line-height: 1rem;
+}
+
+.empty-card {
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  color: #64748b;
+  display: flex;
+  justify-content: center;
+  min-height: 8rem;
+  padding: 1.5rem;
+  text-align: center;
 }
 
 .table-wrap {
@@ -434,6 +507,14 @@ td {
   font-size: 1.875rem;
   font-weight: 700;
   line-height: 2.25rem;
+}
+
+.business-metric strong.positive {
+  color: #16a34a;
+}
+
+.business-metric strong.negative {
+  color: #dc2626;
 }
 
 .business-metric span {

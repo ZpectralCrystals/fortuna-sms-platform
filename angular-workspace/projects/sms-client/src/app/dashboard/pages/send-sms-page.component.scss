@@ -696,25 +696,34 @@ h1 {
   margin-top: 2px;
 }
 
-.variables-grid {
+.template-variable-grid {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.variable-chip-row {
-  display: flex;
-  flex-wrap: wrap;
+.template-preview-card {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  display: grid;
   gap: 8px;
+  margin-top: 14px;
+  padding: 14px;
 }
 
-.variable-chip {
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
-  padding: 4px 10px;
-  font-size: 12px;
+.template-preview-card > span {
+  color: #1d4ed8;
+  font-size: 13px;
   font-weight: 700;
+}
+
+.template-preview-card p {
+  color: #111827;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 .field span {
@@ -949,7 +958,7 @@ h1 {
   .multiple-validation-card,
   .batch-results-card__header,
   .batch-result-row,
-  .variables-grid {
+  .template-variable-grid {
     align-items: stretch;
     grid-template-columns: 1fr;
     flex-direction: column;

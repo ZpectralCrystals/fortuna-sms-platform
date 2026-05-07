@@ -87,8 +87,8 @@ export class MessagesPageComponent implements OnInit {
   statusLabel(status: SmsMessageStatus): string {
     const labels: Record<SmsMessageStatus, string> = {
       pending: 'Pendiente',
-      sent: 'Enviado',
-      delivered: 'Entregado',
+      sent: 'Aceptado',
+      delivered: 'Aceptado',
       failed: 'Fallido'
     };
 

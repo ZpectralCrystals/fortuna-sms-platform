@@ -1,12 +1,12 @@
 <div *ngIf="loading" class="loading-state">
-  <div class="loading-text">Cargando módulo...</div>
+  <div class="loading-text">Cargando API Keys...</div>
 </div>
 
 <div *ngIf="!loading" class="api-keys-page">
   <div class="page-header">
     <div class="title-group">
       <div class="title-icon">
-        <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="icon-lg" viewBox="0 0 24 24" aria-hidden="true">
           <path d="m15.5 7.5 1 1" />
           <path d="m12 11 1.5 1.5" />
           <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
@@ -15,31 +15,117 @@
       </div>
       <div>
         <h1>API Keys</h1>
-        <p>Módulo pendiente de implementación</p>
+        <p>Auditoría y revocación de credenciales externas</p>
       </div>
     </div>
   </div>
 
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span>Total</span>
+      <strong>{{ apiKeys.length }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Activas</span>
+      <strong>{{ activeCount }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Revocadas</span>
+      <strong>{{ revokedCount }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Con uso</span>
+      <strong>{{ usedCount }}</strong>
+    </article>
+  </div>
+
   <div class="info-box">
     <div class="info-content">
-      <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg class="info-icon" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
         <path d="M12 16v-4" />
         <path d="M12 8h.01" />
       </svg>
       <div>
-        <p class="info-title">Módulo API Keys pendiente</p>
+        <p class="info-title">Seguridad</p>
         <p class="info-text">
-          Este módulo permitirá generar y administrar credenciales para integraciones externas.
-          Se implementará en la siguiente fase, junto con la API pública.
+          Backoffice muestra prefijos y metadatos. La clave completa y el hash nunca se exponen.
         </p>
       </div>
     </div>
   </div>
 
+  <p *ngIf="message" class="notice-message">{{ message }}</p>
+  <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+  <div class="filters-card">
+    <div class="field search-field">
+      <label for="api-key-search">Buscar</label>
+      <input
+        id="api-key-search"
+        type="search"
+        [(ngModel)]="searchTerm"
+        placeholder="Cliente, email, empresa o prefijo"
+      />
+    </div>
+
+    <div class="field">
+      <label for="api-key-status">Estado</label>
+      <select id="api-key-status" [(ngModel)]="statusFilter">
+        <option value="all">Todos</option>
+        <option value="active">Activas</option>
+        <option value="revoked">Revocadas</option>
+        <option value="expired">Expiradas</option>
+      </select>
+    </div>
+  </div>
+
   <div class="table-card">
-    <div class="empty-cell">
-      API pública aún no disponible. No hay credenciales productivas para mostrar.
+    <table *ngIf="filteredApiKeys.length > 0">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>API Key</th>
+          <th>Scopes</th>
+          <th>Estado</th>
+          <th>Creada</th>
+          <th>Último uso</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let key of filteredApiKeys" class="api-key-row">
+          <td>
+            <div class="client-name">{{ clientName(key) }}</div>
+            <div class="client-email">{{ key.clientEmail }}</div>
+            <div class="client-email">{{ clientCompany(key) }}</div>
+          </td>
+          <td>
+            <div class="key-name">{{ key.name }}</div>
+            <code>{{ key.keyPrefix }}••••••••••••••••</code>
+          </td>
+          <td>{{ scopesText(key) }}</td>
+          <td>
+            <span [ngClass]="statusClass(key)">{{ statusLabel(key) }}</span>
+          </td>
+          <td class="date-cell">{{ formatDate(key.createdAt) }}</td>
+          <td class="date-cell">{{ formatDate(key.lastUsedAt) }}</td>
+          <td>
+            <button
+              type="button"
+              class="revoke-button"
+              [disabled]="statusValue(key) !== 'active' || revokingId === key.id"
+              (click)="revokeApiKey(key)"
+            >
+              Revocar
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="filteredApiKeys.length === 0" class="empty-cell">
+      No hay API Keys para los filtros activos.
     </div>
   </div>
 </div>

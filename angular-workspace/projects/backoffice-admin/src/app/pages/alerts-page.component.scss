@@ -23,6 +23,14 @@
   gap: 1.5rem;
 }
 
+.section-heading {
+  color: #0f172a;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 2rem;
+  margin: 0 0 -0.25rem;
+}
+
 .page-header {
   align-items: center;
   display: flex;
@@ -86,16 +94,6 @@
   border-radius: 0.5rem;
   display: flex;
   gap: 0.75rem;
-  padding: 1rem;
-}
-
-.note-box {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 0.5rem;
-  color: #1e40af;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
   padding: 1rem;
 }
 
@@ -345,9 +343,15 @@
 
 .check-row {
   align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
   display: flex;
   gap: 0.5rem;
+  min-height: 2.375rem;
   margin: 0;
+  padding: 0.5rem 1rem;
+  width: 100%;
 }
 
 .check-row input {

@@ -1,20 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BackofficeClientProfile, BackofficeService } from '@sms-fortuna/shared';
 
-import { SupabaseService } from '../../../../shared/src/lib/services/supabase.service';
-
-interface BackofficeClientProfile {
+interface BackofficeUserRow {
   id: string;
   email: string;
-  full_name: string;
-  razon_social: string;
-  ruc: string;
-  company: string;
+  full_name: string | null;
+  company: string | null;
   phone: string | null;
   sms_balance: number;
   is_active: boolean;
-  created_at: string | null;
 }
 
 @Component({
@@ -25,14 +21,16 @@ interface BackofficeClientProfile {
   styleUrl: './users-page.component.scss'
 })
 export class UsersPageComponent implements OnInit {
-  private readonly supabaseService = inject(SupabaseService);
+  private readonly backofficeService = inject(BackofficeService);
 
-  users: BackofficeClientProfile[] = [];
+  users: BackofficeUserRow[] = [];
   loading = true;
   searchTerm = '';
   errorMessage = '';
+  successMessage = '';
+  updatingUserId: string | null = null;
 
-  get filteredUsers(): BackofficeClientProfile[] {
+  get filteredUsers(): BackofficeUserRow[] {
     const search = this.searchTerm.trim().toLowerCase();
 
     if (!search) {
@@ -42,9 +40,8 @@ export class UsersPageComponent implements OnInit {
     return this.users.filter((user) =>
       (user.full_name ?? '').toLowerCase().includes(search) ||
       (user.email ?? '').toLowerCase().includes(search) ||
-      user.company.toLowerCase().includes(search) ||
-      user.razon_social.toLowerCase().includes(search) ||
-      user.ruc.toLowerCase().includes(search)
+      (user.company ?? '').toLowerCase().includes(search) ||
+      (user.phone ?? '').toLowerCase().includes(search)
     );
   }
 
@@ -55,47 +52,37 @@ export class UsersPageComponent implements OnInit {
   async loadUsers(): Promise<void> {
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
     try {
-      const adminIds = await this.loadAdminIds();
-      const currentUserId = await this.getCurrentUserId();
-      const { data, error } = await this.supabaseService.instance
-        .from('profiles')
-        .select('id,email,full_name,razon_social,ruc,phone,is_active,credits,created_at')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      this.users = (data ?? [])
-        .filter((profile: any) => {
-          const id = String(profile.id ?? '');
-          return id && !adminIds.has(id) && id !== currentUserId;
-        })
-        .map((profile: any) => {
-          const razonSocial = this.toSafeString(profile.razon_social);
-          const ruc = this.toSafeString(profile.ruc);
-
-          return {
-            id: String(profile.id ?? ''),
-            email: this.toSafeString(profile.email),
-            full_name: this.toSafeString(profile.full_name),
-            razon_social: razonSocial,
-            ruc,
-            company: razonSocial || ruc || '-',
-            phone: this.toNullableString(profile.phone),
-            sms_balance: Number(profile.credits ?? 0),
-            is_active: Boolean(profile.is_active ?? false),
-            created_at: typeof profile.created_at === 'string' ? profile.created_at : null
-          };
-        });
+      const profiles = await this.backofficeService.listClients();
+      this.users = profiles.map((profile) => this.mapUser(profile));
     } catch (error) {
       console.warn('Error loading profile users:', error);
       this.users = [];
-      this.errorMessage = 'No se pudieron cargar los usuarios. Verifica permisos del administrador.';
+      this.errorMessage = 'No se pudieron cargar los usuarios';
     } finally {
       this.loading = false;
+    }
+  }
+
+  async toggleUserStatus(user: BackofficeUserRow): Promise<void> {
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.updatingUserId = user.id;
+
+    try {
+      await this.backofficeService.setClientActive(user.id, !user.is_active);
+      this.successMessage = user.is_active
+        ? 'Usuario desactivado correctamente.'
+        : 'Usuario activado correctamente.';
+      await this.loadUsers();
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo cambiar el estado del usuario.';
+    } finally {
+      this.updatingUserId = null;
     }
   }
 
@@ -103,43 +90,15 @@ export class UsersPageComponent implements OnInit {
     return value.toLocaleString('es-PE');
   }
 
-  private async loadAdminIds(): Promise<Set<string>> {
-    try {
-      const { data, error } = await this.supabaseService.instance
-        .from('admins')
-        .select('id');
-
-      if (error) {
-        throw error;
-      }
-
-      return new Set((data ?? []).map((admin: any) => String(admin.id ?? '')).filter(Boolean));
-    } catch (error) {
-      console.warn('Error loading profile user admins:', error);
-      return new Set();
-    }
-  }
-
-  private async getCurrentUserId(): Promise<string | null> {
-    try {
-      const { data, error } = await this.supabaseService.instance.auth.getSession();
-
-      if (error) {
-        throw error;
-      }
-
-      return data.session?.user?.id ?? null;
-    } catch (error) {
-      console.warn('Error loading current profile user:', error);
-      return null;
-    }
-  }
-
-  private toSafeString(value: unknown): string {
-    return typeof value === 'string' ? value : '';
-  }
-
-  private toNullableString(value: unknown): string | null {
-    return typeof value === 'string' && value.trim() ? value : null;
+  private mapUser(profile: BackofficeClientProfile): BackofficeUserRow {
+    return {
+      id: profile.id,
+      email: profile.email || '-',
+      full_name: profile.full_name,
+      company: profile.razon_social || profile.ruc || null,
+      phone: profile.phone,
+      sms_balance: Number(profile.credits ?? 0),
+      is_active: Boolean(profile.is_active)
+    };
   }
 }

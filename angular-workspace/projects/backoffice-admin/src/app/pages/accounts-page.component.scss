@@ -529,9 +529,196 @@ button:disabled {
   font-size: 0.875rem;
 }
 
+.accounts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.accounts-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.accounts-header p {
+  margin-top: 0.25rem;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.toolbar {
+  padding: 0;
+}
+
+.search-box {
+  flex: 1 1 100%;
+}
+
+.search-box input {
+  min-height: 2.75rem;
+  border-color: #d1d5db;
+  border-radius: 0.5rem;
+  padding-left: 2.45rem;
+}
+
+.clients-grid {
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+}
+
+.client-card {
+  display: flex;
+  min-height: 19rem;
+  flex-direction: column;
+  border-color: #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.client-card:hover,
+.client-card:focus-visible {
+  border-color: #c7d2fe;
+  box-shadow: 0 10px 20px rgb(15 23 42 / 0.08);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.client-topline {
+  align-items: flex-start;
+}
+
+.client-title h3 {
+  color: #111827;
+  font-size: 1.05rem;
+  line-height: 1.35rem;
+  font-weight: 700;
+}
+
+.client-email,
+.client-company {
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.client-company {
+  margin-top: 0.25rem;
+  font-weight: 400;
+}
+
+.status-pill {
+  min-height: 1.65rem;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+.client-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.client-card-metrics .client-metric-row,
+.client-since-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.55rem;
+  padding: 0.85rem;
+}
+
+.client-card-metrics .client-metric-row span,
+.client-since-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.client-card-metrics .client-metric-row strong,
+.client-since-row strong {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.metric-blue {
+  background: #eff6ff !important;
+  color: #1d4ed8;
+}
+
+.metric-green {
+  background: #f0fdf4 !important;
+  color: #15803d;
+}
+
+.metric-purple {
+  background: #faf5ff !important;
+  color: #7e22ce;
+}
+
+.metric-left {
+  min-width: 0;
+}
+
+.metric-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.client-since-row {
+  margin-top: 0.75rem;
+  background: #f9fafb;
+  color: #4b5563;
+}
+
+.client-since-row strong {
+  max-width: 12rem;
+  overflow: hidden;
+  color: #111827;
+  text-align: right;
+  text-overflow: ellipsis;
+}
+
+.detail-card-button {
+  align-self: flex-start;
+  margin-top: auto;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.5rem 0.85rem;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.detail-card-button:hover,
+.detail-card-button:focus-visible {
+  background: #1d4ed8;
+  outline: none;
+}
+
 @media (max-width: 760px) {
   .detail-columns {
     grid-template-columns: 1fr;
+  }
+
+  .accounts-header {
+    flex-direction: column;
   }
 
   .client-topline,
@@ -539,6 +726,22 @@ button:disabled {
   .detail-item,
   .client-card-footer {
     flex-direction: column;
+  }
+
+  .client-card {
+    min-height: 0;
+    padding: 1rem;
+  }
+
+  .client-since-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .client-since-row strong {
+    max-width: 100%;
+    text-align: left;
   }
 
   .modal-header-actions {

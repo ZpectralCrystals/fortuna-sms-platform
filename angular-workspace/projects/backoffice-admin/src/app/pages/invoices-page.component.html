@@ -4,9 +4,9 @@
   <div class="page-header">
     <div>
       <h1>Facturas</h1>
-      <p>Comprobantes internos basados en recargas aprobadas</p>
+      <p>Recargas aprobadas y generación de reportes</p>
     </div>
-    <button type="button" class="export-button" [disabled]="filteredInvoices.length === 0" (click)="exportToCSV()">
+    <button type="button" class="export-button" [disabled]="invoices.length === 0" (click)="exportToCSV()">
       <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M12 15V3" />
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -16,7 +16,6 @@
     </button>
   </div>
 
-  <p *ngIf="noticeMessage" class="notice-message">{{ noticeMessage }}</p>
   <p *ngIf="errorMessage" class="notice-message error-message">{{ errorMessage }}</p>
 
   <div class="filters-card">
@@ -29,30 +28,22 @@
 
     <div class="filters-grid">
       <div class="field">
-        <label for="searchTerm">Buscar</label>
-        <input id="searchTerm" type="text" name="searchTerm" [(ngModel)]="searchTerm" placeholder="Cliente, email, RUC u operación" />
+        <label for="selectedYear">Año</label>
+        <select id="selectedYear" name="selectedYear" [(ngModel)]="selectedYear">
+          <option *ngFor="let year of availableYears" [ngValue]="year">{{ year }}</option>
+        </select>
       </div>
 
       <div class="field">
-        <label for="dateFrom">Desde</label>
-        <input id="dateFrom" type="date" name="dateFrom" [(ngModel)]="dateFrom" />
-      </div>
-
-      <div class="field">
-        <label for="dateTo">Hasta</label>
-        <input id="dateTo" type="date" name="dateTo" [(ngModel)]="dateTo" />
-      </div>
-
-      <div class="field">
-        <label for="paymentMethod">Método</label>
-        <select id="paymentMethod" name="paymentMethod" [(ngModel)]="paymentMethod">
-          <option value="all">Todos</option>
-          <option *ngFor="let method of paymentMethods" [value]="method">{{ method }}</option>
+        <label for="selectedMonth">Mes</label>
+        <select id="selectedMonth" name="selectedMonth" [(ngModel)]="selectedMonth">
+          <option [ngValue]="null">Todos los meses</option>
+          <option *ngFor="let month of months" [ngValue]="month.value">{{ month.name }}</option>
         </select>
       </div>
 
       <div class="filter-action">
-        <button type="button" class="clear-button" (click)="clearFilters()">Limpiar filtros</button>
+        <button type="button" class="clear-button" (click)="clearFilters()">Limpiar Filtros</button>
       </div>
     </div>
   </div>
@@ -60,18 +51,21 @@
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-header">
-        <p>Recargas aprobadas</p>
+        <p>Total Facturas</p>
         <svg class="stat-icon blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
           <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+          <path d="M10 9H8" />
+          <path d="M16 13H8" />
+          <path d="M16 17H8" />
         </svg>
       </div>
-      <p class="stat-value">{{ filteredInvoices.length }}</p>
+      <p class="stat-value">{{ invoices.length }}</p>
     </div>
 
     <div class="stat-card">
       <div class="stat-header">
-        <p>SMS vendidos</p>
+        <p>Total SMS Vendidos</p>
         <svg class="stat-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M8 2v4" />
           <path d="M16 2v4" />
@@ -79,87 +73,65 @@
           <path d="M3 10h18" />
         </svg>
       </div>
-      <p class="stat-value">{{ formatNumber(totalQuantity) }}</p>
+      <p class="stat-value">{{ formatNumber(getTotalQuantity()) }}</p>
     </div>
 
     <div class="stat-card">
       <div class="stat-header">
-        <p>Total aprobado</p>
-        <span class="money-icon">S/</span>
+        <p>Ingresos Totales</p>
+        <span class="money-icon">💰</span>
       </div>
-      <p class="stat-value revenue">{{ formatCurrency(totalRevenue) }}</p>
+      <p class="stat-value revenue">{{ formatCurrency(getTotalRevenue()) }}</p>
     </div>
   </div>
 
   <div class="list-card">
     <div class="list-header">
-      <h2>Recargas aprobadas para comprobante interno</h2>
+      <h2>
+        Listado de Facturas
+        <span *ngIf="selectedMonth" class="period-label">- {{ selectedMonthName }} {{ selectedYear }}</span>
+        <span *ngIf="!selectedMonth" class="period-label">- {{ selectedYear }}</span>
+      </h2>
     </div>
 
-    <bo-empty-state
-      *ngIf="filteredInvoices.length === 0"
-      title="No hay recargas aprobadas para los filtros actuales"
-      icon="file-text"
-    ></bo-empty-state>
+    <div *ngIf="invoices.length === 0" class="empty-state">
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      </svg>
+      <p>No hay facturas para el período seleccionado</p>
+    </div>
 
-    <div *ngIf="filteredInvoices.length > 0" class="table-wrap">
+    <div *ngIf="invoices.length > 0" class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Fecha aprobación</th>
+            <th>Fecha</th>
             <th>Cliente</th>
-            <th>RUC / Razón social</th>
+            <th>Empresa</th>
             <th>Paquete</th>
             <th class="right">SMS</th>
             <th class="right">Monto</th>
             <th>Método</th>
             <th>Código Op.</th>
-            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let invoice of filteredInvoices">
-            <td>{{ formatDate(invoice.approved_at) }}</td>
+          <tr *ngFor="let invoice of invoices">
+            <td>{{ formatDate(invoice.invoice_date) }}</td>
             <td>
               <div class="client-name">{{ invoice.user_name }}</div>
               <div class="client-email">{{ invoice.user_email }}</div>
             </td>
-            <td>{{ invoice.razon_social || invoice.ruc || '-' }}</td>
+            <td>{{ invoice.user_company || '-' }}</td>
             <td class="package-cell">{{ invoice.package_name }}</td>
             <td class="right strong">{{ formatNumber(invoice.quantity) }}</td>
             <td class="right amount">{{ formatCurrency(invoice.amount) }}</td>
-            <td class="method-cell">{{ invoice.payment_method || '-' }}</td>
+            <td class="method-cell">{{ invoice.payment_method }}</td>
             <td class="operation-cell">{{ invoice.operation_code || '-' }}</td>
-            <td>
-              <button type="button" class="clear-button compact-button" (click)="openDetail(invoice)">Ver detalle</button>
-            </td>
           </tr>
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <div *ngIf="selectedInvoice" class="modal-backdrop">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2>Detalle comprobante interno</h2>
-        <button type="button" class="close-button" (click)="closeDetail()">×</button>
-      </div>
-      <dl class="detail-grid">
-        <div><dt>ID recarga</dt><dd>{{ selectedInvoice.recharge_id }}</dd></div>
-        <div><dt>Cliente</dt><dd>{{ selectedInvoice.user_name }}</dd></div>
-        <div><dt>Email</dt><dd>{{ selectedInvoice.user_email }}</dd></div>
-        <div><dt>RUC</dt><dd>{{ selectedInvoice.ruc || '-' }}</dd></div>
-        <div><dt>Razón social</dt><dd>{{ selectedInvoice.razon_social || '-' }}</dd></div>
-        <div><dt>Paquete</dt><dd>{{ selectedInvoice.package_name }}</dd></div>
-        <div><dt>SMS</dt><dd>{{ formatNumber(selectedInvoice.quantity) }}</dd></div>
-        <div><dt>Monto</dt><dd>{{ formatCurrency(selectedInvoice.amount) }}</dd></div>
-        <div><dt>Método</dt><dd>{{ selectedInvoice.payment_method || '-' }}</dd></div>
-        <div><dt>Código operación</dt><dd>{{ selectedInvoice.operation_code || '-' }}</dd></div>
-        <div><dt>Fecha aprobación</dt><dd>{{ formatDate(selectedInvoice.approved_at) }}</dd></div>
-        <div><dt>Estado</dt><dd>{{ selectedInvoice.status }}</dd></div>
-      </dl>
-      <p class="notice-message">Este detalle es control interno. No reemplaza comprobante tributario SUNAT.</p>
     </div>
   </div>
 </div>

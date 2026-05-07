@@ -126,9 +126,13 @@ export class DashboardPageComponent implements OnInit {
   }
 
   get deliveryRate(): string {
-    return this.stats.sentMessages > 0
-      ? `${((this.stats.deliveredMessages / this.stats.sentMessages) * 100).toFixed(1)}%`
+    return this.stats.totalMessages > 0
+      ? `${((this.acceptedMessages / this.stats.totalMessages) * 100).toFixed(1)}%`
       : '0%';
+  }
+
+  get acceptedMessages(): number {
+    return this.stats.sentMessages + this.stats.deliveredMessages;
   }
 
   get totalPurchasedSms(): number {

@@ -1,32 +1,69 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { AdminSmsMessage, SmsService } from '@sms-fortuna/shared';
+import { AdminRecharge, BackofficeClientProfile, BackofficeService, RechargesService } from '@sms-fortuna/shared';
 
-interface MarketingKpis {
-  accepted: number;
-  failed: number;
-  totalCost: number;
-  activeClients: number;
+interface MarketingStats {
+  currentMonth: {
+    revenue: number;
+    monthName: string;
+  };
+  lastMonth: {
+    revenue: number;
+    monthName: string;
+  };
+  growth: {
+    amount: number;
+    percentage: number;
+    label: string;
+    isGrowing: boolean;
+  };
+  customers: {
+    total: number;
+    active: number;
+    newThisMonth: number;
+    retentionRate: number;
+    customersWithPurchase: number;
+    recurrentCustomers: number;
+  };
+  avgRechargeAmount: number;
 }
 
-interface DailySmsActivity {
-  date: string;
-  label: string;
-  accepted: number;
-  failed: number;
-  total: number;
+interface RevenueTrend {
+  key: string;
+  year: number;
+  month: number;
+  monthName: string;
+  revenue: number;
+  rechargesCount: number;
+  uniqueCustomers: number;
+  avgRechargeValue: number;
 }
 
-interface ClientSmsActivity {
-  user_id: string;
-  name: string;
+interface CustomerAcquisition {
+  key: string;
+  year: number;
+  monthName: string;
+  newCustomers: number;
+  repeatCustomers: number;
+  totalRevenue: number;
+}
+
+interface TopCustomer {
+  userId: string;
+  fullName: string;
   email: string;
   company: string | null;
-  accepted: number;
-  failed: number;
-  segments: number;
-  cost: number;
-  lastSentAt: string;
+  totalRevenue: number;
+  totalRecharges: number;
+  avgRechargeAmount: number;
+  lastRechargeDate: string;
+}
+
+interface MarketingRecommendation {
+  tone: 'red' | 'orange' | 'blue' | 'green' | 'neutral';
+  icon: 'alert' | 'users' | 'trend' | 'userPlus' | 'award';
+  title: string;
+  message: string;
 }
 
 @Component({
@@ -37,20 +74,17 @@ interface ClientSmsActivity {
   styleUrl: './marketing-page.component.scss'
 })
 export class MarketingPageComponent implements OnInit {
-  private readonly smsService = inject(SmsService);
+  private readonly rechargesService = inject(RechargesService);
+  private readonly backofficeService = inject(BackofficeService);
 
   loading = true;
   errorMessage = '';
-  messages: AdminSmsMessage[] = [];
-  kpis: MarketingKpis = {
-    accepted: 0,
-    failed: 0,
-    totalCost: 0,
-    activeClients: 0
-  };
-  dailyActivity: DailySmsActivity[] = [];
-  topClients: ClientSmsActivity[] = [];
-  recentHighVolume: ClientSmsActivity[] = [];
+  approvedRecharges: AdminRecharge[] = [];
+  clients: BackofficeClientProfile[] = [];
+  stats: MarketingStats | null = null;
+  revenueTrends: RevenueTrend[] = [];
+  acquisitionStats: CustomerAcquisition[] = [];
+  topCustomers: TopCustomer[] = [];
 
   async ngOnInit(): Promise<void> {
     await this.loadMarketingData();
@@ -61,31 +95,104 @@ export class MarketingPageComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      this.messages = await this.smsService.listAdminMessages({ limit: 500 });
-      this.kpis = this.buildKpis(this.messages);
-      this.dailyActivity = this.buildDailyActivity(this.messages, 30);
-      this.topClients = this.buildClientActivity(this.messages).slice(0, 5);
-      this.recentHighVolume = this.buildClientActivity(this.filterLastDays(this.messages, 7)).slice(0, 5);
+      const [recharges, clients] = await Promise.all([
+        this.rechargesService.listAdminRecharges(),
+        this.backofficeService.listClients()
+      ]);
+
+      this.approvedRecharges = recharges.filter((recharge) => recharge.status === 'approved');
+      this.clients = clients;
+      this.stats = this.buildStats();
+      this.revenueTrends = this.buildRevenueTrends(12);
+      this.acquisitionStats = this.buildAcquisitionStats(12);
+      this.topCustomers = this.buildTopCustomers(5);
     } catch (error) {
       this.errorMessage = error instanceof Error
         ? error.message
-        : 'No se pudo cargar la actividad SMS.';
-      this.messages = [];
-      this.kpis = { accepted: 0, failed: 0, totalCost: 0, activeClients: 0 };
-      this.dailyActivity = this.buildEmptyDailyActivity(30);
-      this.topClients = [];
-      this.recentHighVolume = [];
+        : 'No se pudieron cargar las métricas de marketing.';
+      this.approvedRecharges = [];
+      this.clients = [];
+      this.stats = this.buildStats();
+      this.revenueTrends = this.buildRevenueTrends(12);
+      this.acquisitionStats = [];
+      this.topCustomers = [];
     } finally {
       this.loading = false;
     }
   }
 
-  getMaxDailyTotal(): number {
-    return Math.max(1, ...this.dailyActivity.map((item) => item.total));
+  get recommendations(): MarketingRecommendation[] {
+    if (!this.stats) {
+      return [];
+    }
+
+    if (!this.approvedRecharges.length && !this.clients.length) {
+      return [{
+        tone: 'neutral',
+        icon: 'alert',
+        title: 'Información insuficiente',
+        message: 'Aún no hay suficiente información para generar recomendaciones.'
+      }];
+    }
+
+    const recommendations: MarketingRecommendation[] = [];
+    const currentRevenue = this.stats.currentMonth.revenue;
+    const lastRevenue = this.stats.lastMonth.revenue;
+
+    if (lastRevenue > 0 && currentRevenue < lastRevenue) {
+      const drop = ((lastRevenue - currentRevenue) / lastRevenue) * 100;
+      recommendations.push({
+        tone: 'red',
+        icon: 'alert',
+        title: 'Ingresos en Descenso',
+        message: `Tus ingresos han disminuido ${drop.toFixed(1)}% este mes. Considera contactar clientes inactivos o lanzar una campaña promocional.`
+      });
+    }
+
+    if (this.stats.customers.total > 0) {
+      const activeRate = (this.stats.customers.active / this.stats.customers.total) * 100;
+      if (activeRate < 40) {
+        recommendations.push({
+          tone: 'orange',
+          icon: 'users',
+          title: 'Baja Retención',
+          message: `Solo el ${activeRate.toFixed(1)}% de tus clientes están activos. Implementa programas de fidelización o descuentos por volumen.`
+        });
+      }
+    }
+
+    if (this.stats.customers.newThisMonth === 0) {
+      recommendations.push({
+        tone: 'blue',
+        icon: 'userPlus',
+        title: 'Sin Nuevos Clientes',
+        message: 'No has adquirido nuevos clientes este mes. Considera campañas de adquisición o programas de referidos.'
+      });
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push({
+        tone: 'green',
+        icon: 'award',
+        title: 'Buen Desempeño',
+        message: 'Los indicadores principales se mantienen saludables este mes.'
+      });
+    }
+
+    return recommendations;
   }
 
-  getBarHeight(item: DailySmsActivity): number {
-    return Math.max(0, (item.total / this.getMaxDailyTotal()) * 100);
+  getMaxRevenue(): number {
+    return Math.max(0, ...this.revenueTrends.map((trend) => trend.revenue));
+  }
+
+  getRevenueBarHeight(revenue: number): number {
+    const max = this.getMaxRevenue();
+    return max > 0 ? (revenue / max) * 100 : 0;
+  }
+
+  hasRevenueTrendData(): boolean {
+    return this.revenueTrends.some((trend) => trend.revenue > 0);
   }
 
   formatCurrency(value: number): string {
@@ -99,128 +206,221 @@ export class MarketingPageComponent implements OnInit {
     return new Intl.NumberFormat('es-PE').format(value || 0);
   }
 
-  formatDate(value: string): string {
-    return new Date(value).toLocaleString('es-PE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
+  formatSignedCurrency(value: number): string {
+    const formatted = this.formatCurrency(Math.abs(value));
+    return `${value >= 0 ? '+' : '-'}${formatted}`;
   }
 
-  private buildKpis(messages: AdminSmsMessage[]): MarketingKpis {
-    const accepted = messages.filter((message) => this.isAccepted(message)).length;
-    const failed = messages.filter((message) => message.status === 'failed').length;
-    const totalCost = messages
-      .filter((message) => this.isAccepted(message))
-      .reduce((sum, message) => sum + message.cost, 0);
-    const activeClients = new Set(messages.map((message) => message.user_id).filter(Boolean)).size;
+  private buildStats(): MarketingStats {
+    const now = new Date();
+    const currentKey = this.monthKey(now);
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastKey = this.monthKey(lastMonth);
+    const currentMonthRecharges = this.rechargesByMonth(currentKey);
+    const lastMonthRecharges = this.rechargesByMonth(lastKey);
+    const currentRevenue = this.sumRevenue(currentMonthRecharges);
+    const lastRevenue = this.sumRevenue(lastMonthRecharges);
+    const growthAmount = currentRevenue - lastRevenue;
+    const growthPercentage = this.calculateGrowthPercentage(currentRevenue, lastRevenue);
+    const firstPurchaseByClient = this.firstPurchaseByClient();
+    const activeClientIds = new Set(currentMonthRecharges.map((recharge) => recharge.user_id).filter(Boolean));
+    const customersWithPurchase = new Set(this.approvedRecharges.map((recharge) => recharge.user_id).filter(Boolean));
+    const recurrentCustomers = this.countRecurrentCustomers();
+    const newThisMonth = Array.from(firstPurchaseByClient.values())
+      .filter((date) => this.monthKey(date) === currentKey)
+      .length;
+    const avgBase = currentMonthRecharges.length ? currentMonthRecharges : this.approvedRecharges;
 
     return {
-      accepted,
-      failed,
-      totalCost,
-      activeClients
+      currentMonth: {
+        revenue: currentRevenue,
+        monthName: this.monthName(now)
+      },
+      lastMonth: {
+        revenue: lastRevenue,
+        monthName: this.monthName(lastMonth)
+      },
+      growth: {
+        amount: growthAmount,
+        percentage: growthPercentage,
+        label: this.growthLabel(currentRevenue, lastRevenue, growthPercentage),
+        isGrowing: growthAmount >= 0
+      },
+      customers: {
+        total: this.clients.length,
+        active: activeClientIds.size,
+        newThisMonth,
+        retentionRate: customersWithPurchase.size > 0 ? (recurrentCustomers / customersWithPurchase.size) * 100 : 0,
+        customersWithPurchase: customersWithPurchase.size,
+        recurrentCustomers
+      },
+      avgRechargeAmount: avgBase.length ? this.sumRevenue(avgBase) / avgBase.length : 0
     };
   }
 
-  private buildDailyActivity(messages: AdminSmsMessage[], days: number): DailySmsActivity[] {
-    const items = this.buildEmptyDailyActivity(days);
-    const byDate = new Map(items.map((item) => [item.date, item]));
-
-    for (const message of messages) {
-      const dateKey = this.dateKey(message.sent_at || message.created_at);
-      const item = byDate.get(dateKey);
-
-      if (!item) {
-        continue;
-      }
-
-      if (this.isAccepted(message)) {
-        item.accepted += 1;
-      } else if (message.status === 'failed') {
-        item.failed += 1;
-      }
-
-      item.total = item.accepted + item.failed;
-    }
-
-    return items;
-  }
-
-  private buildEmptyDailyActivity(days: number): DailySmsActivity[] {
-    const formatter = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: '2-digit' });
-    const today = new Date();
-
-    return Array.from({ length: days }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (days - 1 - index));
+  private buildRevenueTrends(months: number): RevenueTrend[] {
+    return this.lastMonths(months).map((date) => {
+      const key = this.monthKey(date);
+      const recharges = this.rechargesByMonth(key);
+      const revenue = this.sumRevenue(recharges);
+      const uniqueCustomers = new Set(recharges.map((recharge) => recharge.user_id).filter(Boolean)).size;
 
       return {
-        date: this.dateKey(date.toISOString()),
-        label: formatter.format(date),
-        accepted: 0,
-        failed: 0,
-        total: 0
+        key,
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        monthName: this.monthName(date),
+        revenue,
+        rechargesCount: recharges.length,
+        uniqueCustomers,
+        avgRechargeValue: recharges.length ? revenue / recharges.length : 0
       };
     });
   }
 
-  private buildClientActivity(messages: AdminSmsMessage[]): ClientSmsActivity[] {
-    const clients = new Map<string, ClientSmsActivity>();
+  private buildAcquisitionStats(months: number): CustomerAcquisition[] {
+    const firstPurchase = this.firstPurchaseByClient();
 
-    for (const message of messages) {
-      const key = message.user_id || 'unknown';
-      const current = clients.get(key) ?? {
-        user_id: key,
-        name: message.profile?.full_name || message.profile?.razon_social || message.profile?.email || 'Cliente sin nombre',
-        email: message.profile?.email || '-',
-        company: message.profile?.razon_social || message.profile?.ruc || null,
-        accepted: 0,
-        failed: 0,
-        segments: 0,
-        cost: 0,
-        lastSentAt: message.sent_at || message.created_at
+    return this.lastMonths(months)
+      .map((date) => {
+        const key = this.monthKey(date);
+        const recharges = this.rechargesByMonth(key);
+        const customersInMonth = new Set(recharges.map((recharge) => recharge.user_id).filter(Boolean));
+        let newCustomers = 0;
+        let repeatCustomers = 0;
+
+        for (const userId of customersInMonth) {
+          const firstDate = firstPurchase.get(userId);
+          if (firstDate && this.monthKey(firstDate) === key) {
+            newCustomers += 1;
+          } else {
+            repeatCustomers += 1;
+          }
+        }
+
+        return {
+          key,
+          year: date.getFullYear(),
+          monthName: this.monthName(date),
+          newCustomers,
+          repeatCustomers,
+          totalRevenue: this.sumRevenue(recharges)
+        };
+      })
+      .filter((item) => item.newCustomers > 0 || item.repeatCustomers > 0 || item.totalRevenue > 0)
+      .slice(-6);
+  }
+
+  private buildTopCustomers(limit: number): TopCustomer[] {
+    const profilesById = new Map(this.clients.map((client) => [client.id, client]));
+    const grouped = new Map<string, TopCustomer>();
+
+    for (const recharge of this.approvedRecharges) {
+      const userId = recharge.user_id || 'unknown';
+      const profile = profilesById.get(userId);
+      const current = grouped.get(userId) ?? {
+        userId,
+        fullName: profile?.full_name || profile?.email || recharge.profile?.full_name || recharge.profile?.email || '-',
+        email: profile?.email || recharge.profile?.email || '-',
+        company: profile?.razon_social || profile?.ruc || recharge.profile?.razon_social || null,
+        totalRevenue: 0,
+        totalRecharges: 0,
+        avgRechargeAmount: 0,
+        lastRechargeDate: this.rechargeDate(recharge).toISOString()
       };
 
-      if (this.isAccepted(message)) {
-        current.accepted += 1;
-        current.segments += message.segments;
-        current.cost += message.cost;
-      } else if (message.status === 'failed') {
-        current.failed += 1;
+      current.totalRevenue += Number(recharge.amount ?? 0);
+      current.totalRecharges += 1;
+      current.avgRechargeAmount = current.totalRevenue / current.totalRecharges;
+
+      const rechargeTime = this.rechargeDate(recharge).getTime();
+      if (rechargeTime > new Date(current.lastRechargeDate).getTime()) {
+        current.lastRechargeDate = this.rechargeDate(recharge).toISOString();
       }
 
-      const messageDate = new Date(message.sent_at || message.created_at).getTime();
-      const currentDate = new Date(current.lastSentAt).getTime();
-      if (messageDate > currentDate) {
-        current.lastSentAt = message.sent_at || message.created_at;
-      }
-
-      clients.set(key, current);
+      grouped.set(userId, current);
     }
 
-    return Array.from(clients.values())
-      .sort((a, b) => b.segments - a.segments || b.accepted - a.accepted);
+    return Array.from(grouped.values())
+      .sort((a, b) => b.totalRevenue - a.totalRevenue || b.totalRecharges - a.totalRecharges)
+      .slice(0, limit);
   }
 
-  private filterLastDays(messages: AdminSmsMessage[], days: number): AdminSmsMessage[] {
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    start.setHours(0, 0, 0, 0);
-
-    return messages.filter((message) =>
-      new Date(message.sent_at || message.created_at).getTime() >= start.getTime()
-    );
+  private rechargesByMonth(key: string): AdminRecharge[] {
+    return this.approvedRecharges.filter((recharge) => this.monthKey(this.rechargeDate(recharge)) === key);
   }
 
-  private isAccepted(message: AdminSmsMessage): boolean {
-    return message.status === 'sent' || message.status === 'delivered';
+  private firstPurchaseByClient(): Map<string, Date> {
+    const firstPurchase = new Map<string, Date>();
+
+    for (const recharge of this.approvedRecharges) {
+      if (!recharge.user_id) {
+        continue;
+      }
+
+      const date = this.rechargeDate(recharge);
+      const current = firstPurchase.get(recharge.user_id);
+
+      if (!current || date.getTime() < current.getTime()) {
+        firstPurchase.set(recharge.user_id, date);
+      }
+    }
+
+    return firstPurchase;
   }
 
-  private dateKey(value: string): string {
-    return new Date(value).toISOString().slice(0, 10);
+  private countRecurrentCustomers(): number {
+    const counts = new Map<string, number>();
+
+    for (const recharge of this.approvedRecharges) {
+      if (!recharge.user_id) {
+        continue;
+      }
+
+      counts.set(recharge.user_id, (counts.get(recharge.user_id) ?? 0) + 1);
+    }
+
+    return Array.from(counts.values()).filter((count) => count > 1).length;
+  }
+
+  private lastMonths(count: number): Date[] {
+    const now = new Date();
+    return Array.from({ length: count }, (_, index) => new Date(now.getFullYear(), now.getMonth() - (count - 1 - index), 1));
+  }
+
+  private rechargeDate(recharge: AdminRecharge): Date {
+    return new Date(recharge.approved_at || recharge.created_at);
+  }
+
+  private monthKey(value: Date): string {
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private monthName(value: Date): string {
+    return new Intl.DateTimeFormat('es-PE', { month: 'short' }).format(value);
+  }
+
+  private sumRevenue(recharges: AdminRecharge[]): number {
+    return recharges.reduce((sum, recharge) => sum + Number(recharge.amount ?? 0), 0);
+  }
+
+  private calculateGrowthPercentage(currentRevenue: number, lastRevenue: number): number {
+    if (lastRevenue > 0) {
+      return ((currentRevenue - lastRevenue) / lastRevenue) * 100;
+    }
+
+    if (currentRevenue > 0) {
+      return 100;
+    }
+
+    return 0;
+  }
+
+  private growthLabel(currentRevenue: number, lastRevenue: number, percentage: number): string {
+    if (lastRevenue === 0 && currentRevenue > 0) {
+      return 'Nuevo ingreso';
+    }
+
+    return `${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%`;
   }
 }

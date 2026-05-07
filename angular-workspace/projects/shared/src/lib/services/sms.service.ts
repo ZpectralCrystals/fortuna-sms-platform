@@ -289,20 +289,20 @@ export class SmsService {
   }
 
   extractTemplateVariables(content: string): string[] {
-    const matches = content.matchAll(/\{([a-zA-Z0-9_-]+)\}/g);
-    return Array.from(new Set(Array.from(matches, (match) => match[1]).filter(Boolean)));
+    const matches = content.matchAll(/\{\s*([a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ-]+)\s*\}/g);
+    return Array.from(new Set(Array.from(matches, (match) => match[1]?.trim()).filter(Boolean)));
   }
 
   renderTemplatePreview(content: string, values: Record<string, string>): string {
-    return content.replace(/\{([a-zA-Z0-9_-]+)\}/g, (match, variableName: string) => {
-      const value = values[variableName]?.trim();
+    return content.replace(/\{\s*([a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ-]+)\s*\}/g, (match, variableName: string) => {
+      const value = values[variableName.trim()]?.trim();
       return value || match;
     });
   }
 
   renderTemplateExample(content: string): string {
-    return content.replace(/\{([a-zA-Z0-9_-]+)\}/g, (_match, variableName: string) =>
-      this.getExampleValue(variableName)
+    return content.replace(/\{\s*([a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ-]+)\s*\}/g, (_match, variableName: string) =>
+      this.getExampleValue(variableName.trim())
     );
   }
 

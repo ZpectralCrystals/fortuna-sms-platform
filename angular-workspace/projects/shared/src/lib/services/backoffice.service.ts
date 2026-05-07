@@ -38,6 +38,11 @@ export interface AddInventoryPurchaseRequest {
   notes?: string | null;
 }
 
+export interface BackofficeClientCardStats {
+  approvedRecharges: number;
+  totalSpent: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BackofficeService {
   private readonly supabase = inject(SupabaseService);
@@ -147,6 +152,41 @@ export class BackofficeService {
     return ((profilesResult.data as unknown[]) ?? [])
       .map((profile) => this.mapClientProfile(profile))
       .filter((profile) => profile.id && !adminIds.has(profile.id));
+  }
+
+  async getClientCardStats(profileIds: string[]): Promise<Map<string, BackofficeClientCardStats>> {
+    const uniqueIds = Array.from(new Set(profileIds.filter(Boolean)));
+    const stats = new Map<string, BackofficeClientCardStats>(
+      uniqueIds.map((id) => [id, { approvedRecharges: 0, totalSpent: 0 }])
+    );
+
+    if (!uniqueIds.length) {
+      return stats;
+    }
+
+    const { data, error } = await this.supabase.instance
+      .from('recharges')
+      .select('user_id,amount,status')
+      .in('user_id', uniqueIds);
+
+    if (error) {
+      throw new Error(`No se pudieron cargar las métricas de cuentas: ${error.message}`);
+    }
+
+    for (const recharge of (data as unknown[]) ?? []) {
+      const row = recharge as Record<string, unknown>;
+      const userId = this.toSafeString(row['user_id']);
+      const current = stats.get(userId);
+
+      if (!current || row['status'] !== 'approved') {
+        continue;
+      }
+
+      current.approvedRecharges += 1;
+      current.totalSpent += Number(row['amount'] ?? 0);
+    }
+
+    return stats;
   }
 
   async getClientDetail(profileId: string): Promise<BackofficeClientDetail> {

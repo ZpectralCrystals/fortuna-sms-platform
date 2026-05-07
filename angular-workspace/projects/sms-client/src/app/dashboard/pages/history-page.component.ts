@@ -58,11 +58,11 @@ export class HistoryPageComponent implements OnInit {
   statusText(status: SmsMessageStatus): string {
     switch (status) {
       case 'delivered':
-        return 'Entregado';
+        return 'Aceptado';
       case 'failed':
         return 'Fallido';
       case 'sent':
-        return 'Enviado';
+        return 'Aceptado';
       default:
         return 'Pendiente';
     }

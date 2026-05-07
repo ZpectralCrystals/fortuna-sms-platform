@@ -46,21 +46,25 @@
 
   <div class="table-card">
     <div class="filters-panel">
-      <div class="filters-row">
-        <div class="search-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
-          <input
-            type="text"
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="applyFilters()"
-            placeholder="Buscar por cliente, email, destinatario o mensaje..."
-          />
-        </div>
+      <div class="filters-grid">
+        <label class="filter-field filter-field--search">
+          <span>Buscar</span>
+          <div class="search-wrapper">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              type="text"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="applyFilters()"
+              placeholder="Buscar por cliente, email, destinatario o mensaje..."
+            />
+          </div>
+        </label>
 
-        <div class="select-group">
+        <label class="filter-field">
+          <span>Estado</span>
           <div class="select-wrapper status-select">
             <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
@@ -68,26 +72,50 @@
             <select [(ngModel)]="statusFilter" (ngModelChange)="onStatusFilterChange()">
               <option value="all">Todos los estados</option>
               <option value="pending">Pendiente</option>
-              <option value="sent">Enviado</option>
-              <option value="delivered">Entregado</option>
+              <option value="sent">Aceptado</option>
+              <option value="delivered">Aceptado</option>
               <option value="failed">Fallido</option>
             </select>
           </div>
-          <input
-            class="date-select"
-            type="date"
-            [(ngModel)]="dateFrom"
-            (ngModelChange)="onDateFilterChange()"
-            aria-label="Fecha desde"
-          />
-          <input
-            class="date-select"
-            type="date"
-            [(ngModel)]="dateTo"
-            (ngModelChange)="onDateFilterChange()"
-            aria-label="Fecha hasta"
-          />
-        </div>
+        </label>
+
+        <label class="filter-field">
+          <span>Desde</span>
+          <div class="date-wrapper">
+            <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2v4" />
+              <path d="M16 2v4" />
+              <rect width="18" height="18" x="3" y="4" rx="2" />
+              <path d="M3 10h18" />
+            </svg>
+            <input
+              class="date-select"
+              type="date"
+              [(ngModel)]="dateFrom"
+              (ngModelChange)="onDateFilterChange()"
+              aria-label="Fecha desde"
+            />
+          </div>
+        </label>
+
+        <label class="filter-field">
+          <span>Hasta</span>
+          <div class="date-wrapper">
+            <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2v4" />
+              <path d="M16 2v4" />
+              <rect width="18" height="18" x="3" y="4" rx="2" />
+              <path d="M3 10h18" />
+            </svg>
+            <input
+              class="date-select"
+              type="date"
+              [(ngModel)]="dateTo"
+              (ngModelChange)="onDateFilterChange()"
+              aria-label="Fecha hasta"
+            />
+          </div>
+        </label>
       </div>
       <div class="limit-note">
         Mostrando últimos {{ messageLimit }} mensajes según los filtros activos.
@@ -242,7 +270,7 @@
             <dd>{{ formatDate(detail.sent_at) }}</dd>
           </div>
           <div>
-            <dt>Entregado</dt>
+            <dt>Aceptado</dt>
             <dd>{{ formatDate(detail.delivered_at) }}</dd>
           </div>
         </dl>

@@ -1,17 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SupabaseService } from '@sms-fortuna/shared';
-
-interface ApiKeyRecord {
-  id: string;
-  user_id: string;
-  name: string;
-  key: string;
-  is_active: boolean;
-  created_at: string;
-  last_used_at: string | null;
-}
+import { ApiKey, ApiKeysService, CreatedApiKey } from '@sms-fortuna/shared';
 
 @Component({
   selector: 'sms-api-keys-page',
@@ -21,142 +11,147 @@ interface ApiKeyRecord {
   styleUrl: './api-keys-page.component.scss'
 })
 export class ApiKeysPageComponent implements OnInit {
-  private readonly supabase = inject(SupabaseService);
+  private readonly apiKeysService = inject(ApiKeysService);
 
-  readonly apiExample = `fetch('https://TU_SUPABASE_URL/functions/v1/send-sms', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer TU_API_KEY',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    to: '+51987654321',
-    message: 'Tu mensaje aquí'
-  })
-})`;
-
-  apiKeys: ApiKeyRecord[] = [];
-  showModal = false;
+  apiKeys: ApiKey[] = [];
+  loading = true;
+  creating = false;
+  revokingId = '';
+  message = '';
+  errorMessage = '';
+  showCreateModal = false;
   newKeyName = '';
-  visibleKeys = new Set<string>();
-  copiedKeyId: string | null = null;
-  noticeMessage = '';
-  modalMessage = '';
+  createdKey: CreatedApiKey | null = null;
+  copiedValue = '';
 
-  ngOnInit(): void {
-    void this.fetchApiKeys();
+  get createdKeyValue(): string {
+    return this.createdKey?.value ?? '';
   }
 
-  openModal(): void {
-    this.showModal = true;
+  async ngOnInit(): Promise<void> {
+    await this.loadApiKeys();
+  }
+
+  async loadApiKeys(): Promise<void> {
+    this.loading = true;
+    this.errorMessage = '';
+
+    try {
+      this.apiKeys = await this.apiKeysService.list();
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar las API Keys.';
+      this.apiKeys = [];
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  openCreateModal(): void {
     this.newKeyName = '';
-    this.modalMessage = '';
+    this.createdKey = null;
+    this.errorMessage = '';
+    this.message = '';
+    this.showCreateModal = true;
   }
 
-  closeModal(): void {
-    this.showModal = false;
+  closeCreateModal(): void {
+    this.showCreateModal = false;
     this.newKeyName = '';
-    this.modalMessage = '';
+    this.createdKey = null;
+    this.creating = false;
   }
 
-  showCreatePendingMessage(): void {
-    this.modalMessage = 'La generación segura de API keys se conectará en la siguiente fase.';
-  }
+  async createApiKey(): Promise<void> {
+    const name = this.newKeyName.trim();
+    this.errorMessage = '';
+    this.message = '';
 
-  requestDelete(_id: string): void {
-    if (!window.confirm('¿Estás seguro de eliminar esta API key?')) {
+    if (!name) {
+      this.errorMessage = 'Ingresa un nombre para la API Key.';
       return;
     }
 
-    this.noticeMessage = 'La revocación segura de API keys se conectará en la siguiente fase.';
-  }
+    this.creating = true;
 
-  toggleVisibility(id: string): void {
-    const next = new Set(this.visibleKeys);
-
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-
-    this.visibleKeys = next;
-  }
-
-  isVisible(id: string): boolean {
-    return this.visibleKeys.has(id);
-  }
-
-  async copyToClipboard(apiKey: ApiKeyRecord): Promise<void> {
     try {
-      await navigator.clipboard.writeText(apiKey.key);
-      this.copiedKeyId = apiKey.id;
-      window.setTimeout(() => {
-        this.copiedKeyId = null;
-      }, 2000);
-    } catch {
-      this.noticeMessage = 'No se pudo copiar la API key.';
+      this.createdKey = await this.apiKeysService.create(name);
+      this.message = 'API Key creada. Copia la clave ahora; no volveremos a mostrarla.';
+      await this.loadApiKeys();
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo crear la API Key.';
+    } finally {
+      this.creating = false;
     }
   }
 
-  maskKey(key: string): string {
-    if (key.length <= 12) {
-      return key;
+  async revokeApiKey(key: ApiKey): Promise<void> {
+    if (!key.isActive || !window.confirm(`Revocar API Key "${key.name}"?`)) {
+      return;
     }
 
-    return `${key.substring(0, 8)}...${key.substring(key.length - 4)}`;
+    this.revokingId = key.id;
+    this.errorMessage = '';
+    this.message = '';
+
+    try {
+      await this.apiKeysService.revoke(key.id);
+      this.message = 'API Key revocada.';
+      await this.loadApiKeys();
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo revocar la API Key.';
+    } finally {
+      this.revokingId = '';
+    }
   }
 
-  formatCreatedAt(value: string): string {
+  async copyValue(value: string): Promise<void> {
+    await navigator.clipboard.writeText(value);
+    this.copiedValue = value;
+    window.setTimeout(() => {
+      if (this.copiedValue === value) {
+        this.copiedValue = '';
+      }
+    }, 1600);
+  }
+
+  statusLabel(key: ApiKey): string {
+    if (key.revokedAt || !key.isActive) {
+      return 'Revocada';
+    }
+
+    if (key.expiresAt && new Date(key.expiresAt).getTime() <= Date.now()) {
+      return 'Expirada';
+    }
+
+    return 'Activa';
+  }
+
+  statusClass(key: ApiKey): string {
+    return this.statusLabel(key) === 'Activa' ? 'status--active' : 'status--inactive';
+  }
+
+  scopesText(key: ApiKey): string {
+    return key.scopes.length ? key.scopes.join(', ') : '-';
+  }
+
+  formatDate(value: string | null): string {
+    if (!value) {
+      return 'Nunca';
+    }
+
     return new Date(value).toLocaleString('es-PE', {
-      day: '2-digit',
-      month: 'long',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  formatLastUsedAt(value: string): string {
-    return new Date(value).toLocaleString('es-PE', {
-      day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
+      day: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true
     });
-  }
-
-  private async fetchApiKeys(): Promise<void> {
-    try {
-      const { data: sessionData } = await this.supabase.instance.auth.getSession();
-      const userId = sessionData.session?.user?.id;
-
-      if (!userId) {
-        this.apiKeys = [];
-        return;
-      }
-
-      const { data, error } = await this.supabase.instance
-        .from('api_keys')
-        .select('id, user_id, name, key, is_active, created_at, last_used_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        this.apiKeys = [];
-        return;
-      }
-
-      this.apiKeys = ((data as ApiKeyRecord[] | null) ?? []).map((apiKey) => ({
-        ...apiKey,
-        name: apiKey.name ?? '',
-        key: apiKey.key ?? '',
-        is_active: Boolean(apiKey.is_active),
-        last_used_at: apiKey.last_used_at ?? null
-      }));
-    } catch {
-      this.apiKeys = [];
-    }
   }
 }

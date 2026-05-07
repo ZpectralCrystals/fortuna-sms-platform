@@ -1,20 +1,47 @@
 <bo-loading-state *ngIf="loading"></bo-loading-state>
 
-<div *ngIf="!loading" class="alerts-page">
+<div *ngIf="!loading && !config" class="config-error">
+  <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 8v4" />
+    <path d="M12 16h.01" />
+  </svg>
+  <p>{{ errorMessage || 'No se pudo cargar la configuración' }}</p>
+</div>
+
+<div *ngIf="!loading && config" class="alerts-page">
+  <div class="section-heading">Alertas SMS</div>
+
   <div class="page-header">
     <div>
       <h1>Alertas de Saldo Bajo</h1>
-      <p>Control interno de clientes con pocos créditos SMS</p>
+      <p>Sistema automático de notificaciones por SMS</p>
     </div>
+    <button type="button" class="send-button" [disabled]="!config.is_active || sending" (click)="sendAlerts()">
+      <ng-container *ngIf="sending; else sendReady">
+        <span class="button-spinner"></span>
+        Enviando...
+      </ng-container>
+      <ng-template #sendReady>
+        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="m22 2-7 20-4-9-9-4Z" />
+          <path d="M22 2 11 13" />
+        </svg>
+        Enviar Alertas Ahora
+      </ng-template>
+    </button>
   </div>
 
-  <div class="note-box">
-    Las alertas automáticas se implementarán con cola/notificaciones en una fase posterior.
-    Esta pantalla no envía SMS ni descuenta créditos.
+  <div *ngIf="successMessage" class="success-box">
+    <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <path d="m9 11 3 3L22 4" />
+    </svg>
+    <p>{{ successMessage }}</p>
   </div>
 
   <div *ngIf="errorMessage" class="success-box error-box">
-    <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8v4" />
       <path d="M12 16h.01" />
@@ -22,60 +49,53 @@
     <p>{{ errorMessage }}</p>
   </div>
 
-  <div *ngIf="successMessage" class="success-box">
-    <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <path d="m9 11 3 3L22 4" />
-    </svg>
-    <p>{{ successMessage }}</p>
-  </div>
-
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-header">
-        <p>Umbral actual</p>
+        <p>Total Alertas</p>
         <svg class="stat-icon blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+          <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ stats.total_alerts }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Hoy</p>
+        <svg class="stat-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ stats.alerts_today }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Esta Semana</p>
+        <svg class="stat-icon purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M3 3v18h18" />
           <path d="M18 17V9" />
           <path d="M13 17V5" />
           <path d="M8 17v-3" />
         </svg>
       </div>
-      <p class="stat-value">{{ formatNumber(config.threshold_credits) }}</p>
+      <p class="stat-value">{{ stats.alerts_this_week }}</p>
     </div>
 
     <div class="stat-card">
       <div class="stat-header">
-        <p>Clientes bajo umbral</p>
+        <p>Usuarios Únicos</p>
         <svg class="stat-icon orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
           <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       </div>
-      <p class="stat-value">{{ lowBalanceClients.length }}</p>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-header">
-        <p>Alertas registradas</p>
-        <svg class="stat-icon purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M10.268 21a2 2 0 0 0 3.464 0" />
-          <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
-        </svg>
-      </div>
-      <p class="stat-value">{{ totalAlerts }}</p>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-header">
-        <p>Pendientes / enviadas</p>
-        <svg class="stat-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      </div>
-      <p class="stat-value">{{ pendingAlerts }} / {{ sentAlerts }}</p>
+      <p class="stat-value">{{ stats.unique_users_alerted }}</p>
     </div>
   </div>
 
@@ -85,99 +105,77 @@
         <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.916 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.916 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
         <circle cx="12" cy="12" r="3" />
       </svg>
-      <h2>Configuración</h2>
+      <h2>Configuración del Sistema</h2>
     </div>
 
     <div class="config-content">
       <div class="system-state">
         <div class="state-left">
-          <svg class="state-icon enabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <svg *ngIf="config.is_active" class="state-icon enabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M10.268 21a2 2 0 0 0 3.464 0" />
             <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
           </svg>
+          <svg *ngIf="!config.is_active" class="state-icon disabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+            <path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .802-3" />
+            <path d="M2 2l20 20" />
+            <path d="M8.668 3.01A6 6 0 0 1 18 8c0 1.916.256 3.251.654 4.272" />
+          </svg>
           <div>
-            <p class="state-title">Estado del control</p>
-            <p class="state-text">{{ config.is_active ? 'Control activo para revisión administrativa' : 'Control pausado' }}</p>
+            <p class="state-title">Estado del Sistema</p>
+            <p class="state-text">
+              {{ config.is_active ? 'Las alertas se enviarán automáticamente' : 'Sistema desactivado, no se enviarán alertas' }}
+            </p>
           </div>
         </div>
 
-        <button type="button" class="switch" [class.active]="config.is_active" (click)="config.is_active = !config.is_active" aria-label="Cambiar estado">
+        <button type="button" class="switch" [class.active]="config.is_active" (click)="handleConfigChange('is_active', !config.is_active)" aria-label="Cambiar estado del sistema">
           <span></span>
         </button>
       </div>
 
       <div class="fields-grid">
         <div class="field">
-          <label for="threshold_credits">Umbral de créditos</label>
-          <input id="threshold_credits" type="number" min="0" step="1" name="threshold_credits" [(ngModel)]="config.threshold_credits" />
-          <p>Clientes con créditos iguales o menores aparecen en la lista.</p>
+          <label for="threshold_amount">Umbral en Soles (S/)</label>
+          <input id="threshold_amount" type="number" step="0.01" name="threshold_amount" [ngModel]="config.threshold_amount" (ngModelChange)="handleThresholdAmountChange($event)" />
+          <p>Alertar cuando el saldo sea menor a este monto</p>
         </div>
 
         <div class="field">
-          <label>Métodos futuros</label>
+          <label for="threshold_sms_count">Umbral en SMS</label>
+          <input id="threshold_sms_count" type="number" name="threshold_sms_count" [ngModel]="config.threshold_credits" (ngModelChange)="handleThresholdCreditsChange($event)" />
+          <p>Cantidad de SMS equivalente al umbral</p>
+        </div>
+
+        <div class="field">
+          <label for="cooldown_hours">Espera entre alertas (horas)</label>
+          <input id="cooldown_hours" type="number" name="cooldown_hours" [ngModel]="config.cooldown_hours" (ngModelChange)="handleCooldownChange($event)" />
+          <p>Tiempo mínimo entre alertas al mismo cliente</p>
+        </div>
+
+        <div class="field">
+          <label>Métodos de Envío</label>
           <div class="checks">
             <label class="check-row">
-              <input type="checkbox" name="notify_admin" [(ngModel)]="config.notify_admin" />
-              <span>Notificar administrador</span>
-            </label>
-            <label class="check-row">
-              <input type="checkbox" name="notify_client" [(ngModel)]="config.notify_client" />
-              <span>Notificar cliente</span>
+              <input type="checkbox" name="send_sms" [(ngModel)]="config.send_sms" />
+              <span>Enviar por SMS</span>
             </label>
           </div>
         </div>
       </div>
 
+      <div class="field">
+        <label for="message_template">Mensaje de Alerta</label>
+        <textarea id="message_template" rows="4" name="message_template" [(ngModel)]="config.message_template"></textarea>
+        <p>Variables disponibles: {{ '{name}' }}, {{ '{balance}' }}, {{ '{amount}' }}</p>
+      </div>
+
       <div class="actions">
+        <button type="button" class="cancel-button" (click)="resetConfig()">Cancelar</button>
         <button type="button" class="save-button" [disabled]="saving" (click)="saveConfig()">
-          {{ saving ? 'Guardando...' : 'Guardar configuración' }}
+          {{ saving ? 'Guardando...' : 'Guardar Configuración' }}
         </button>
       </div>
-    </div>
-  </div>
-
-  <div class="history-card">
-    <div class="history-header">
-      <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      </svg>
-      <h2>Clientes con saldo bajo</h2>
-    </div>
-
-    <div *ngIf="lowBalanceClients.length === 0" class="empty-history">
-      <p>No hay clientes bajo el umbral configurado.</p>
-    </div>
-
-    <div *ngIf="lowBalanceClients.length > 0" class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>RUC / Razón social</th>
-            <th class="right">Créditos</th>
-            <th class="center">Estado</th>
-            <th>Actualizado</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let client of lowBalanceClients">
-            <td>
-              <div class="client-name">{{ clientName(client) }}</div>
-              <div class="client-email">{{ client.email || '-' }}</div>
-            </td>
-            <td>{{ client.razon_social || client.ruc || '-' }}</td>
-            <td class="right strong">{{ formatNumber(client.credits) }}</td>
-            <td class="center">
-              <span class="status-badge" [class.sent]="client.is_active" [class.failed]="!client.is_active">
-                {{ client.is_active ? 'Activo' : 'Inactivo' }}
-              </span>
-            </td>
-            <td>{{ formatDate(client.updated_at) }}</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   </div>
 
@@ -188,11 +186,15 @@
         <path d="M3 3v5h5" />
         <path d="M12 7v5l4 2" />
       </svg>
-      <h2>Historial de alertas</h2>
+      <h2>Historial de Alertas</h2>
     </div>
 
     <div *ngIf="recentAlerts.length === 0" class="empty-history">
-      <p>No hay alertas registradas.</p>
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+        <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+      </svg>
+      <p>No hay alertas registradas</p>
     </div>
 
     <div *ngIf="recentAlerts.length > 0" class="table-wrap">
@@ -201,27 +203,31 @@
           <tr>
             <th>Fecha</th>
             <th>Cliente</th>
-            <th class="right">Créditos</th>
-            <th class="right">Umbral</th>
+            <th>Contacto</th>
+            <th class="right">Balance</th>
+            <th class="right">Equivalente</th>
+            <th class="center">Vía</th>
             <th class="center">Estado</th>
-            <th>Enviada</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let alert of recentAlerts">
-            <td>{{ formatDate(alert.created_at) }}</td>
+            <td>{{ formatDate(alert.sent_at || alert.created_at) }}</td>
             <td>
-              <div class="client-name">{{ alertClientName(alert) }}</div>
-              <div class="client-email">{{ alertClientEmail(alert) }}</div>
+              <div class="client-name">{{ alert.user_name }}</div>
+              <div class="client-email">{{ alert.user_email }}</div>
             </td>
-            <td class="right strong">{{ formatNumber(alert.credits_at_alert) }}</td>
-            <td class="right">{{ formatNumber(alert.threshold_credits) }}</td>
+            <td>{{ alert.user_phone || '-' }}</td>
+            <td class="right strong">{{ formatNumber(alert.balance_at_alert) }} SMS</td>
+            <td class="right amount">{{ formatCurrency(alert.amount_equivalent) }}</td>
             <td class="center">
-              <span class="status-badge" [ngClass]="alert.status">
-                {{ statusLabel(alert.status) }}
+              <span class="via-badge">{{ alert.sent_via }}</span>
+            </td>
+            <td class="center">
+              <span class="status-badge" [ngClass]="alert.delivery_status">
+                {{ statusLabel(alert.delivery_status) }}
               </span>
             </td>
-            <td>{{ formatDate(alert.sent_at) }}</td>
           </tr>
         </tbody>
       </table>

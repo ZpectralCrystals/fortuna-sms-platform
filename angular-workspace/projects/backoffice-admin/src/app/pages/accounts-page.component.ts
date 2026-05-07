@@ -3,6 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   BackofficeClientDetail,
+  BackofficeClientCardStats,
   BackofficeClientProfile,
   BackofficeService,
   UpdateClientBasicInfoPayload
@@ -20,6 +21,10 @@ interface ClientEditForm {
   is_active: boolean;
 }
 
+interface AccountCardClient extends BackofficeClientProfile {
+  approvedRecharges: number;
+}
+
 @Component({
   selector: 'bo-accounts-page',
   standalone: true,
@@ -30,7 +35,7 @@ interface ClientEditForm {
 export class AccountsPageComponent implements OnInit {
   private readonly backofficeService = inject(BackofficeService);
 
-  clients: BackofficeClientProfile[] = [];
+  clients: AccountCardClient[] = [];
   loading = true;
   detailLoading = false;
   saving = false;
@@ -44,7 +49,7 @@ export class AccountsPageComponent implements OnInit {
   editMode = false;
   editForm: ClientEditForm = this.emptyEditForm();
 
-  get filteredClients(): BackofficeClientProfile[] {
+  get filteredClients(): AccountCardClient[] {
     const search = this.searchTerm.trim().toLowerCase();
 
     return this.clients.filter((client) => {
@@ -88,8 +93,8 @@ export class AccountsPageComponent implements OnInit {
     return this.clients.reduce((sum, client) => sum + client.total_spent, 0);
   }
 
-  get topCreditClient(): BackofficeClientProfile | null {
-    return this.clients.reduce<BackofficeClientProfile | null>((top, client) => {
+  get topCreditClient(): AccountCardClient | null {
+    return this.clients.reduce<AccountCardClient | null>((top, client) => {
       if (!top || client.credits > top.credits) {
         return client;
       }
@@ -107,11 +112,19 @@ export class AccountsPageComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      this.clients = await this.backofficeService.listClients();
+      const profiles = await this.backofficeService.listClients();
+      const statsByClient = await this.backofficeService.getClientCardStats(
+        profiles.map((profile) => profile.id)
+      );
+
+      this.clients = profiles.map((profile) => this.toAccountCardClient(
+        profile,
+        statsByClient.get(profile.id)
+      ));
     } catch (error) {
       this.errorMessage = error instanceof Error
         ? error.message
-        : 'No se pudieron cargar los clientes.';
+        : 'No se pudieron cargar las cuentas.';
       this.clients = [];
     } finally {
       this.loading = false;
@@ -266,10 +279,10 @@ export class AccountsPageComponent implements OnInit {
 
   messageStatusLabel(status: MessageStatus): string {
     const labels: Record<MessageStatus, string> = {
-      delivered: 'Entregado',
+      delivered: 'Aceptado',
       failed: 'Fallido',
       pending: 'Pendiente',
-      sent: 'Enviado'
+      sent: 'Aceptado'
     };
 
     return labels[status];
@@ -393,5 +406,16 @@ export class AccountsPageComponent implements OnInit {
     };
 
     return labels[field] || field;
+  }
+
+  private toAccountCardClient(
+    profile: BackofficeClientProfile,
+    stats?: BackofficeClientCardStats
+  ): AccountCardClient {
+    return {
+      ...profile,
+      total_spent: profile.total_spent,
+      approvedRecharges: stats?.approvedRecharges ?? 0
+    };
   }
 }

@@ -178,27 +178,39 @@ h1 {
 }
 
 .filters-panel {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #e2e8f0;
 }
 
-.filters-row {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+  align-items: end;
+}
+
+.filter-field {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.filter-field > span {
+  color: #334155;
+  font-size: 0.78rem;
+  line-height: 1rem;
+  font-weight: 700;
 }
 
 .search-wrapper,
-.select-wrapper {
+.select-wrapper,
+.date-wrapper {
   position: relative;
 }
 
-.search-wrapper {
-  flex: 1 1 auto;
-}
-
 .search-icon,
-.filter-icon {
+.filter-icon,
+.date-icon {
   position: absolute;
   left: 0.75rem;
   top: 50%;
@@ -213,6 +225,11 @@ h1 {
 }
 
 .filter-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.date-icon {
   width: 1rem;
   height: 1rem;
 }
@@ -235,6 +252,7 @@ select:focus {
 }
 
 input {
+  min-height: 2.75rem;
   width: 100%;
   padding: 0.5rem 1rem 0.5rem 2.5rem;
 }
@@ -244,13 +262,8 @@ input::placeholder {
   opacity: 1;
 }
 
-.select-group {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
 select {
+  width: 100%;
   min-height: 2.625rem;
   appearance: none;
 }
@@ -260,11 +273,11 @@ select {
 }
 
 .date-select {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.8rem 0.5rem 2.25rem;
 }
 
 .limit-note {
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
   color: #64748b;
   font-size: 0.8125rem;
   line-height: 1.25rem;
@@ -637,14 +650,12 @@ pre {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
+  .filters-grid {
+    grid-template-columns: minmax(22rem, 2fr) minmax(12rem, 1fr) minmax(10rem, 1fr) minmax(10rem, 1fr);
+  }
+
   .detail-grid,
   .definition-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 640px) {
-  .filters-row {
-    flex-direction: row;
   }
 }

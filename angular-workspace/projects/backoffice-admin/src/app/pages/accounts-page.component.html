@@ -3,36 +3,15 @@
 </div>
 
 <div *ngIf="!loading" class="accounts-page">
+  <header class="accounts-header">
+    <div>
+      <h1>Cuentas</h1>
+      <p>Gestión de clientes registrados en SMS Fortuna</p>
+    </div>
+  </header>
+
   <p *ngIf="errorMessage" class="message-box error">{{ errorMessage }}</p>
   <p *ngIf="successMessage" class="message-box success">{{ successMessage }}</p>
-
-  <section class="metrics-grid">
-    <article class="metric-card">
-      <span>Total clientes</span>
-      <strong>{{ formatNumber(totalClients) }}</strong>
-    </article>
-    <article class="metric-card active">
-      <span>Activos</span>
-      <strong>{{ formatNumber(activeClients) }}</strong>
-    </article>
-    <article class="metric-card inactive">
-      <span>Inactivos</span>
-      <strong>{{ formatNumber(inactiveClients) }}</strong>
-    </article>
-    <article class="metric-card">
-      <span>Créditos</span>
-      <strong>{{ formatNumber(totalCredits) }}</strong>
-    </article>
-    <article class="metric-card">
-      <span>Gastado</span>
-      <strong>S/ {{ formatCurrency(totalSpent) }}</strong>
-    </article>
-    <article class="metric-card">
-      <span>Top créditos</span>
-      <strong>{{ topCreditClient ? clientName(topCreditClient) : '-' }}</strong>
-      <small *ngIf="topCreditClient">{{ formatNumber(topCreditClient.credits) }} créditos</small>
-    </article>
-  </section>
 
   <section class="toolbar">
     <div class="search-box">
@@ -44,49 +23,72 @@
         type="text"
         name="searchTerm"
         [(ngModel)]="searchTerm"
-        placeholder="Buscar por nombre, email, razón social, RUC o teléfono"
+        placeholder="Buscar clientes..."
       />
     </div>
-
-    <select name="statusFilter" [(ngModel)]="statusFilter" class="status-filter">
-      <option value="all">Todos</option>
-      <option value="active">Activos</option>
-      <option value="inactive">Inactivos</option>
-    </select>
   </section>
 
   <div class="clients-grid">
-    <article *ngFor="let client of filteredClients" class="client-card">
+    <article *ngFor="let client of filteredClients" class="client-card" (click)="openClient(client)" tabindex="0" role="button">
       <div class="client-topline">
         <div class="client-title">
           <h3>{{ clientName(client) }}</h3>
           <p class="client-email">{{ client.email || '-' }}</p>
+          <p class="client-company">{{ clientCompany(client) || '-' }}</p>
         </div>
         <span class="status-pill" [class.active]="client.is_active" [class.inactive]="!client.is_active">
           {{ client.is_active ? 'Activo' : 'Inactivo' }}
         </span>
       </div>
 
-      <p *ngIf="clientCompany(client)" class="client-company">{{ clientCompany(client) }}</p>
-      <p *ngIf="client.phone" class="client-phone">{{ client.phone }}</p>
-
       <div class="client-card-metrics">
-        <div>
-          <span>Créditos</span>
+        <div class="client-metric-row metric-blue">
+          <span class="metric-left">
+            <svg class="metric-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+            </svg>
+            Balance SMS
+          </span>
           <strong>{{ formatNumber(client.credits) }}</strong>
         </div>
-        <div>
-          <span>Gastado</span>
+        <div class="client-metric-row metric-green">
+          <span class="metric-left">
+            <svg class="metric-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" x2="12" y1="2" y2="22" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            Total Gastado
+          </span>
           <strong>S/ {{ formatCurrency(client.total_spent) }}</strong>
+        </div>
+        <div class="client-metric-row metric-purple">
+          <span class="metric-left">
+            <svg class="metric-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 3v18h18" />
+              <path d="m19 9-5 5-4-4-3 3" />
+            </svg>
+            Recargas
+          </span>
+          <strong>{{ formatNumber(client.approvedRecharges) }}</strong>
         </div>
       </div>
 
-      <div class="client-card-footer">
-        <span>Creado {{ formatDate(client.created_at) }}</span>
-        <button type="button" class="secondary-button" (click)="openClient(client)">
-          Ver detalle
-        </button>
+      <div class="client-since-row">
+        <span class="metric-left">
+          <svg class="metric-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 2v4" />
+            <path d="M16 2v4" />
+            <rect width="18" height="18" x="3" y="4" rx="2" />
+            <path d="M3 10h18" />
+          </svg>
+          Desde
+        </span>
+        <strong>{{ formatDate(client.created_at) }}</strong>
       </div>
+
+      <button type="button" class="detail-card-button" (click)="openClient(client); $event.stopPropagation()">
+        Ver detalle
+      </button>
     </article>
   </div>
 
@@ -95,7 +97,7 @@
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.3-4.3" />
     </svg>
-    <p>No se encontraron clientes</p>
+    <p>{{ clients.length === 0 ? 'No hay cuentas registradas' : 'No se encontraron clientes' }}</p>
   </div>
 
   <div *ngIf="detailLoading || detailError || selectedDetail" class="modal-backdrop" (click)="closeClient()">

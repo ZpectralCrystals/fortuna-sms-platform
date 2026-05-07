@@ -278,10 +278,12 @@
             Quitar plantilla
           </button>
         </div>
-        <small>Puedes editar el mensaje antes de enviarlo. No se enviará automáticamente.</small>
+        <p class="template-base-card__content">{{ templateBaseContent }}</p>
+        <small *ngIf="hasTemplateVariables">Edita solo las variables de la plantilla. El texto base queda protegido.</small>
+        <small *ngIf="!hasTemplateVariables">Plantilla sin variables. Puedes editar el mensaje como texto normal.</small>
       </section>
 
-      <div *ngIf="mode !== 'file' || (fileName && !fileUsesCustomMessages)" class="field">
+      <div *ngIf="(mode !== 'file' && !hasTemplateVariables) || (mode === 'file' && fileName && !fileUsesCustomMessages)" class="field">
         <label for="message">Mensaje</label>
         <textarea
           id="message"
@@ -301,14 +303,31 @@
 
       <section *ngIf="hasTemplateVariables && mode !== 'file'" class="variables-card">
         <div class="variables-card__header">
-          <h3>Variables detectadas</h3>
-          <p>Reemplázalas editando el mensaje si corresponde.</p>
+          <h3>Variables de plantilla</h3>
+          <p>Completa cada valor para generar el mensaje final.</p>
         </div>
 
-        <div class="variable-chip-row">
-          <span *ngFor="let variable of templateVariables" class="variable-chip">
-            {{ variable }}
-          </span>
+        <div class="template-variable-grid">
+          <div *ngFor="let variable of templateVariables" class="field">
+            <label [for]="'template-variable-' + variable">{{ variable }}</label>
+            <input
+              [id]="'template-variable-' + variable"
+              type="text"
+              [name]="'templateVariable_' + variable"
+              [(ngModel)]="templateVariableValues[variable]"
+              [placeholder]="variable"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="template-preview-card">
+          <span>Vista previa del mensaje</span>
+          <p>{{ renderedFinalMessage }}</p>
+          <div class="field-meta">
+            <small>{{ renderedFinalMessage.length }} caracteres</small>
+            <small>{{ smsCount }} SMS {{ messageLength > 160 ? '(mensaje largo)' : '' }}</small>
+          </div>
         </div>
       </section>
 

@@ -141,6 +141,10 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   get renderedFinalMessage(): string {
+    if (this.selectedTemplate && this.hasTemplateVariables) {
+      return this.renderTemplate(this.templateBaseContent, this.templateVariableValues);
+    }
+
     return this.manualMessage;
   }
 
@@ -235,6 +239,11 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   setMode(mode: SendMode): void {
+    if (mode === 'file' && this.hasTemplateVariables) {
+      this.removeTemplate(false);
+      this.manualMessage = '';
+    }
+
     this.mode = mode;
     this.error = '';
     this.success = false;
@@ -253,13 +262,13 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   handleMessageChange(): void {
-    if (this.isTemplateMode) {
+    if (this.isTemplateMode && !this.hasTemplateVariables) {
       this.templateVariables = this.smsService.extractTemplateVariables(this.manualMessage);
     }
   }
 
   removeTemplate(useRenderedMessage = true): void {
-    const rendered = this.manualMessage.trim();
+    const rendered = this.getMessageToSend();
     this.selectedTemplateId = '';
     this.selectedTemplate = null;
     this.templateVariables = [];
@@ -919,15 +928,19 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   getMissingTemplateVariables(): string[] {
-    return [];
+    if (!this.hasTemplateVariables) {
+      return [];
+    }
+
+    return this.templateVariables.filter((variable) => !this.templateVariableValues[variable]?.trim());
   }
 
   hasUnresolvedPlaceholders(message: string): boolean {
-    return /\{[a-zA-Z0-9_-]+\}/.test(message);
+    return /\{\s*[a-zA-Z0-9_áéíóúÁÉÍÓÚñÑ-]+\s*\}/.test(message);
   }
 
   getMessageToSend(): string {
-    return this.manualMessage.trim();
+    return this.renderedFinalMessage.trim();
   }
 
   getSendDisabledReason(): string | null {
@@ -957,10 +970,22 @@ export class SendSmsPageComponent implements OnInit {
       if (this.fileMessages.some((fileMessage) => !this.getFileMessageToSend(fileMessage))) {
         return 'Cada fila debe tener mensaje o escribe un mensaje general.';
       }
+
+      if (this.fileMessages.some((fileMessage) => this.hasUnresolvedPlaceholders(this.getFileMessageToSend(fileMessage)))) {
+        return 'Completa las variables de la plantilla antes de enviar.';
+      }
     }
 
     if (this.mode !== 'file' && !message) {
       return 'El mensaje no puede estar vacío.';
+    }
+
+    if (this.mode !== 'file' && this.hasTemplateVariables && this.getMissingTemplateVariables().length > 0) {
+      return 'Completa las variables de la plantilla antes de enviar.';
+    }
+
+    if (this.mode !== 'file' && this.hasUnresolvedPlaceholders(message)) {
+      return 'Completa las variables de la plantilla antes de enviar.';
     }
 
     if (this.credits < this.requiredCredits) {
