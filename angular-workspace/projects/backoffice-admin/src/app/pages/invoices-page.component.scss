@@ -82,6 +82,12 @@
   padding: 0.75rem 1rem;
 }
 
+.error-message {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
 .filters-card,
 .stat-card,
 .list-card {
@@ -129,6 +135,7 @@
   margin-bottom: 0.5rem;
 }
 
+.field input,
 .field select {
   border: 1px solid #cbd5e1;
   border-radius: 0.5rem;
@@ -139,6 +146,7 @@
   width: 100%;
 }
 
+.field input:focus,
 .field select:focus {
   border-color: transparent;
   box-shadow: 0 0 0 2px #3b82f6;
@@ -164,6 +172,11 @@
 
 .clear-button:hover {
   background: #e2e8f0;
+}
+
+.compact-button {
+  white-space: nowrap;
+  width: auto;
 }
 
 .stats-grid {
@@ -337,10 +350,87 @@ td {
   line-height: 1rem;
 }
 
+.modal-backdrop {
+  align-items: center;
+  background: rgb(15 23 42 / 0.45);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 50;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  max-height: calc(100vh - 2rem);
+  max-width: 48rem;
+  overflow: auto;
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.modal-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+  color: #0f172a;
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.close-button {
+  background: #f1f5f9;
+  border: 0;
+  border-radius: 9999px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 1.25rem;
+  height: 2rem;
+  line-height: 1;
+  width: 2rem;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  margin: 0 0 1rem;
+}
+
+.detail-grid div {
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.detail-grid dt {
+  color: #64748b;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-grid dd {
+  color: #0f172a;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 768px) {
   .filters-grid,
   .stats-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

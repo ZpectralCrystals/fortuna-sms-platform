@@ -89,6 +89,26 @@
   padding: 1rem;
 }
 
+.note-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+  color: #1e40af;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  padding: 1rem;
+}
+
+.error-box {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.error-box p,
+.error-box .success-icon {
+  color: #991b1b;
+}
+
 .success-box p {
   color: #166534;
   margin: 0;

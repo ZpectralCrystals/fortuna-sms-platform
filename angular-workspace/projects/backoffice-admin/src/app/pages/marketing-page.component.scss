@@ -146,6 +146,10 @@ h2 {
   padding: 1rem;
 }
 
+.recommendation-card {
+  margin: 0;
+}
+
 .recommendation-inner {
   align-items: flex-start;
   display: flex;
@@ -210,6 +214,10 @@ h2 {
   position: relative;
   transition: background 150ms ease;
   width: 100%;
+}
+
+.bar[style*='0%'] {
+  min-height: 0.25rem;
 }
 
 .bar:hover {

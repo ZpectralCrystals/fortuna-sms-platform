@@ -5,23 +5,152 @@
 <div *ngIf="!loading" class="marketing-page">
   <div>
     <h1>Marketing & Análisis</h1>
-    <p class="subtitle">Módulo pendiente de implementación</p>
+    <p class="subtitle">Actividad comercial real basada en SMS enviados</p>
   </div>
 
-  <div class="card recommendations-card">
-    <h2>Marketing pendiente</h2>
-    <div class="recommendations-list">
-      <div class="recommendation">
-        <div class="recommendation-inner">
-          <svg class="recommendation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 3v18h18" />
-            <path d="M18 17V9" />
-            <path d="M13 17V5" />
-            <path d="M8 17v-3" />
-          </svg>
-          <div>
-            <h3>Módulo pendiente</h3>
-            <p>Este módulo permitirá gestionar campañas SMS y análisis comercial. Se implementará después de cerrar API pública y campañas.</p>
+  <div class="recommendation">
+    <div class="recommendation-inner">
+      <svg class="recommendation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4" />
+        <path d="M12 8h.01" />
+      </svg>
+      <div>
+        <h3>Campañas avanzadas pendientes</h3>
+        <p>La agrupación avanzada por campañas se implementará cuando se agregue campaign_id. Esta pantalla solo muestra actividad real de sms_messages.</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="stats-error">
+    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </svg>
+    <p>{{ errorMessage }}</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>SMS aceptados</p>
+        <svg class="kpi-icon blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="m22 2-7 20-4-9-9-4Z" />
+          <path d="M22 2 11 13" />
+        </svg>
+      </div>
+      <p class="kpi-value">{{ formatNumber(kpis.accepted) }}</p>
+      <p class="kpi-help">aceptados por proveedor</p>
+    </div>
+
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>SMS fallidos</p>
+        <svg class="kpi-icon red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m15 9-6 6" />
+          <path d="m9 9 6 6" />
+        </svg>
+      </div>
+      <p class="kpi-value negative">{{ formatNumber(kpis.failed) }}</p>
+      <p class="kpi-help">mensajes no aceptados</p>
+    </div>
+
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>Costo total</p>
+        <svg class="kpi-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="12" x2="12" y1="2" y2="22" />
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+      </div>
+      <p class="kpi-value revenue">{{ formatCurrency(kpis.totalCost) }}</p>
+      <p class="kpi-help">solo SMS aceptados</p>
+    </div>
+
+    <div class="card kpi-card">
+      <div class="kpi-header">
+        <p>Clientes con actividad</p>
+        <svg class="kpi-icon purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        </svg>
+      </div>
+      <p class="kpi-value">{{ formatNumber(kpis.activeClients) }}</p>
+      <p class="kpi-help">últimos mensajes cargados</p>
+    </div>
+  </div>
+
+  <div class="card trend-card">
+    <h2>Actividad SMS últimos 30 días</h2>
+    <div class="chart-area">
+      <div *ngFor="let item of dailyActivity" class="bar-column">
+        <div class="bar-track">
+          <div class="bar" [style.height.%]="getBarHeight(item)">
+            <div class="tooltip">
+              <div class="tooltip-title">{{ item.label }}</div>
+              <div>Aceptados: {{ item.accepted }}</div>
+              <div>Fallidos: {{ item.failed }}</div>
+              <div>Total: {{ item.total }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="bar-month">{{ item.label }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lower-grid">
+    <div class="card table-card">
+      <h2>Top clientes por consumo</h2>
+      <div *ngIf="topClients.length === 0" class="stats-error">
+        <p>No hay actividad SMS registrada.</p>
+      </div>
+      <div *ngIf="topClients.length > 0" class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th class="right">SMS</th>
+              <th class="right">Aceptados</th>
+              <th class="right">Fallidos</th>
+              <th class="right">Costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let customer of topClients">
+              <td>
+                <div class="customer-name">{{ customer.name }}</div>
+                <div class="customer-email">{{ customer.email }}</div>
+              </td>
+              <td class="right total-revenue">{{ formatNumber(customer.segments) }}</td>
+              <td class="right repeat-customers">{{ formatNumber(customer.accepted) }}</td>
+              <td class="right new-customers">{{ formatNumber(customer.failed) }}</td>
+              <td class="right total-revenue">{{ formatCurrency(customer.cost) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card top-card">
+      <h2>Actividad reciente de alto volumen</h2>
+      <div *ngIf="recentHighVolume.length === 0" class="stats-error">
+        <p>No hay actividad en los últimos 7 días.</p>
+      </div>
+      <div *ngIf="recentHighVolume.length > 0" class="top-list">
+        <div *ngFor="let customer of recentHighVolume; let index = index" class="top-item">
+          <div class="rank">{{ index + 1 }}</div>
+          <div class="customer-main">
+            <p class="customer-name">{{ customer.name }}</p>
+            <p class="customer-email">{{ customer.email }}</p>
+            <p *ngIf="customer.company" class="customer-company">{{ customer.company }}</p>
+          </div>
+          <div class="customer-revenue">
+            <p>{{ formatNumber(customer.segments) }} SMS</p>
+            <span>{{ formatDate(customer.lastSentAt) }}</span>
           </div>
         </div>
       </div>
