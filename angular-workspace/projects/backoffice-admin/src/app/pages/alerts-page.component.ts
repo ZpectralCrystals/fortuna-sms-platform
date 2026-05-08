@@ -57,6 +57,16 @@ interface AlertStatsRow {
   created_at: string;
 }
 
+interface InternalAlertsAccount {
+  profile_id: string;
+  account_type: string;
+  label: string;
+  is_active: boolean;
+  email: string;
+  full_name: string | null;
+  credits: number;
+}
+
 @Component({
   selector: 'bo-alerts-page',
   standalone: true,
@@ -78,6 +88,18 @@ export class AlertsPageComponent implements OnInit {
   lowBalanceClients: LowBalanceClient[] = [];
   recentAlerts: RecentAlert[] = [];
 
+  internalAccount: InternalAlertsAccount | null = null;
+  internalAccountLoading = false;
+  internalAccountError = '';
+  internalAccountMessage = '';
+  configuredInternalProfileId: string | null = null;
+  showAllocateModal = false;
+  allocateAmount = 100;
+  allocateReason = '';
+  allocationError = '';
+  allocating = false;
+  ensuringInternalAccount = false;
+
   async ngOnInit(): Promise<void> {
     await this.loadData();
   }
@@ -94,6 +116,7 @@ export class AlertsPageComponent implements OnInit {
         this.loadAlertStatistics()
       ]);
       await this.loadLowBalanceClients();
+      await this.loadInternalAccount();
     } catch (error) {
       this.errorMessage = error instanceof Error
         ? error.message
@@ -106,6 +129,150 @@ export class AlertsPageComponent implements OnInit {
     } finally {
       this.loading = false;
     }
+  }
+
+  async loadInternalAccount(): Promise<void> {
+    this.internalAccountLoading = true;
+    this.internalAccountError = '';
+
+    try {
+      const { data, error } = await this.supabaseService.instance.rpc('admin_get_internal_alerts_account');
+
+      if (error) {
+        throw error;
+      }
+
+      const response = data as { account?: unknown; configured_profile_id?: unknown } | null;
+      this.internalAccount = this.mapInternalAccount(response?.account ?? null);
+      this.configuredInternalProfileId = this.toNullableString(response?.configured_profile_id);
+    } catch (error) {
+      this.internalAccount = null;
+      this.configuredInternalProfileId = null;
+      this.internalAccountError = this.toFriendlyError(error, 'No se pudo cargar la cuenta interna de alertas.');
+    } finally {
+      this.internalAccountLoading = false;
+    }
+  }
+
+  async ensureInternalAccount(): Promise<void> {
+    this.internalAccountError = '';
+    this.internalAccountMessage = '';
+    this.ensuringInternalAccount = true;
+
+    try {
+      const { data, error } = await this.supabaseService.instance.rpc('admin_ensure_internal_alerts_account');
+
+      if (error) {
+        throw error;
+      }
+
+      const response = data as { success?: boolean; created?: boolean; error?: string; message?: string } | null;
+
+      if (response && response.success === false) {
+        this.internalAccountError = response.message
+          || 'Falta crear el usuario auth con email alerts@smsfortuna.internal antes de asociar la cuenta interna.';
+        return;
+      }
+
+      this.internalAccountMessage = response?.created
+        ? 'Cuenta interna asociada y configurada para alertas.'
+        : 'Cuenta interna ya estaba configurada.';
+
+      await this.loadInternalAccount();
+    } catch (error) {
+      this.internalAccountError = this.toFriendlyError(error, 'No se pudo configurar la cuenta interna.');
+    } finally {
+      this.ensuringInternalAccount = false;
+    }
+  }
+
+  openAllocateModal(): void {
+    if (!this.internalAccount) {
+      return;
+    }
+
+    this.allocateAmount = 100;
+    this.allocateReason = 'Bolsa para alertas de saldo bajo';
+    this.internalAccountError = '';
+    this.internalAccountMessage = '';
+    this.allocationError = '';
+    this.showAllocateModal = true;
+  }
+
+  openAllocateInternalSmsModal(): void {
+    this.openAllocateModal();
+  }
+
+  closeAllocateModal(): void {
+    this.showAllocateModal = false;
+    this.allocating = false;
+    this.allocationError = '';
+  }
+
+  closeAllocateInternalSmsModal(): void {
+    this.closeAllocateModal();
+  }
+
+  async submitAllocation(): Promise<void> {
+    if (!this.internalAccount || this.allocating) {
+      return;
+    }
+
+    const amount = Math.trunc(this.toNumber(this.allocateAmount));
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.allocationError = 'Ingresa una cantidad válida de SMS.';
+      return;
+    }
+
+    this.allocating = true;
+    this.internalAccountError = '';
+    this.internalAccountMessage = '';
+    this.allocationError = '';
+
+    try {
+      const { error } = await this.supabaseService.instance.rpc('admin_allocate_internal_sms', {
+        p_profile_id: this.internalAccount.profile_id,
+        p_sms_amount: amount,
+        p_reason: this.allocateReason?.trim() || null
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      this.internalAccountMessage = 'SMS internos asignados correctamente.';
+      this.showAllocateModal = false;
+      await this.loadInternalAccount();
+    } catch (error) {
+      this.allocationError = this.toFriendlyError(error, 'No se pudo asignar SMS internos.');
+    } finally {
+      this.allocating = false;
+    }
+  }
+
+  async confirmAllocateInternalSms(): Promise<void> {
+    await this.submitAllocation();
+  }
+
+  loadInternalAlertsAccount(): Promise<void> {
+    return this.loadInternalAccount();
+  }
+
+  canConfirmAllocation(): boolean {
+    const amount = Math.trunc(this.toNumber(this.allocateAmount));
+    return Boolean(this.internalAccount) && Number.isFinite(amount) && amount > 0 && !this.allocating;
+  }
+
+  internalAccountName(): string {
+    if (!this.internalAccount) {
+      return '';
+    }
+
+    return this.internalAccount.label
+      || this.internalAccount.full_name
+      || this.internalAccount.email
+      || 'Cuenta interna';
   }
 
   async loadConfig(): Promise<void> {
@@ -491,11 +658,50 @@ export class AlertsPageComponent implements OnInit {
       return 'No se encontró configuración de alertas.';
     }
 
+    if (message.includes('NOT_INTERNAL_ACCOUNT')) {
+      return 'El perfil indicado no es una cuenta interna activa.';
+    }
+
+    if (message.includes('INTERNAL_PROFILE_MISSING')) {
+      return 'Falta crear el usuario auth con email alerts@smsfortuna.internal antes de asociar la cuenta interna.';
+    }
+
+    if (message.includes('INVALID_AMOUNT')) {
+      return 'La cantidad de SMS debe ser mayor a cero.';
+    }
+
+    if (message.includes('INVALID_PROFILE')) {
+      return 'Perfil interno inválido.';
+    }
+
     if (message.includes('INVALID_') || message.includes('EMPTY_MESSAGE_TEMPLATE')) {
       return 'Revisa la configuración ingresada.';
     }
 
     return message || fallback;
+  }
+
+  private mapInternalAccount(value: unknown): InternalAlertsAccount | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const row = value as Record<string, unknown>;
+    const profileId = this.toSafeString(row['profile_id']);
+
+    if (!profileId) {
+      return null;
+    }
+
+    return {
+      profile_id: profileId,
+      account_type: this.toSafeString(row['account_type']) || 'low_balance_alerts',
+      label: this.toSafeString(row['label']) || 'SMS Fortuna Alertas',
+      is_active: Boolean(row['is_active'] ?? true),
+      email: this.toSafeString(row['email']),
+      full_name: this.toNullableString(row['full_name']),
+      credits: Number(row['credits'] ?? 0)
+    };
   }
 
   private toSafeString(value: unknown): string {

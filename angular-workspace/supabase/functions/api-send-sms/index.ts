@@ -82,6 +82,7 @@ const publicMessages: Record<string, string> = {
 Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
+  let stage = "REQUEST_START";
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -94,10 +95,19 @@ Deno.serve(async (req: Request) => {
   let apiKeyRow: ApiKeyRow | null = null;
 
   try {
+    stage = "ENV_CHECK";
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    logStage(stage, requestId, {
+      has_supabase_url: Boolean(supabaseUrl),
+      has_service_role_key: Boolean(serviceRoleKey),
+    });
 
     if (!supabaseUrl || !serviceRoleKey) {
+      logStageError(stage, requestId, "MISSING_ENV", {
+        has_supabase_url: Boolean(supabaseUrl),
+        has_service_role_key: Boolean(serviceRoleKey),
+      });
       return errorResponse("INTERNAL_ERROR", 500);
     }
 
@@ -113,27 +123,74 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    stage = "API_KEY_LOOKUP";
+    logStage(stage, requestId, {
+      has_api_key: true,
+    });
     const apiKeyHash = await sha256Hex(apiKey);
     apiKeyRow = await findApiKey(supabaseAdmin, apiKeyHash);
 
     if (!apiKeyRow) {
+      logStageError(stage, requestId, "API_KEY_INVALID");
       return errorResponse("API_KEY_INVALID", 401);
     }
 
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      key_prefix: apiKeyRow.key_prefix,
+      scopes: apiKeyRow.scopes,
+      is_active: apiKeyRow.is_active,
+      has_revoked_at: Boolean(apiKeyRow.revoked_at),
+      has_expires_at: Boolean(apiKeyRow.expires_at),
+    });
+
     const keyValidation = validateApiKey(apiKeyRow);
     if (keyValidation) {
+      logStageError(stage, requestId, keyValidation, {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+      });
       await logApiRequest(supabaseAdmin, apiKeyRow, "failed", keyValidation);
       return errorResponse(keyValidation, keyValidation === "INSUFFICIENT_SCOPE" ? 403 : 401);
     }
 
+    stage = "PROFILE_LOOKUP";
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+    });
     const profile = await findProfile(supabaseAdmin, apiKeyRow.user_id);
     if (!profile || profile.is_active !== true) {
+      logStageError(stage, requestId, "PROFILE_INACTIVE", {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+        found_profile: Boolean(profile),
+        is_active: profile?.is_active ?? null,
+      });
       await logApiRequest(supabaseAdmin, apiKeyRow, "failed", "PROFILE_INACTIVE");
       return errorResponse("PROFILE_INACTIVE", 403);
     }
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      profile_active: profile.is_active,
+      credits: Number(profile.credits ?? 0),
+    });
 
+    stage = "RATE_LIMIT";
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      rate_limit_per_minute: apiKeyRow.rate_limit_per_minute,
+      rate_limit_per_day: apiKeyRow.rate_limit_per_day,
+    });
     const rateError = await validateRateLimit(supabaseAdmin, apiKeyRow);
     if (rateError) {
+      logStageError(stage, requestId, rateError, {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+      });
       await logApiRequest(supabaseAdmin, apiKeyRow, "failed", rateError);
       return errorResponse(rateError, 429);
     }
@@ -159,6 +216,16 @@ Deno.serve(async (req: Request) => {
       return errorResponse("INVALID_IDEMPOTENCY_KEY", 400);
     }
 
+    stage = "BEGIN_ATTEMPT_RPC";
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      recipient: normalizedRecipient,
+      message_length: message.length,
+      idempotency_key_length: idempotencyKey.length,
+      rpc: "internal_begin_sms_send_attempt",
+      params: ["p_user_id", "p_idempotency_key", "p_recipient", "p_message"],
+    });
     const attempt = await beginSmsAttempt(
       supabaseAdmin,
       apiKeyRow.user_id,
@@ -169,9 +236,22 @@ Deno.serve(async (req: Request) => {
 
     if (!attempt.success) {
       const errorCode = normalizePublicErrorCode(attempt.error_message ?? attempt.status ?? "INTERNAL_ERROR");
+      logStageError(stage, requestId, errorCode, {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+        rpc_status: attempt.status ?? null,
+      });
       await logApiRequest(supabaseAdmin, apiKeyRow, "failed", errorCode);
       return errorResponse(errorCode, statusForError(errorCode));
     }
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      attempt_id: attempt.attempt_id ?? null,
+      already_processed: attempt.already_processed ?? false,
+      segments: Number(attempt.segments ?? 0),
+      cost: Number(attempt.cost ?? 0),
+    });
 
     if (attempt.already_processed) {
       await markApiKeyUsed(supabaseAdmin, apiKeyRow.id);
@@ -190,6 +270,15 @@ Deno.serve(async (req: Request) => {
       return errorResponse("INTERNAL_ERROR", 500);
     }
 
+    stage = "PROVIDER_ADAPTER";
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      attempt_id: attempt.attempt_id,
+      provider_recipient_present: Boolean(attempt.provider_recipient),
+      segments: Number(attempt.segments ?? 0),
+      cost: Number(attempt.cost ?? 0),
+    });
     const providerResult = await sendSmsViaProviderAdapter({
       recipient: attempt.recipient ?? normalizedRecipient,
       providerRecipient: attempt.provider_recipient,
@@ -201,6 +290,20 @@ Deno.serve(async (req: Request) => {
 
     if (!providerResult.success) {
       const providerError = normalizeProviderErrorCode(providerResult.error ?? "PROVIDER_ERROR");
+      logStageError(stage, requestId, providerError, {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+        attempt_id: attempt.attempt_id,
+        provider: providerResult.provider,
+      });
+      stage = "COMPLETE_FAILED_RPC";
+      logStage(stage, requestId, {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+        attempt_id: attempt.attempt_id,
+        rpc: "internal_complete_sms_send_failed",
+        params: ["p_attempt_id", "p_provider", "p_provider_response", "p_error_message"],
+      });
       const failed = await completeSmsFailed(
         supabaseAdmin,
         attempt.attempt_id,
@@ -210,6 +313,12 @@ Deno.serve(async (req: Request) => {
       );
 
       if (failed.success === true || failed.status === "sent") {
+        logStage(stage, requestId, {
+          api_key_id: apiKeyRow.id,
+          user_id: apiKeyRow.user_id,
+          attempt_id: attempt.attempt_id,
+          recovered_as_sent: true,
+        });
         await markApiKeyUsed(supabaseAdmin, apiKeyRow.id);
         await logApiRequest(supabaseAdmin, apiKeyRow, "success");
         return successResponse({
@@ -221,10 +330,31 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      logStageError(stage, requestId, providerError, {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+        attempt_id: attempt.attempt_id,
+        status: failed.status ?? null,
+      });
       await logApiRequest(supabaseAdmin, apiKeyRow, "failed", providerError);
       return errorResponse("PROVIDER_ERROR", 502);
     }
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      attempt_id: attempt.attempt_id,
+      provider: providerResult.provider,
+      status: providerResult.status,
+    });
 
+    stage = "COMPLETE_SUCCESS_RPC";
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      attempt_id: attempt.attempt_id,
+      rpc: "internal_complete_sms_send_success",
+      params: ["p_attempt_id", "p_provider", "p_provider_message_id", "p_provider_response"],
+    });
     const completed = await completeSmsSuccess(
       supabaseAdmin,
       attempt.attempt_id,
@@ -235,9 +365,22 @@ Deno.serve(async (req: Request) => {
 
     if (!completed.success) {
       const errorCode = normalizePublicErrorCode(completed.error_message ?? completed.status ?? "INTERNAL_ERROR");
+      logStageError(stage, requestId, errorCode, {
+        api_key_id: apiKeyRow.id,
+        user_id: apiKeyRow.user_id,
+        attempt_id: attempt.attempt_id,
+        rpc_status: completed.status ?? null,
+      });
       await logApiRequest(supabaseAdmin, apiKeyRow, "failed", errorCode);
       return errorResponse(errorCode, statusForError(errorCode));
     }
+    logStage(stage, requestId, {
+      api_key_id: apiKeyRow.id,
+      user_id: apiKeyRow.user_id,
+      attempt_id: attempt.attempt_id,
+      message_id: completed.message_id ?? completed.id ?? null,
+      status: completed.status ?? "sent",
+    });
 
     await markApiKeyUsed(supabaseAdmin, apiKeyRow.id);
     await logApiRequest(supabaseAdmin, apiKeyRow, "success");
@@ -257,11 +400,11 @@ Deno.serve(async (req: Request) => {
       status: "sent",
     });
   } catch (error) {
-    logSafe("api-send-sms failed", {
+    logStageError(stage, requestId, error instanceof Error ? error.name : "UnknownError", {
       request_id: requestId,
       api_key_id: apiKeyRow?.id ?? null,
       user_id: apiKeyRow?.user_id ?? null,
-      error_code: error instanceof Error ? error.name : "UnknownError",
+      error_message: error instanceof Error ? error.message : "Unknown error",
       duration_ms: Date.now() - startedAt,
     });
 
@@ -610,6 +753,54 @@ function jsonResponse(payload: Record<string, unknown>, status = 200): Response 
       "Content-Type": "application/json",
     },
   });
+}
+
+function logStage(stage: string, requestId: string, payload: Record<string, unknown> = {}): void {
+  logSafe("api-send-sms stage", {
+    stage,
+    request_id: requestId,
+    ...sanitizeLogPayload(payload),
+  });
+}
+
+function logStageError(
+  stage: string,
+  requestId: string,
+  errorCode: string,
+  payload: Record<string, unknown> = {},
+): void {
+  logSafe("api-send-sms stage failed", {
+    stage,
+    request_id: requestId,
+    error_code: errorCode,
+    ...sanitizeLogPayload(payload),
+  });
+}
+
+function sanitizeLogPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => {
+      const normalized = key.toLowerCase();
+      if (
+        normalized.includes("api_key")
+        && !["api_key_id", "has_api_key"].includes(normalized)
+      ) {
+        return [key, "[redacted]"];
+      }
+
+      if (
+        normalized.includes("secret")
+        || normalized.includes("token")
+        || normalized.includes("password")
+        || normalized.includes("authorization")
+        || normalized.includes("key_hash")
+      ) {
+        return [key, "[redacted]"];
+      }
+
+      return [key, value];
+    }),
+  );
 }
 
 function logSafe(message: string, payload: Record<string, unknown>): void {

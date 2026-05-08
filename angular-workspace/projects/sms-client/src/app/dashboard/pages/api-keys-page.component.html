@@ -14,24 +14,14 @@
     </button>
   </header>
 
-  <section class="info-box">
-    <div class="info-layout">
-      <svg class="info-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M21 2l-2 2"></path>
-        <path d="M15.5 7.5l2 2"></path>
-        <path d="M11.7 11.3a6 6 0 1 1-2.99-2.99L21 20.59V22h-1.41Z"></path>
-      </svg>
-      <div>
-        <h2>API pública SMS Fortuna</h2>
-        <p class="info-copy">
-          Usa estas claves con el header <code>X-API-Key</code>. La clave completa solo se muestra una vez al crearla.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <p *ngIf="message" class="notice-message">{{ message }}</p>
-  <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
+  <div *ngIf="message" class="notice-message" role="status">
+    <span>{{ message }}</span>
+    <button type="button" class="notice-close" (click)="message = ''" aria-label="Cerrar aviso">×</button>
+  </div>
+  <div *ngIf="errorMessage" class="error-message" role="alert">
+    <span>{{ errorMessage }}</span>
+    <button type="button" class="notice-close" (click)="errorMessage = ''" aria-label="Cerrar error">×</button>
+  </div>
 
   <section class="keys-panel">
     <div class="keys-panel__header">
@@ -48,8 +38,10 @@
         <path d="M15.5 7.5l2 2"></path>
         <path d="M11.7 11.3a6 6 0 1 1-2.99-2.99L21 20.59V22h-1.41Z"></path>
       </svg>
-      <p>No tienes API Keys creadas</p>
-      <span>Crea una clave para conectar sistemas externos a SMS Fortuna.</span>
+      <p>No tienes API Keys aún</p>
+      <button type="button" class="primary-button" (click)="openCreateModal()">
+        Crear primera API Key
+      </button>
     </div>
 
     <div *ngIf="!loading && apiKeys.length > 0" class="keys-list">
@@ -62,13 +54,11 @@
             </div>
 
             <div class="key-value-row">
-              <code>{{ key.keyPrefix }}••••••••••••••••</code>
-              <button type="button" class="mini-button" (click)="copyValue(key.keyPrefix)" aria-label="Copiar prefijo">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
+              <code
+                class="masked-key"
+                title="La clave completa solo se muestra al crearla."
+                aria-label="API Key enmascarada"
+              >{{ key.keyPrefix }}•••••••••••••••••</code>
             </div>
 
             <p class="key-meta">
@@ -85,6 +75,7 @@
             [disabled]="revokingId === key.id || statusLabel(key) !== 'Activa'"
             (click)="revokeApiKey(key)"
             aria-label="Revocar API Key"
+            title="Revocar API Key"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M3 6h18"></path>
@@ -97,6 +88,38 @@
         </div>
       </article>
     </div>
+  </section>
+
+  <section class="usage-guide">
+    <h2>Cómo usar tu API Key</h2>
+    <ol class="usage-steps">
+      <li>Guarda tu API Key en el backend de tu aplicación.</li>
+      <li>No la pongas directamente en JavaScript público del navegador.</li>
+      <li>Envía SMS llamando al endpoint público de Fortuna SMS con el header <code>X-API-Key</code>.</li>
+      <li>Usa una <code>idempotency_key</code> única por operación para evitar envíos duplicados.</li>
+    </ol>
+
+    <div class="usage-blocks">
+      <div class="usage-block usage-block--full">
+        <span class="usage-label">Endpoint</span>
+        <pre>POST https://ewltnrfqwkhimnyqfrrw.supabase.co/functions/v1/api-send-sms</pre>
+      </div>
+
+      <div class="usage-block">
+        <span class="usage-label">Headers</span>
+        <pre>X-API-Key: TU_API_KEY
+Content-Type: application/json</pre>
+      </div>
+
+      <div class="usage-block">
+        <span class="usage-label">Body</span>
+        <pre>{{ exampleBody }}</pre>
+      </div>
+    </div>
+
+    <p class="usage-warning">
+      Por seguridad, usa esta clave desde tu backend. Si la expones en el navegador, cualquier persona podría usar tu saldo.
+    </p>
   </section>
 </div>
 
@@ -128,7 +151,7 @@
 
     <ng-template #createdKeyTemplate>
       <h2>API Key creada</h2>
-      <p class="created-copy">Copia esta API Key ahora. No volveremos a mostrarla.</p>
+      <p class="created-copy">Cópiala ahora; no volveremos a mostrarla.</p>
       <div class="secret-box">
         <code>{{ createdKeyValue }}</code>
         <button type="button" class="primary-submit" (click)="copyValue(createdKeyValue)">
@@ -136,9 +159,11 @@
         </button>
       </div>
       <div class="warning-box">
-        <p>Guárdala en un lugar seguro. Si la pierdes, revócala y crea una nueva.</p>
+        <p>Guarda esta clave en un lugar seguro. Por seguridad, no podremos mostrarla nuevamente.</p>
       </div>
-      <button type="button" class="primary-submit full-width" (click)="closeCreateModal()">Entendido</button>
+      <div class="modal-actions">
+        <button type="button" class="secondary-button" (click)="closeCreateModal()">Cerrar</button>
+      </div>
     </ng-template>
   </div>
 </div>

@@ -5,3 +5,6 @@ dist/
 .env.*
 !.env.example
 docs/private/
+
+# Claude Code temporary worktrees
+.claude/worktrees/

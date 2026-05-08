@@ -49,6 +49,93 @@
     <p>{{ errorMessage }}</p>
   </div>
 
+  <section class="internal-account-card">
+    <div class="internal-account-header">
+      <div class="internal-account-title">
+        <span class="internal-account-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+        </span>
+        <div>
+          <h2>Cuenta interna de alertas</h2>
+          <p>Esta cuenta paga el costo de los SMS de alerta. El cliente alertado no pierde créditos.</p>
+        </div>
+      </div>
+      <button
+        *ngIf="internalAccount"
+        type="button"
+        class="primary-action-button"
+        (click)="openAllocateInternalSmsModal()"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 5v14" />
+          <path d="M5 12h14" />
+        </svg>
+        Asignar SMS
+      </button>
+    </div>
+
+    <p *ngIf="internalAccountMessage" class="internal-message internal-message--ok">{{ internalAccountMessage }}</p>
+    <p *ngIf="internalAccountError" class="internal-message internal-message--error">{{ internalAccountError }}</p>
+
+    <div *ngIf="internalAccountLoading" class="internal-loading">
+      <span class="button-spinner internal-spinner"></span>
+      Cargando cuenta interna...
+    </div>
+
+    <div *ngIf="!internalAccountLoading && internalAccount; else noInternalAccount" class="internal-account-grid">
+      <div class="internal-account-item">
+        <span class="internal-account-label">Nombre</span>
+        <strong class="internal-account-value">{{ internalAccountName() }}</strong>
+      </div>
+
+      <div class="internal-account-item">
+        <span class="internal-account-label">Email</span>
+        <strong class="internal-account-value">{{ internalAccount.email || '-' }}</strong>
+      </div>
+
+      <div class="internal-account-item internal-account-item--balance">
+        <span class="internal-account-label">Saldo disponible</span>
+        <strong class="internal-account-value internal-account-value--balance">
+          {{ formatNumber(internalAccount.credits) }} SMS
+        </strong>
+      </div>
+
+      <div class="internal-account-item">
+        <span class="internal-account-label">Estado</span>
+        <div class="internal-account-status-row">
+          <span class="internal-status" [class.inactive]="!internalAccount.is_active">
+            {{ internalAccount.is_active ? 'Activa' : 'Inactiva' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noInternalAccount>
+      <div *ngIf="!internalAccountLoading" class="internal-account-empty">
+        <div class="internal-empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+          </svg>
+        </div>
+        <div>
+          <h3>No hay cuenta interna configurada</h3>
+          <p>Configura una cuenta interna para cubrir los SMS de alerta sin descontar créditos al cliente.</p>
+        </div>
+        <button
+          type="button"
+          class="primary-action-button"
+          [disabled]="ensuringInternalAccount"
+          (click)="ensureInternalAccount()"
+        >
+          {{ ensuringInternalAccount ? 'Configurando...' : 'Crear/Configurar cuenta interna' }}
+        </button>
+      </div>
+    </ng-template>
+  </section>
+
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-header">
@@ -231,6 +318,64 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showAllocateModal" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2>Asignar SMS internos</h2>
+        <p>Suma SMS al saldo de <strong>{{ internalAccountName() }}</strong>. No genera factura ni ingreso comercial.</p>
+      </div>
+      <button type="button" class="modal-close" (click)="closeAllocateInternalSmsModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="field">
+      <label for="allocate_amount">Cantidad de SMS</label>
+      <input
+        id="allocate_amount"
+        type="number"
+        min="1"
+        step="1"
+        name="allocate_amount"
+        required
+        [(ngModel)]="allocateAmount"
+      />
+    </div>
+
+    <div class="field">
+      <label for="allocate_reason">Motivo</label>
+      <input
+        id="allocate_reason"
+        type="text"
+        name="allocate_reason"
+        maxlength="200"
+        placeholder="Bolsa para alertas de saldo bajo"
+        [(ngModel)]="allocateReason"
+      />
+    </div>
+
+    <p *ngIf="allocationError" class="error-message">{{ allocationError }}</p>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-button" [disabled]="allocating" (click)="closeAllocateInternalSmsModal()">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="save-button"
+        [disabled]="!canConfirmAllocation()"
+        (click)="confirmAllocateInternalSms()"
+      >
+        {{ allocating ? 'Asignando...' : 'Confirmar asignación' }}
+      </button>
     </div>
   </div>
 </div>

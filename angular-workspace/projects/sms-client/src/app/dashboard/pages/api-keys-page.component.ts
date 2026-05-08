@@ -13,6 +13,12 @@ import { ApiKey, ApiKeysService, CreatedApiKey } from '@sms-fortuna/shared';
 export class ApiKeysPageComponent implements OnInit {
   private readonly apiKeysService = inject(ApiKeysService);
 
+  readonly exampleBody = `{
+  "recipient": "956062256",
+  "message": "Hola desde Fortuna SMS",
+  "idempotency_key": "pedido-123"
+}`;
+
   apiKeys: ApiKey[] = [];
   loading = true;
   creating = false;
