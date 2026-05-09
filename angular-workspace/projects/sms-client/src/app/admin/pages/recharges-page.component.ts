@@ -2,9 +2,17 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { AdminRecharge, RechargeStatus, RechargesService, SmsPackage } from '@sms-fortuna/shared';
+import {
+  AdminRecharge,
+  ManualRechargeClient,
+  PaymentMethod,
+  RechargeStatus,
+  RechargesService,
+  SmsPackage
+} from '@sms-fortuna/shared';
 
 type RechargeFilter = 'all' | RechargeStatus;
+type ManualPaymentMethod = Extract<PaymentMethod, string>;
 
 @Component({
   selector: 'bo-recharges-page',
@@ -18,6 +26,7 @@ export class RechargesPageComponent implements OnInit {
 
   recharges: AdminRecharge[] = [];
   packages: SmsPackage[] = [];
+  clients: ManualRechargeClient[] = [];
   loading = true;
   submitting = false;
   filter: RechargeFilter = 'pending';
@@ -29,12 +38,22 @@ export class RechargesPageComponent implements OnInit {
   rejectionReason = '';
   approvalError = '';
   rejectError = '';
+  createError = '';
   message = '';
   newRecharge = {
     user_id: '',
     package_id: '',
-    payment_method: 'yape'
+    payment_method: 'yape' as ManualPaymentMethod,
+    operation_code: '',
+    notes: ''
   };
+  readonly paymentMethods: Array<{ value: ManualPaymentMethod; label: string }> = [
+    { value: 'yape', label: 'Yape' },
+    { value: 'plin', label: 'Plin' },
+    { value: 'transferencia', label: 'Transferencia' },
+    { value: 'efectivo', label: 'Efectivo' },
+    { value: 'otro', label: 'Otro' }
+  ];
   readonly filterOptions: Array<{ value: RechargeFilter; label: string }> = [
     { value: 'all', label: 'Todas' },
     { value: 'pending', label: 'Pendientes' },
@@ -50,10 +69,33 @@ export class RechargesPageComponent implements OnInit {
     return this.recharges.filter((recharge) => recharge.status === this.filter);
   }
 
+  get selectedPackage(): SmsPackage | null {
+    return this.packages.find((pkg) => pkg.id === this.newRecharge.package_id) ?? null;
+  }
+
+  get manualRechargeSmsAmount(): number | null {
+    return this.selectedPackage?.sms_credits ?? null;
+  }
+
+  get manualRechargeAmount(): number | null {
+    return this.selectedPackage?.total_price ?? null;
+  }
+
+  get canCreateRecharge(): boolean {
+    return Boolean(
+      !this.submitting &&
+      this.newRecharge.user_id &&
+      this.newRecharge.package_id &&
+      this.newRecharge.payment_method &&
+      this.newRecharge.operation_code.trim()
+    );
+  }
+
   async ngOnInit(): Promise<void> {
     await Promise.all([
       this.loadRecharges(),
-      this.loadPackages()
+      this.loadPackages(),
+      this.loadClients()
     ]);
     this.loading = false;
   }
@@ -80,19 +122,84 @@ export class RechargesPageComponent implements OnInit {
     }
   }
 
+  async loadClients(): Promise<void> {
+    try {
+      this.clients = await this.rechargesService.listManualRechargeClients();
+    } catch (error) {
+      this.message = error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar los clientes.';
+      this.clients = [];
+    }
+  }
+
   openCreateModal(): void {
-    this.message = 'La creación manual desde backoffice se implementará en una fase posterior.';
+    this.message = '';
+    this.createError = '';
+    this.resetNewRecharge();
+    this.showCreateModal = true;
   }
 
   closeCreateModal(): void {
     this.showCreateModal = false;
   }
 
-  handleCreateRecharge(): void {
+  async handleCreateRecharge(): Promise<void> {
+    this.createError = '';
+
+    const operationCode = this.newRecharge.operation_code.trim();
+
+    if (!this.newRecharge.user_id) {
+      this.createError = 'Selecciona un cliente.';
+      return;
+    }
+
+    if (!this.newRecharge.package_id) {
+      this.createError = 'Selecciona un paquete.';
+      return;
+    }
+
+    if (!this.newRecharge.payment_method) {
+      this.createError = 'Selecciona un método de pago.';
+      return;
+    }
+
+    if (!operationCode) {
+      this.createError = 'Ingresa el código de operación.';
+      return;
+    }
+
     this.submitting = true;
-    this.message = 'La creación manual desde backoffice se implementará en una fase posterior.';
-    this.submitting = false;
-    this.showCreateModal = false;
+
+    try {
+      const result = await this.rechargesService.createManualRecharge({
+        user_id: this.newRecharge.user_id,
+        package_id: this.newRecharge.package_id,
+        payment_method: this.newRecharge.payment_method,
+        operation_code: operationCode,
+        notes: this.newRecharge.notes
+      });
+
+      this.message = `Recarga creada correctamente: ${this.formatNumber(result.sms_credits)} SMS por S/ ${this.formatCurrency(result.amount)}. Saldo actualizado: ${this.formatNumber(result.new_balance)} SMS.`;
+      this.filter = 'approved';
+      this.closeCreateModal();
+      await Promise.all([
+        this.loadRecharges(),
+        this.loadClients()
+      ]);
+    } catch (error) {
+      this.createError = error instanceof Error
+        ? error.message
+        : 'No se pudo crear la recarga.';
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  onPackageChange(packageId: string): void {
+    if (!packageId) {
+      this.newRecharge.package_id = '';
+    }
   }
 
   openApprovalModal(recharge: AdminRecharge): void {
@@ -219,6 +326,25 @@ export class RechargesPageComponent implements OnInit {
     return recharge.profile?.razon_social?.trim()
       || recharge.profile?.ruc?.trim()
       || null;
+  }
+
+  clientOptionLabel(client: ManualRechargeClient): string {
+    const name = client.full_name?.trim() || client.razon_social?.trim() || client.email;
+    const company = client.razon_social?.trim();
+
+    return company && company !== name
+      ? `${name} - ${company}`
+      : name;
+  }
+
+  private resetNewRecharge(): void {
+    this.newRecharge = {
+      user_id: '',
+      package_id: '',
+      payment_method: 'yape',
+      operation_code: '',
+      notes: ''
+    };
   }
 
   formatNumber(value: number): string {

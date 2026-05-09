@@ -3,7 +3,7 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { AuthService } from '../../../../shared/src/lib/services/auth.service';
+import { AuthService } from '@sms-fortuna/shared';
 
 @Component({
   selector: 'sms-forgot-password-page',

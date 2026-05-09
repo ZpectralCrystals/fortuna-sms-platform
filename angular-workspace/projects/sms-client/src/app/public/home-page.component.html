@@ -208,7 +208,7 @@
             <p>{{ plan.description }}</p>
           </div>
 
-          <div class="plan-card__price">
+          <div class="plan-card__price" [class.plan-card__price--text]="plan.price === 'Personalizado'">
             <span *ngIf="plan.price !== 'Personalizado'">S/ </span>{{ plan.price }}
             <small *ngIf="plan.priceUnit">{{ plan.priceUnit }}</small>
           </div>

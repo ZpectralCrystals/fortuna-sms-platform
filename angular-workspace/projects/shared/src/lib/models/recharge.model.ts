@@ -41,10 +41,35 @@ export interface AdminRecharge extends Recharge {
   profile: RechargeProfile | null;
 }
 
+export interface ManualRechargeClient {
+  id: string;
+  email: string;
+  full_name: string | null;
+  razon_social: string | null;
+  ruc: string | null;
+  is_active: boolean;
+  credits: number;
+}
+
 export interface CreateRechargeRequest {
   package_id: string;
   sms_credits: number;
   amount: number;
   payment_method: PaymentMethod;
   operation_code?: string | null;
+}
+
+export interface CreateManualRechargeRequest {
+  user_id: string;
+  package_id: string;
+  payment_method: PaymentMethod;
+  operation_code: string;
+  notes?: string | null;
+}
+
+export interface CreateManualRechargeResult {
+  recharge_id: string;
+  new_balance: number;
+  sms_credits: number;
+  amount: number;
 }

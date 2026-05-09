@@ -450,6 +450,10 @@ td {
   padding: 1.5rem;
 }
 
+.modal-card.wide-modal {
+  max-width: 40rem;
+}
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -498,7 +502,8 @@ td {
 }
 
 .modal-form select,
-.modal-form input {
+.modal-form input,
+.modal-form textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 0.5rem 1rem;
@@ -511,9 +516,28 @@ td {
 }
 
 .modal-form select:focus,
-.modal-form input:focus {
+.modal-form input:focus,
+.modal-form textarea:focus {
   border-color: transparent;
   box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.modal-form textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+
+.modal-form .locked-input {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .modal-form .approval-input:focus {
@@ -658,9 +682,14 @@ td {
 @media (max-width: 767px) {
   .inventory-content,
   .toolbar,
-  .modal-actions {
+  .modal-actions,
+  .form-grid {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .form-grid {
+    display: flex;
   }
 
   .filter-group {

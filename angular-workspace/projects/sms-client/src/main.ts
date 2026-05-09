@@ -6,7 +6,7 @@ import { AppComponent } from './app/app.component';
 import { smsClientRoutes } from './app/app.routes';
 import { environment } from './environments/environment';
 
-import { SupabaseService } from '../../shared/src/lib/services/supabase.service';
+import { SupabaseService } from '@sms-fortuna/shared';
 
 function initSupabase(supabaseService: SupabaseService) {
   return () => {

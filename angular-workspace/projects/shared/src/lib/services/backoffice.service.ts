@@ -43,18 +43,148 @@ export interface BackofficeClientCardStats {
   totalSpent: number;
 }
 
+export interface BackofficeDashboardStats {
+  users: {
+    total_users: number;
+    active_users: number;
+    total_sms_balance: number;
+  };
+  recharges: {
+    pending_recharges: number;
+    approved_sms_sold: number;
+    total_revenue: number;
+  };
+  inventory: {
+    available_sms: number;
+    sold_sms: number;
+    total_sms: number;
+  };
+  messages: {
+    total_messages: number;
+    sent_messages: number;
+    delivered_messages: number;
+    failed_messages: number;
+    pending_messages: number;
+  };
+}
+
+const INTERNAL_ALERTS_EMAIL = 'alerts@smsfortuna.internal';
+const REVENUE_RECHARGE_STATUS = 'approved';
+const SENT_OR_ACCEPTED_MESSAGE_STATUSES = new Set(['sent', 'accepted']);
+
 @Injectable({ providedIn: 'root' })
 export class BackofficeService {
   private readonly supabase = inject(SupabaseService);
 
-  async getDashboardStats(): Promise<unknown> {
-    const { data, error } = await this.supabase.instance.rpc('get_dashboard_stats');
+  async getDashboardStats(): Promise<BackofficeDashboardStats> {
+    const [
+      profilesResult,
+      internalAccountsResult,
+      adminsResult,
+      rechargesResult,
+      inventoryResult,
+      messagesResult
+    ] = await Promise.all([
+      this.supabase.instance
+        .from('profiles')
+        .select('id,email,is_active,credits'),
+      this.supabase.instance
+        .from('internal_accounts')
+        .select('profile_id,is_active'),
+      this.supabase.instance
+        .from('admins')
+        .select('id'),
+      this.supabase.instance
+        .from('recharges')
+        .select('user_id,status,amount,sms_credits'),
+      this.supabase.instance
+        .from('sms_inventory')
+        .select('available_sms,sold_sms,total_sms')
+        .maybeSingle(),
+      this.supabase.instance
+        .from('sms_messages')
+        .select('status')
+    ]);
 
-    if (error) {
-      throw new Error(this.toFriendlyError(error.message));
+    if (profilesResult.error) {
+      throw new Error(`No se pudieron cargar los perfiles: ${profilesResult.error.message}`);
     }
 
-    return data;
+    if (internalAccountsResult.error) {
+      throw new Error(`No se pudieron cargar las cuentas internas: ${internalAccountsResult.error.message}`);
+    }
+
+    if (adminsResult.error) {
+      throw new Error(`No se pudieron validar administradores: ${adminsResult.error.message}`);
+    }
+
+    if (rechargesResult.error) {
+      throw new Error(`No se pudieron cargar las recargas: ${rechargesResult.error.message}`);
+    }
+
+    if (inventoryResult.error) {
+      throw new Error(`No se pudo cargar el inventario: ${inventoryResult.error.message}`);
+    }
+
+    if (messagesResult.error) {
+      throw new Error(`No se pudieron cargar los mensajes: ${messagesResult.error.message}`);
+    }
+
+    const internalProfileIds = new Set(
+      ((internalAccountsResult.data as unknown[]) ?? [])
+        .map((account) => this.toSafeString((account as Record<string, unknown>)['profile_id']))
+        .filter(Boolean)
+    );
+    const adminIds = new Set(
+      ((adminsResult.data as unknown[]) ?? [])
+        .map((admin) => this.toSafeString((admin as Record<string, unknown>)['id']))
+        .filter(Boolean)
+    );
+    const profiles = ((profilesResult.data as unknown[]) ?? [])
+      .map((profile) => profile as Record<string, unknown>)
+      .filter((profile) => this.isCommercialProfile(profile, internalProfileIds, adminIds));
+    const commercialProfileIds = new Set(
+      profiles.map((profile) => this.toSafeString(profile['id'])).filter(Boolean)
+    );
+    const revenueRecharges = ((rechargesResult.data as unknown[]) ?? [])
+      .map((recharge) => recharge as Record<string, unknown>)
+      .filter((recharge) => {
+        const userId = this.toSafeString(recharge['user_id']);
+        const status = this.toSafeString(recharge['status']).toLowerCase();
+
+        return commercialProfileIds.has(userId) && status === REVENUE_RECHARGE_STATUS;
+      });
+    const pendingRecharges = ((rechargesResult.data as unknown[]) ?? [])
+      .filter((recharge) => this.toSafeString((recharge as Record<string, unknown>)['status']).toLowerCase() === 'pending')
+      .length;
+    const messages = ((messagesResult.data as unknown[]) ?? [])
+      .map((message) => this.toSafeString((message as Record<string, unknown>)['status']).toLowerCase());
+    const inventory = inventoryResult.data as Record<string, unknown> | null;
+
+    return {
+      users: {
+        total_users: profiles.length,
+        active_users: profiles.filter((profile) => profile['is_active'] === true).length,
+        total_sms_balance: profiles.reduce((sum, profile) => sum + Number(profile['credits'] ?? 0), 0)
+      },
+      recharges: {
+        pending_recharges: pendingRecharges,
+        approved_sms_sold: revenueRecharges.reduce((sum, recharge) => sum + Number(recharge['sms_credits'] ?? 0), 0),
+        total_revenue: revenueRecharges.reduce((sum, recharge) => sum + Number(recharge['amount'] ?? 0), 0)
+      },
+      inventory: {
+        available_sms: Number(inventory?.['available_sms'] ?? 0),
+        sold_sms: Number(inventory?.['sold_sms'] ?? 0),
+        total_sms: Number(inventory?.['total_sms'] ?? 0)
+      },
+      messages: {
+        total_messages: messages.length,
+        sent_messages: messages.filter((status) => SENT_OR_ACCEPTED_MESSAGE_STATUSES.has(status)).length,
+        delivered_messages: messages.filter((status) => status === 'delivered').length,
+        failed_messages: messages.filter((status) => status === 'failed').length,
+        pending_messages: messages.filter((status) => status === 'pending').length
+      }
+    };
   }
 
   async getInventoryState(): Promise<InventoryState> {
@@ -348,6 +478,20 @@ export class BackofficeService {
     }
 
     return `${fallback} ${message}`;
+  }
+
+  private isCommercialProfile(
+    profile: Record<string, unknown>,
+    internalProfileIds: Set<string>,
+    adminIds: Set<string>
+  ): boolean {
+    const id = this.toSafeString(profile['id']);
+    const email = this.toSafeString(profile['email']).trim().toLowerCase();
+
+    return Boolean(id) &&
+      !internalProfileIds.has(id) &&
+      !adminIds.has(id) &&
+      email !== INTERNAL_ALERTS_EMAIL;
   }
 
   private async getClientProfile(profileId: string): Promise<BackofficeClientProfile> {

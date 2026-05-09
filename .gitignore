@@ -1,5 +1,6 @@
 # Sistema
 .DS_Store
+Thumbs.db
 
 # Dependencias
 node_modules/
@@ -10,6 +11,8 @@ dist/
 **/dist/
 .angular/
 **/.angular/
+.angular/cache/
+**/.angular/cache/
 .cache/
 coverage/
 
@@ -18,6 +21,8 @@ coverage/
 .env.*
 **/.env
 **/.env.*
+!.env.example
+!**/.env.example
 
 # Logs
 *.log
@@ -26,17 +31,71 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Temporales pesados
-docs/qa_tmp/
-docs/**/node_modules/
+# Editores / IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# Proyectos antiguos solo como referencia local
+# Claude Code temporary worktrees
+.claude/worktrees/
+**/.claude/worktrees/
+.claude/**/worktrees/
+**/.claude/**/worktrees/
+
+# Supabase CLI temp
+supabase/.temp/
+**/supabase/.temp/
+
+# Backups locales (no subir al repo)
+old/
+tmp/
+temp/
+*.tmp
+*.local
+
+# Reportes / fases / docs internos no necesarios para build
+FASE_*.md
+**/FASE_*.md
+ESTRUCTURA_*.md
+**/ESTRUCTURA_*.md
+README_MIGRACION.md
+**/README_MIGRACION.md
+SUPABASE_FINAL_UNIFICADO.md
+**/SUPABASE_FINAL_UNIFICADO.md
+API_PUBLICA_SMS_FORTUNA.md
+**/API_PUBLICA_SMS_FORTUNA.md
+AGENTS.md
+docs/private/
+**/docs/private/
+
+# Postman / colecciones
+*.postman_collection.json
+*.postman_collection*.json
+
+# Proyectos antiguos (referencia local)
 sms/
 backoffice/
 
-# Reportes y evidencias pesadas no versionadas por ahora
+# Reportes / evidencias antiguas
+docs/00-planificacion/
 docs/01-reportes-qa/
 docs/02-evidencias/
 docs/03-presentaciones/
 docs/04-temporales/
-*.postman_collection.json
+docs/qa_tmp/
+docs/refactor/
+docs/ESTADO_ACTUAL.md
+docs/INDICE_PROYECTO.md
+
+# Supabase final / dumps obsoletos
+supabase_final/
+**/supabase_final/
+
+# Vercel local
+vercel.json
+**/vercel.json
+
+# Claude local metadata
+.claude/
+**/.claude/

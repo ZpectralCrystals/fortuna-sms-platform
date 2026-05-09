@@ -1,13 +1,48 @@
 node_modules/
 dist/
 .angular/
+.angular/cache/
+.cache/
+coverage/
+
 .env
 .env.*
 !.env.example
+
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
+
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.claude/worktrees/
+.claude/**/worktrees/
+
+supabase/.temp/
+
+# Reportes / docs internos
+FASE_*.md
+ESTRUCTURA_*.md
+README_MIGRACION.md
+SUPABASE_FINAL_UNIFICADO.md
+API_PUBLICA_SMS_FORTUNA.md
 docs/private/
+docs/refactor/
 
-# Claude Code temporary worktrees
-.claude/worktrees/
+# Postman
+*.postman_collection.json
+*.postman_collection*.json
 
-# Claude Code temporary worktrees
-.claude/worktrees/
+# Vercel local (deploy ahora vía AWS)
+vercel.json
+
+# Supabase dumps obsoletos
+supabase_final/
+
+# Claude local metadata
+.claude/

@@ -16,10 +16,13 @@ interface DashboardStats {
   totalSmsBalance: number;
   inventoryAvailable: number;
   inventorySold: number;
+  revenueSmsSold: number;
   inventoryTotal: number;
   totalMessages: number;
   sentMessages: number;
   deliveredMessages: number;
+  failedMessages: number;
+  pendingMessages: number;
   totalRevenue: number;
 }
 
@@ -49,10 +52,13 @@ export class DashboardPageComponent implements OnInit {
     totalSmsBalance: 0,
     inventoryAvailable: 0,
     inventorySold: 0,
+    revenueSmsSold: 0,
     inventoryTotal: 0,
     totalMessages: 0,
     sentMessages: 0,
     deliveredMessages: 0,
+    failedMessages: 0,
+    pendingMessages: 0,
     totalRevenue: 0
   };
 
@@ -83,7 +89,7 @@ export class DashboardPageComponent implements OnInit {
       {
         title: 'Ingresos',
         value: `S/ ${this.formatCurrency(this.stats.totalRevenue)}`,
-        subtitle: `${this.formatNumber(this.stats.inventorySold)} SMS vendidos`,
+        subtitle: `${this.formatNumber(this.stats.revenueSmsSold)} SMS vendidos`,
         icon: 'trendingUp',
         textColor: 'text-green-600',
         bgColor: 'bg-green-50'
@@ -165,11 +171,14 @@ export class DashboardPageComponent implements OnInit {
         totalSmsBalance: Number(statsData.users?.total_sms_balance ?? 0),
         inventoryAvailable: Number(statsData.inventory?.available_sms ?? 0),
         inventorySold: Number(statsData.inventory?.sold_sms ?? 0),
+        revenueSmsSold: Number(statsData.recharges?.approved_sms_sold ?? 0),
         inventoryTotal: Number(statsData.inventory?.total_sms ?? 0),
         totalMessages: Number(statsData.messages?.total_messages ?? 0),
         sentMessages: Number(statsData.messages?.sent_messages ?? 0),
         deliveredMessages: Number(statsData.messages?.delivered_messages ?? 0),
-        totalRevenue: Number.parseFloat(String(statsData.users?.total_revenue ?? 0))
+        failedMessages: Number(statsData.messages?.failed_messages ?? 0),
+        pendingMessages: Number(statsData.messages?.pending_messages ?? 0),
+        totalRevenue: Number.parseFloat(String(statsData.recharges?.total_revenue ?? 0))
       };
     } catch (error) {
       this.errorMessage = error instanceof Error

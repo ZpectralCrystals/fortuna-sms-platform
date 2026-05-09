@@ -1,12 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import {
   AdminRecharge,
+  CreateManualRechargeRequest,
+  CreateManualRechargeResult,
   CreateRechargeRequest,
+  ManualRechargeClient,
   Recharge,
   RechargeStatus,
   SmsPackage
 } from '../models/recharge.model';
 import { SupabaseService } from './supabase.service';
+
+const INTERNAL_ALERTS_EMAIL = 'alerts@smsfortuna.internal';
 
 @Injectable({ providedIn: 'root' })
 export class RechargesService {
@@ -24,6 +29,54 @@ export class RechargesService {
     }
 
     return ((data as any[] | null) ?? []).map((pkg) => this.mapPackage(pkg));
+  }
+
+  async listManualRechargeClients(): Promise<ManualRechargeClient[]> {
+    const [profilesResult, internalAccountsResult, adminsResult] = await Promise.all([
+      this.supabase.instance
+        .from('profiles')
+        .select('id,email,full_name,razon_social,ruc,is_active,credits')
+        .order('email', { ascending: true }),
+      this.supabase.instance
+        .from('internal_accounts')
+        .select('profile_id'),
+      this.supabase.instance
+        .from('admins')
+        .select('id')
+    ]);
+
+    if (profilesResult.error) {
+      throw new Error(`No se pudieron cargar los clientes: ${profilesResult.error.message}`);
+    }
+
+    if (internalAccountsResult.error) {
+      throw new Error(`No se pudieron excluir las cuentas internas: ${internalAccountsResult.error.message}`);
+    }
+
+    if (adminsResult.error) {
+      throw new Error(`No se pudieron validar administradores: ${adminsResult.error.message}`);
+    }
+
+    const internalProfileIds = new Set(
+      ((internalAccountsResult.data as unknown[]) ?? [])
+        .map((account) => this.toSafeString((account as Record<string, unknown>)['profile_id']))
+        .filter(Boolean)
+    );
+    const adminIds = new Set(
+      ((adminsResult.data as unknown[]) ?? [])
+        .map((admin) => this.toSafeString((admin as Record<string, unknown>)['id']))
+        .filter(Boolean)
+    );
+
+    return ((profilesResult.data as unknown[]) ?? [])
+      .map((profile) => this.mapManualRechargeClient(profile))
+      .filter((profile) =>
+        profile.id &&
+        profile.email.toLowerCase() !== INTERNAL_ALERTS_EMAIL &&
+        !internalProfileIds.has(profile.id) &&
+        !adminIds.has(profile.id)
+      )
+      .sort((a, b) => this.clientSortLabel(a).localeCompare(this.clientSortLabel(b), 'es'));
   }
 
   async listMyRecharges(): Promise<Recharge[]> {
@@ -164,6 +217,29 @@ export class RechargesService {
     }
   }
 
+  async createManualRecharge(request: CreateManualRechargeRequest): Promise<CreateManualRechargeResult> {
+    const { data, error } = await this.supabase.instance.rpc('admin_create_manual_recharge', {
+      p_user_id: request.user_id,
+      p_package_id: request.package_id,
+      p_payment_method: request.payment_method,
+      p_operation_code: request.operation_code.trim(),
+      p_notes: request.notes?.trim() || null
+    });
+
+    if (error) {
+      throw new Error(this.toFriendlyRpcError(error.message));
+    }
+
+    const result = data as Record<string, unknown> | null;
+
+    return {
+      recharge_id: this.toSafeString(result?.['recharge_id']),
+      new_balance: Number(result?.['new_balance'] ?? 0),
+      sms_credits: Number(result?.['sms_credits'] ?? 0),
+      amount: Number(result?.['amount'] ?? 0)
+    };
+  }
+
   private async getCurrentUserId(): Promise<string | null> {
     const { data, error } = await this.supabase.instance.auth.getSession();
 
@@ -210,6 +286,24 @@ export class RechargesService {
     };
   }
 
+  private mapManualRechargeClient(value: unknown): ManualRechargeClient {
+    const profile = value as Record<string, unknown>;
+
+    return {
+      id: this.toSafeString(profile['id']),
+      email: this.toSafeString(profile['email']),
+      full_name: this.toNullableString(profile['full_name']),
+      razon_social: this.toNullableString(profile['razon_social']),
+      ruc: this.toNullableString(profile['ruc']),
+      is_active: profile['is_active'] === true,
+      credits: Number(profile['credits'] ?? 0)
+    };
+  }
+
+  private clientSortLabel(client: ManualRechargeClient): string {
+    return client.full_name || client.razon_social || client.email;
+  }
+
   private toStatus(value: unknown): RechargeStatus {
     return value === 'approved' || value === 'rejected' || value === 'pending'
       ? value
@@ -231,6 +325,46 @@ export class RechargesService {
 
     if (message.includes('RECHARGE_ALREADY_PROCESSED')) {
       return 'Esta recarga ya fue procesada.';
+    }
+
+    if (message.includes('CLIENT_NOT_ALLOWED')) {
+      return 'Este perfil no puede recibir recargas comerciales.';
+    }
+
+    if (message.includes('CLIENT_NOT_FOUND')) {
+      return 'Cliente no encontrado.';
+    }
+
+    if (message.includes('PACKAGE_NOT_FOUND')) {
+      return 'Paquete no encontrado.';
+    }
+
+    if (message.includes('PACKAGE_INACTIVE')) {
+      return 'El paquete seleccionado no está activo.';
+    }
+
+    if (message.includes('INVALID_PACKAGE_VALUES')) {
+      return 'El paquete seleccionado no tiene SMS o precio válido.';
+    }
+
+    if (message.includes('INVALID_PAYMENT_METHOD')) {
+      return 'Selecciona un método de pago válido.';
+    }
+
+    if (message.includes('OPERATION_CODE_REQUIRED')) {
+      return 'El código de operación es requerido.';
+    }
+
+    if (message.includes('OPERATION_CODE_ALREADY_EXISTS')) {
+      return 'El código de operación ya existe.';
+    }
+
+    if (message.includes('INSUFFICIENT_INVENTORY')) {
+      return 'Inventario insuficiente para crear esta recarga.';
+    }
+
+    if (message.includes('INVENTORY_NOT_FOUND')) {
+      return 'No hay inventario SMS configurado.';
     }
 
     if (message.includes('NOT_AUTHORIZED')) {

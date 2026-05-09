@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { Session } from '@supabase/supabase-js';
 import { LoginRequest, RegisterRequest } from '../models/auth.model';
 import { SupabaseService } from './supabase.service';
 
@@ -32,6 +33,15 @@ export class AccountDeactivatedError extends Error {
   }
 }
 
+export interface AuthSessionInfo {
+  userId: string;
+  email: string | null;
+}
+
+const AUTH_DEBUG_PREFIX = '[SMS Fortuna Auth]';
+const SESSION_RETRY_ATTEMPTS = 5;
+const SESSION_RETRY_DELAY_MS = 120;
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly supabase = inject(SupabaseService);
@@ -43,10 +53,18 @@ export class AuthService {
     });
 
     if (error) {
+      this.logAuth('LOGIN_ERROR', {
+        email: request.email,
+        error: error.message
+      });
       throw new Error(this.mapAuthError(error.message));
     }
 
     const userId = data.user?.id;
+    this.logAuth('LOGIN_SUCCESS', {
+      userId: userId ?? null,
+      email: data.user?.email ?? request.email
+    });
 
     if (!userId) {
       return;
@@ -59,11 +77,20 @@ export class AuthService {
       .maybeSingle();
 
     if (profileError) {
+      this.logAuth('LOGIN_PROFILE_ERROR', {
+        userId,
+        email: data.user?.email ?? request.email,
+        error: profileError.message
+      });
       await this.supabase.instance.auth.signOut();
       throw new Error('No se pudo validar el estado de tu cuenta.');
     }
 
     if (profile && profile.is_active === false) {
+      this.logAuth('LOGIN_PROFILE_INACTIVE', {
+        userId,
+        email: data.user?.email ?? request.email
+      });
       await this.supabase.instance.auth.signOut();
       throw new AccountDeactivatedError();
     }
@@ -122,17 +149,14 @@ export class AuthService {
   }
 
   async isAuthenticated(): Promise<boolean> {
-    const { data, error } = await this.supabase.instance.auth.getSession();
+    const session = await this.getSessionWithRetry('isAuthenticated');
 
-    if (error) {
-      return false;
-    }
-
-    return !!data.session;
+    return !!session;
   }
 
   async getCurrentProfile(): Promise<AuthProfile | null> {
-    const userId = await this.getSessionUserId();
+    const session = await this.getSessionWithRetry('getCurrentProfile');
+    const userId = session?.user.id ?? null;
 
     if (!userId) {
       return null;
@@ -168,10 +192,13 @@ export class AuthService {
     return !!(await this.getCurrentProfile());
   }
 
-  async getCurrentAdmin(): Promise<AuthAdmin | null> {
-    const userId = await this.getSessionUserId();
+  async getCurrentAdmin(context = 'getCurrentAdmin'): Promise<AuthAdmin | null> {
+    const session = await this.getSessionWithRetry(context);
+    const userId = session?.user.id ?? null;
+    const email = session?.user.email ?? null;
 
     if (!userId) {
+      this.logAuth('ADMIN_SESSION_MISSING', { context });
       return null;
     }
 
@@ -183,8 +210,24 @@ export class AuthService {
       .maybeSingle();
 
     if (error || !data) {
+      this.logAuth('ADMIN_LOOKUP_RESULT', {
+        context,
+        userId,
+        email,
+        isAdmin: false,
+        error: error?.message ?? null
+      });
       return null;
     }
+
+    this.logAuth('ADMIN_LOOKUP_RESULT', {
+      context,
+      userId,
+      email,
+      adminEmail: String(data.email ?? ''),
+      isAdmin: true,
+      error: null
+    });
 
     return {
       id: String(data.id ?? ''),
@@ -196,18 +239,67 @@ export class AuthService {
     };
   }
 
-  async isAdmin(): Promise<boolean> {
-    return !!(await this.getCurrentAdmin());
+  async isAdmin(context = 'isAdmin'): Promise<boolean> {
+    const admin = await this.getCurrentAdmin(context);
+    const result = !!admin;
+
+    this.logAuth('IS_ADMIN_RESULT', {
+      context,
+      isAdmin: result,
+      adminEmail: admin?.email ?? null
+    });
+
+    return result;
   }
 
-  private async getSessionUserId(): Promise<string | null> {
-    const { data, error } = await this.supabase.instance.auth.getSession();
+  async getCurrentSessionInfo(context = 'getCurrentSessionInfo'): Promise<AuthSessionInfo | null> {
+    const session = await this.getSessionWithRetry(context);
 
-    if (error || !data.session?.user) {
+    if (!session?.user) {
       return null;
     }
 
-    return data.session.user.id;
+    return {
+      userId: session.user.id,
+      email: session.user.email ?? null
+    };
+  }
+
+  private async getSessionWithRetry(context: string): Promise<Session | null> {
+    for (let attempt = 1; attempt <= SESSION_RETRY_ATTEMPTS; attempt += 1) {
+      const { data, error } = await this.supabase.instance.auth.getSession();
+
+      this.logAuth('SESSION_CHECK', {
+        context,
+        attempt,
+        userId: data.session?.user?.id ?? null,
+        email: data.session?.user?.email ?? null,
+        hasSession: !!data.session,
+        error: error?.message ?? null
+      });
+
+      if (error) {
+        return null;
+      }
+
+      if (data.session?.user) {
+        return data.session;
+      }
+
+      if (attempt < SESSION_RETRY_ATTEMPTS) {
+        await this.delay(SESSION_RETRY_DELAY_MS);
+      }
+    }
+
+    return null;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  private logAuth(stage: string, payload: Record<string, unknown>): void {
+    console.info(AUTH_DEBUG_PREFIX, stage, payload);
   }
 
   private mapAuthError(message: string): string {

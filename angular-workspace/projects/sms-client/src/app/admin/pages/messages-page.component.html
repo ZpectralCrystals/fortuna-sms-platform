@@ -189,9 +189,6 @@
             <td>
               <div class="provider-stack">
                 <span class="provider-cell">{{ provider(item) }}</span>
-                <span class="mode-badge" [ngClass]="{ 'mode-badge--test': isTestMode(item) }">
-                  {{ modeLabel(item) }}
-                </span>
               </div>
             </td>
             <td class="error-cell">
@@ -236,7 +233,6 @@
         <div class="detail-card">
           <span>Estado</span>
           <strong>{{ statusLabel(detail.status) }}</strong>
-          <small>{{ modeLabel(detail) }}</small>
         </div>
         <div class="detail-card">
           <span>Consumo</span>

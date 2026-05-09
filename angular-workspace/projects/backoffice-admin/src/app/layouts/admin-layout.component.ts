@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
-import { AuthService } from '../../../../shared/src/lib/services/auth.service';
+import { AuthService } from '@sms-fortuna/shared';
 
 interface NavigationItem {
   name: string;

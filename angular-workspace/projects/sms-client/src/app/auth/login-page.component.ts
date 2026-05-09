@@ -3,7 +3,7 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
-import { AccountDeactivatedError, AuthService } from '../../../../shared/src/lib/services/auth.service';
+import { AccountDeactivatedError, AuthService } from '@sms-fortuna/shared';
 
 const SUPPORT_WHATSAPP_URL = `https://wa.me/51982165728?text=${encodeURIComponent(
   'Hola, necesito soporte técnico con mi cuenta SMS Fortuna.'
@@ -44,8 +44,18 @@ export class LoginPageComponent {
         password: this.password
       });
 
-      const isAdmin = await this.authService.isAdmin();
-      await this.router.navigate([isAdmin ? '/admin' : '/dashboard']);
+      const session = await this.authService.getCurrentSessionInfo('login-post-signin');
+      const isAdmin = await this.authService.isAdmin('login-post-signin');
+      const target = isAdmin ? '/admin/dashboard' : '/dashboard';
+
+      console.info('[SMS Fortuna Auth]', 'LOGIN_ROUTE', {
+        userId: session?.userId ?? null,
+        email: session?.email ?? this.email.trim(),
+        isAdmin,
+        target
+      });
+
+      await this.router.navigate([target]);
     } catch (error) {
       if (error instanceof AccountDeactivatedError) {
         this.deactivatedAccount = true;

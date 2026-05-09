@@ -161,6 +161,136 @@
     <p>No hay recargas para mostrar</p>
   </div>
 
+  <div *ngIf="showCreateModal" class="modal-backdrop">
+    <div class="modal-card wide-modal">
+      <div class="modal-header">
+        <h3>Nueva Recarga</h3>
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Cerrar"
+          (click)="closeCreateModal()"
+        >
+          <span>&times;</span>
+        </button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="handleCreateRecharge()">
+        <div>
+          <label>Cliente *</label>
+          <select
+            required
+            name="manualClient"
+            [(ngModel)]="newRecharge.user_id"
+          >
+            <option value="">Selecciona un cliente</option>
+            <option *ngFor="let client of clients" [value]="client.id">
+              {{ clientOptionLabel(client) }} - {{ client.email }} - {{ formatNumber(client.credits) }} SMS
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label>Paquete *</label>
+          <select
+            required
+            name="manualPackage"
+            [(ngModel)]="newRecharge.package_id"
+            (ngModelChange)="onPackageChange($event)"
+          >
+            <option value="">Selecciona un paquete</option>
+            <option *ngFor="let pkg of packages" [value]="pkg.id">
+              {{ pkg.name }} - {{ formatNumber(pkg.sms_credits) }} SMS - S/ {{ formatCurrency(pkg.total_price) }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-grid">
+          <div>
+            <label>Cantidad SMS *</label>
+            <input
+              type="text"
+              name="manualSmsAmountDisplay"
+              [value]="manualRechargeSmsAmount !== null ? formatNumber(manualRechargeSmsAmount) + ' SMS' : 'Selecciona un paquete'"
+              readonly
+              disabled
+              class="locked-input"
+            />
+          </div>
+
+          <div>
+            <label>Monto S/ *</label>
+            <input
+              type="text"
+              name="manualAmountDisplay"
+              [value]="manualRechargeAmount !== null ? 'S/ ' + formatCurrency(manualRechargeAmount) : 'Selecciona un paquete'"
+              readonly
+              disabled
+              class="locked-input"
+            />
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div>
+            <label>Método de pago *</label>
+            <select
+              required
+              name="manualPaymentMethod"
+              [(ngModel)]="newRecharge.payment_method"
+            >
+              <option *ngFor="let method of paymentMethods" [value]="method.value">
+                {{ method.label }}
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label>Código operación *</label>
+            <input
+              type="text"
+              required
+              name="manualOperationCode"
+              [(ngModel)]="newRecharge.operation_code"
+              placeholder="Ej: OP-123456789"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label>Nota</label>
+          <textarea
+            name="manualNotes"
+            rows="3"
+            [(ngModel)]="newRecharge.notes"
+            placeholder="Opcional"
+          ></textarea>
+        </div>
+
+        <p *ngIf="createError" class="modal-error">
+          {{ createError }}
+        </p>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="closeCreateModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="create-button"
+            [disabled]="!canCreateRecharge || clients.length === 0"
+          >
+            {{ submitting ? 'Creando...' : 'Crear Recarga' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div *ngIf="showApprovalModal && selectedRecharge" class="modal-backdrop">
     <div class="modal-card">
       <div class="modal-header">

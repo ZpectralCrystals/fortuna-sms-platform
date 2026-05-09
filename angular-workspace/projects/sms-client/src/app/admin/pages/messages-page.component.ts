@@ -129,27 +129,8 @@ export class MessagesPageComponent implements OnInit {
     return message.profile?.razon_social || message.profile?.ruc || null;
   }
 
-  provider(message: AdminSmsMessage): string {
-    return message.provider_response?.provider
-      || message.provider_response?.provider_name
-      || message.attempt?.provider
-      || 'No registrado';
-  }
-
-  isTestMode(message: AdminSmsMessage): boolean {
-    return message.provider_response?.test_mode === true;
-  }
-
-  modeLabel(message: AdminSmsMessage): string {
-    if (message.provider_response?.test_mode === true) {
-      return 'Test';
-    }
-
-    if (message.provider_response?.test_mode === false) {
-      return 'Real';
-    }
-
-    return 'No registrado';
+  provider(_message: AdminSmsMessage): string {
+    return 'Fortuna SMS';
   }
 
   errorLabel(message: AdminSmsMessage): string {
@@ -212,9 +193,15 @@ export class MessagesPageComponent implements OnInit {
 
     for (const [key, entryValue] of Object.entries(value)) {
       const normalizedKey = key.toLowerCase().replace(/[-\s]/g, '_');
-      result[key] = sensitiveKeys.some((sensitiveKey) => normalizedKey.includes(sensitiveKey))
-        ? '[oculto]'
-        : this.sanitizeSensitiveData(entryValue);
+      if (sensitiveKeys.some((sensitiveKey) => normalizedKey.includes(sensitiveKey))) {
+        result[key] = '[oculto]';
+      } else if (normalizedKey === 'provider' || normalizedKey === 'provider_name') {
+        result[key] = 'Fortuna SMS';
+      } else if (normalizedKey === 'test_mode') {
+        result[key] = '[oculto]';
+      } else {
+        result[key] = this.sanitizeSensitiveData(entryValue);
+      }
     }
 
     return result;
