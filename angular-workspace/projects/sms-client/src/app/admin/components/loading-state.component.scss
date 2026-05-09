@@ -1,0 +1,32 @@
+:host {
+  display: block;
+}
+
+.loading-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 16rem;
+  justify-content: center;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  border-bottom: 2px solid #2563eb;
+  border-radius: 9999px;
+  height: 3rem;
+  width: 3rem;
+}
+
+p {
+  color: #475569;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  margin: 0.75rem 0 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

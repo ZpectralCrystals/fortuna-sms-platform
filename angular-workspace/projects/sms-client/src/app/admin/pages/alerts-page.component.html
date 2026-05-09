@@ -1,0 +1,381 @@
+<bo-loading-state *ngIf="loading"></bo-loading-state>
+
+<div *ngIf="!loading && !config" class="config-error">
+  <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 8v4" />
+    <path d="M12 16h.01" />
+  </svg>
+  <p>{{ errorMessage || 'No se pudo cargar la configuración' }}</p>
+</div>
+
+<div *ngIf="!loading && config" class="alerts-page">
+  <div class="section-heading">Alertas SMS</div>
+
+  <div class="page-header">
+    <div>
+      <h1>Alertas de Saldo Bajo</h1>
+      <p>Sistema automático de notificaciones por SMS</p>
+    </div>
+    <button type="button" class="send-button" [disabled]="!config.is_active || sending" (click)="sendAlerts()">
+      <ng-container *ngIf="sending; else sendReady">
+        <span class="button-spinner"></span>
+        Enviando...
+      </ng-container>
+      <ng-template #sendReady>
+        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="m22 2-7 20-4-9-9-4Z" />
+          <path d="M22 2 11 13" />
+        </svg>
+        Enviar Alertas Ahora
+      </ng-template>
+    </button>
+  </div>
+
+  <div *ngIf="successMessage" class="success-box">
+    <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <path d="m9 11 3 3L22 4" />
+    </svg>
+    <p>{{ successMessage }}</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="success-box error-box">
+    <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </svg>
+    <p>{{ errorMessage }}</p>
+  </div>
+
+  <section class="internal-account-card">
+    <div class="internal-account-header">
+      <div class="internal-account-title">
+        <span class="internal-account-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+        </span>
+        <div>
+          <h2>Cuenta interna de alertas</h2>
+          <p>Esta cuenta paga el costo de los SMS de alerta. El cliente alertado no pierde créditos.</p>
+        </div>
+      </div>
+      <button
+        *ngIf="internalAccount"
+        type="button"
+        class="primary-action-button"
+        (click)="openAllocateInternalSmsModal()"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 5v14" />
+          <path d="M5 12h14" />
+        </svg>
+        Asignar SMS
+      </button>
+    </div>
+
+    <p *ngIf="internalAccountMessage" class="internal-message internal-message--ok">{{ internalAccountMessage }}</p>
+    <p *ngIf="internalAccountError" class="internal-message internal-message--error">{{ internalAccountError }}</p>
+
+    <div *ngIf="internalAccountLoading" class="internal-loading">
+      <span class="button-spinner internal-spinner"></span>
+      Cargando cuenta interna...
+    </div>
+
+    <div *ngIf="!internalAccountLoading && internalAccount; else noInternalAccount" class="internal-account-grid">
+      <div class="internal-account-item">
+        <span class="internal-account-label">Nombre</span>
+        <strong class="internal-account-value">{{ internalAccountName() }}</strong>
+      </div>
+
+      <div class="internal-account-item">
+        <span class="internal-account-label">Email</span>
+        <strong class="internal-account-value">{{ internalAccount.email || '-' }}</strong>
+      </div>
+
+      <div class="internal-account-item internal-account-item--balance">
+        <span class="internal-account-label">Saldo disponible</span>
+        <strong class="internal-account-value internal-account-value--balance">
+          {{ formatNumber(internalAccount.credits) }} SMS
+        </strong>
+      </div>
+
+      <div class="internal-account-item">
+        <span class="internal-account-label">Estado</span>
+        <div class="internal-account-status-row">
+          <span class="internal-status" [class.inactive]="!internalAccount.is_active">
+            {{ internalAccount.is_active ? 'Activa' : 'Inactiva' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noInternalAccount>
+      <div *ngIf="!internalAccountLoading" class="internal-account-empty">
+        <div class="internal-empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+          </svg>
+        </div>
+        <div>
+          <h3>No hay cuenta interna configurada</h3>
+          <p>Configura una cuenta interna para cubrir los SMS de alerta sin descontar créditos al cliente.</p>
+        </div>
+        <button
+          type="button"
+          class="primary-action-button"
+          [disabled]="ensuringInternalAccount"
+          (click)="ensureInternalAccount()"
+        >
+          {{ ensuringInternalAccount ? 'Configurando...' : 'Crear/Configurar cuenta interna' }}
+        </button>
+      </div>
+    </ng-template>
+  </section>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Total Alertas</p>
+        <svg class="stat-icon blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+          <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ stats.total_alerts }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Hoy</p>
+        <svg class="stat-icon green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ stats.alerts_today }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Esta Semana</p>
+        <svg class="stat-icon purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M3 3v18h18" />
+          <path d="M18 17V9" />
+          <path d="M13 17V5" />
+          <path d="M8 17v-3" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ stats.alerts_this_week }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <p>Usuarios Únicos</p>
+        <svg class="stat-icon orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      </div>
+      <p class="stat-value">{{ stats.unique_users_alerted }}</p>
+    </div>
+  </div>
+
+  <div class="config-card">
+    <div class="card-title">
+      <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.916 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.916 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+      <h2>Configuración del Sistema</h2>
+    </div>
+
+    <div class="config-content">
+      <div class="system-state">
+        <div class="state-left">
+          <svg *ngIf="config.is_active" class="state-icon enabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+            <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+          </svg>
+          <svg *ngIf="!config.is_active" class="state-icon disabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+            <path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .802-3" />
+            <path d="M2 2l20 20" />
+            <path d="M8.668 3.01A6 6 0 0 1 18 8c0 1.916.256 3.251.654 4.272" />
+          </svg>
+          <div>
+            <p class="state-title">Estado del Sistema</p>
+            <p class="state-text">
+              {{ config.is_active ? 'Las alertas se enviarán automáticamente' : 'Sistema desactivado, no se enviarán alertas' }}
+            </p>
+          </div>
+        </div>
+
+        <button type="button" class="switch" [class.active]="config.is_active" (click)="handleConfigChange('is_active', !config.is_active)" aria-label="Cambiar estado del sistema">
+          <span></span>
+        </button>
+      </div>
+
+      <div class="fields-grid">
+        <div class="field">
+          <label for="threshold_amount">Umbral en Soles (S/)</label>
+          <input id="threshold_amount" type="number" step="0.01" name="threshold_amount" [ngModel]="config.threshold_amount" (ngModelChange)="handleThresholdAmountChange($event)" />
+          <p>Alertar cuando el saldo sea menor a este monto</p>
+        </div>
+
+        <div class="field">
+          <label for="threshold_sms_count">Umbral en SMS</label>
+          <input id="threshold_sms_count" type="number" name="threshold_sms_count" [ngModel]="config.threshold_credits" (ngModelChange)="handleThresholdCreditsChange($event)" />
+          <p>Cantidad de SMS equivalente al umbral</p>
+        </div>
+
+        <div class="field">
+          <label for="cooldown_hours">Espera entre alertas (horas)</label>
+          <input id="cooldown_hours" type="number" name="cooldown_hours" [ngModel]="config.cooldown_hours" (ngModelChange)="handleCooldownChange($event)" />
+          <p>Tiempo mínimo entre alertas al mismo cliente</p>
+        </div>
+
+        <div class="field">
+          <label>Métodos de Envío</label>
+          <div class="checks">
+            <label class="check-row">
+              <input type="checkbox" name="send_sms" [(ngModel)]="config.send_sms" />
+              <span>Enviar por SMS</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="message_template">Mensaje de Alerta</label>
+        <textarea id="message_template" rows="4" name="message_template" [(ngModel)]="config.message_template"></textarea>
+        <p>Variables disponibles: {{ '{name}' }}, {{ '{balance}' }}, {{ '{amount}' }}</p>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="cancel-button" (click)="resetConfig()">Cancelar</button>
+        <button type="button" class="save-button" [disabled]="saving" (click)="saveConfig()">
+          {{ saving ? 'Guardando...' : 'Guardar Configuración' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="history-card">
+    <div class="history-header">
+      <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+        <path d="M12 7v5l4 2" />
+      </svg>
+      <h2>Historial de Alertas</h2>
+    </div>
+
+    <div *ngIf="recentAlerts.length === 0" class="empty-history">
+      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+        <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+      </svg>
+      <p>No hay alertas registradas</p>
+    </div>
+
+    <div *ngIf="recentAlerts.length > 0" class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Contacto</th>
+            <th class="right">Balance</th>
+            <th class="right">Equivalente</th>
+            <th class="center">Vía</th>
+            <th class="center">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let alert of recentAlerts">
+            <td>{{ formatDate(alert.sent_at || alert.created_at) }}</td>
+            <td>
+              <div class="client-name">{{ alert.user_name }}</div>
+              <div class="client-email">{{ alert.user_email }}</div>
+            </td>
+            <td>{{ alert.user_phone || '-' }}</td>
+            <td class="right strong">{{ formatNumber(alert.balance_at_alert) }} SMS</td>
+            <td class="right amount">{{ formatCurrency(alert.amount_equivalent) }}</td>
+            <td class="center">
+              <span class="via-badge">{{ alert.sent_via }}</span>
+            </td>
+            <td class="center">
+              <span class="status-badge" [ngClass]="alert.delivery_status">
+                {{ statusLabel(alert.delivery_status) }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showAllocateModal" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2>Asignar SMS internos</h2>
+        <p>Suma SMS al saldo de <strong>{{ internalAccountName() }}</strong>. No genera factura ni ingreso comercial.</p>
+      </div>
+      <button type="button" class="modal-close" (click)="closeAllocateInternalSmsModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="field">
+      <label for="allocate_amount">Cantidad de SMS</label>
+      <input
+        id="allocate_amount"
+        type="number"
+        min="1"
+        step="1"
+        name="allocate_amount"
+        required
+        [(ngModel)]="allocateAmount"
+      />
+    </div>
+
+    <div class="field">
+      <label for="allocate_reason">Motivo</label>
+      <input
+        id="allocate_reason"
+        type="text"
+        name="allocate_reason"
+        maxlength="200"
+        placeholder="Bolsa para alertas de saldo bajo"
+        [(ngModel)]="allocateReason"
+      />
+    </div>
+
+    <p *ngIf="allocationError" class="error-message">{{ allocationError }}</p>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-button" [disabled]="allocating" (click)="closeAllocateInternalSmsModal()">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="save-button"
+        [disabled]="!canConfirmAllocation()"
+        (click)="confirmAllocateInternalSms()"
+      >
+        {{ allocating ? 'Asignando...' : 'Confirmar asignación' }}
+      </button>
+    </div>
+  </div>
+</div>

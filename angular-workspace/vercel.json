@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm run build:sms",
+  "outputDirectory": "dist/sms-client",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

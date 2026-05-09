@@ -44,7 +44,8 @@ export class LoginPageComponent {
         password: this.password
       });
 
-      await this.router.navigate(['/dashboard']);
+      const isAdmin = await this.authService.isAdmin();
+      await this.router.navigate([isAdmin ? '/admin' : '/dashboard']);
     } catch (error) {
       if (error instanceof AccountDeactivatedError) {
         this.deactivatedAccount = true;

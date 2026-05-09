@@ -18,6 +18,17 @@ import { SendSmsPageComponent } from './dashboard/pages/send-sms-page.component'
 import { TemplatesPageComponent } from './dashboard/pages/templates-page.component';
 import { ResetPasswordPageComponent } from './auth/reset-password-page.component';
 import { TermsPageComponent } from './public/terms-page.component';
+import { AdminGuard } from './admin/guards/admin.guard';
+import { AdminLayoutComponent } from './admin/layout/admin-layout.component';
+import { AccountsPageComponent as AdminAccountsPageComponent } from './admin/pages/accounts-page.component';
+import { AlertsPageComponent as AdminAlertsPageComponent } from './admin/pages/alerts-page.component';
+import { ApiKeysPageComponent as AdminApiKeysPageComponent } from './admin/pages/api-keys-page.component';
+import { DashboardPageComponent as AdminDashboardPageComponent } from './admin/pages/dashboard-page.component';
+import { InvoicesPageComponent as AdminInvoicesPageComponent } from './admin/pages/invoices-page.component';
+import { MarketingPageComponent as AdminMarketingPageComponent } from './admin/pages/marketing-page.component';
+import { MessagesPageComponent as AdminMessagesPageComponent } from './admin/pages/messages-page.component';
+import { RechargesPageComponent as AdminRechargesPageComponent } from './admin/pages/recharges-page.component';
+import { UsersPageComponent as AdminUsersPageComponent } from './admin/pages/users-page.component';
 
 export const smsClientRoutes: Routes = [
   { path: '', component: HomePageComponent },
@@ -43,6 +54,27 @@ export const smsClientRoutes: Routes = [
       { path: 'templates', component: TemplatesPageComponent },
       { path: 'api-keys', component: ApiKeysPageComponent },
       { path: 'recharges', component: RechargesPageComponent }
+    ]
+  },
+  {
+    path: 'admin',
+    component: AdminLayoutComponent,
+    canActivate: [AdminGuard],
+    canActivateChild: [AdminGuard],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', component: AdminDashboardPageComponent },
+      { path: 'users', component: AdminUsersPageComponent },
+      { path: 'recharges', component: AdminRechargesPageComponent },
+      { path: 'inventory', redirectTo: 'recharges', pathMatch: 'full' },
+      { path: 'accounts', component: AdminAccountsPageComponent },
+      { path: 'messages', component: AdminMessagesPageComponent },
+      { path: 'api-keys', component: AdminApiKeysPageComponent },
+      { path: 'alerts', component: AdminAlertsPageComponent },
+      { path: 'invoices', component: AdminInvoicesPageComponent },
+      { path: 'marketing', component: AdminMarketingPageComponent },
+      { path: 'sync', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'integration-kit', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
   { path: '**', redirectTo: '' }

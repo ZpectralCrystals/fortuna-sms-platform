@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "ng": "ng",
+    "start": "ng serve sms-client",
     "start:sms": "ng serve sms-client",
     "start:backoffice": "ng serve backoffice-admin",
-    "build": "ng build sms-client && ng build backoffice-admin",
+    "build": "ng build sms-client",
     "build:sms": "ng build sms-client",
-    "build:backoffice": "ng build backoffice-admin",
+    "build:legacy-backoffice": "ng build backoffice-admin",
+    "build:all": "ng build sms-client && ng build backoffice-admin",
     "test": "ng test"
   },
   "dependencies": {
