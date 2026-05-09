@@ -7,11 +7,10 @@ import { AdminRecharge, RechargeStatus, RechargesService, SmsPackage } from '@sm
 type RechargeFilter = 'all' | RechargeStatus;
 
 @Component({
-  selector: 'bo-recharges-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './recharges-page.component.html',
-  styleUrl: './recharges-page.component.scss'
+    selector: 'bo-recharges-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './recharges-page.component.html',
+    styleUrl: './recharges-page.component.scss'
 })
 export class RechargesPageComponent implements OnInit {
   private readonly rechargesService = inject(RechargesService);

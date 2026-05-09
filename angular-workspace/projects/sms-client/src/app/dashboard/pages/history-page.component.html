@@ -1,212 +1,218 @@
-<div *ngIf="loading" class="loading-state">
-  <div class="spinner" aria-label="Cargando"></div>
-</div>
-
-<div *ngIf="!loading" class="history-page">
-  <div *ngIf="errorMessage" class="error-box">
-    {{ errorMessage }}
+@if (loading) {
+  <div class="loading-state">
+    <div class="spinner" aria-label="Cargando"></div>
   </div>
+}
 
-  <header class="history-header">
-    <div>
-      <h1>Historial de SMS</h1>
-      <p>Revisa estado, costo y trazabilidad básica de tus mensajes</p>
-    </div>
-    <button type="button" class="export-button" (click)="exportToCSV()">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <path d="M7 10l5 5 5-5"></path>
-        <path d="M12 15V3"></path>
-      </svg>
-      Exportar CSV
-    </button>
-  </header>
-
-  <section class="filter-card" aria-label="Filtros">
-    <div class="filters-grid">
-      <label class="filter-field">
+@if (!loading) {
+  <div class="history-page">
+    @if (errorMessage) {
+      <div class="error-box">
+        {{ errorMessage }}
+      </div>
+    }
+    <header class="history-header">
+      <div>
+        <h1>Historial de SMS</h1>
+        <p>Revisa estado, costo y trazabilidad básica de tus mensajes</p>
+      </div>
+      <button type="button" class="export-button" (click)="exportToCSV()">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.3-4.3"></path>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <path d="M7 10l5 5 5-5"></path>
+          <path d="M12 15V3"></path>
         </svg>
-        <input
-          type="text"
-          name="searchTerm"
-          placeholder="Buscar por número o mensaje..."
-          [(ngModel)]="searchTerm"
-        />
-      </label>
-
-      <label class="filter-field">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z"></path>
-        </svg>
-        <select name="statusFilter" [(ngModel)]="statusFilter">
-          <option value="all">Todos los estados</option>
-          <option value="delivered">Aceptados</option>
-          <option value="sent">Aceptados</option>
-          <option value="pending">Pendientes</option>
-          <option value="failed">Fallidos</option>
-        </select>
-      </label>
-
-      <label class="filter-field filter-field--plain">
-        <span>Desde</span>
-        <input type="date" name="dateFrom" [(ngModel)]="dateFrom" />
-      </label>
-
-      <label class="filter-field filter-field--plain">
-        <span>Hasta</span>
-        <input type="date" name="dateTo" [(ngModel)]="dateTo" />
-      </label>
-    </div>
-  </section>
-
-  <section class="messages-card">
-    <div class="messages-card__summary">
-      <p>Mostrando {{ filteredMessages.length }} de {{ messages.length }} mensajes</p>
-    </div>
-
-    <div class="message-list">
-      <div *ngIf="filteredMessages.length === 0" class="empty-state">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m22 2-7 20-4-9-9-4Z"></path>
-          <path d="M22 2 11 13"></path>
-        </svg>
-        <p>No se encontraron mensajes</p>
-      </div>
-
-      <article *ngFor="let message of filteredMessages" class="message-row">
-        <div class="message-row__main">
-          <div class="status-icon" [ngClass]="statusIconClass(message.status)">
-            <ng-container [ngSwitch]="message.status">
-              <svg *ngSwitchCase="'delivered'" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9 12l2 2 4-4"></path>
-                <circle cx="12" cy="12" r="10"></circle>
-              </svg>
-              <svg *ngSwitchCase="'failed'" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="m15 9-6 6"></path>
-                <path d="m9 9 6 6"></path>
-              </svg>
-              <svg *ngSwitchCase="'sent'" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m22 2-7 20-4-9-9-4Z"></path>
-                <path d="M22 2 11 13"></path>
-              </svg>
-              <svg *ngSwitchDefault viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M12 6v6l4 2"></path>
-              </svg>
-            </ng-container>
-          </div>
-
-          <div class="message-row__content">
-            <div class="message-row__headline">
-              <span>{{ message.recipient }}</span>
-              <strong [ngClass]="statusBadgeClass(message.status)">
-                {{ statusText(message.status) }}
-              </strong>
-            </div>
-
-            <p class="message-text">{{ message.message }}</p>
-
-            <div class="message-meta">
-              <span>{{ formatDate(message.created_at) }}</span>
-              <span *ngIf="message.sent_at">
-                Enviado: {{ formatTime(message.sent_at) }}
-              </span>
-              <span>
-                {{ message.segments }} SMS
-              </span>
-              <span>S/ {{ formatCurrency(message.cost) }}</span>
-              <span>Proveedor: {{ provider(message) }}</span>
-            </div>
-
-            <p *ngIf="message.error_message" class="message-error">
-              Error: {{ message.error_message }}
-            </p>
-          </div>
-        </div>
-
-        <div class="message-actions">
-          <p>{{ modeLabel(message) }}</p>
-          <button type="button" (click)="openDetail(message)">Ver detalle</button>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <div *ngIf="selectedMessage as detail" class="modal-backdrop" (click)="closeDetail()">
-    <section class="detail-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Detalle de SMS">
-      <div class="detail-header">
-        <div>
-          <h2>Detalle de SMS</h2>
-          <p>{{ detail.id }}</p>
-        </div>
-        <button type="button" class="close-button" (click)="closeDetail()" aria-label="Cerrar">X</button>
-      </div>
-
-      <div class="detail-grid">
-        <div class="detail-card">
-          <span>Destinatario</span>
-          <strong>{{ detail.recipient }}</strong>
-        </div>
-        <div class="detail-card">
-          <span>Estado</span>
-          <strong>{{ statusText(detail.status) }}</strong>
-          <small>{{ modeLabel(detail) }}</small>
-        </div>
-        <div class="detail-card">
-          <span>Consumo</span>
-          <strong>{{ detail.segments }} SMS</strong>
-          <small>S/ {{ formatCurrency(detail.cost) }}</small>
-        </div>
-        <div class="detail-card">
-          <span>Proveedor</span>
-          <strong>{{ provider(detail) }}</strong>
-          <small>{{ detail.provider_message_id || 'Sin provider id' }}</small>
-        </div>
-      </div>
-
-      <div class="detail-section">
-        <h3>Mensaje completo</h3>
-        <p class="full-message">{{ detail.message }}</p>
-      </div>
-
-      <div class="detail-section">
-        <h3>Trazabilidad</h3>
-        <dl class="definition-grid">
-          <div>
-            <dt>Creado</dt>
-            <dd>{{ formatDate(detail.created_at) }}</dd>
-          </div>
-          <div>
-            <dt>Enviado</dt>
-            <dd>{{ formatDate(detail.sent_at) }}</dd>
-          </div>
-          <div>
-            <dt>Aceptado</dt>
-            <dd>{{ formatDate(detail.delivered_at) }}</dd>
-          </div>
-          <div>
-            <dt>Error</dt>
-            <dd>{{ detail.error_message || detail.attempt?.error_message || 'Sin error' }}</dd>
-          </div>
-          <div>
-            <dt>Idempotency key</dt>
-            <dd>{{ detail.attempt?.idempotency_key || 'Sin intento asociado' }}</dd>
-          </div>
-          <div>
-            <dt>Destinatario proveedor</dt>
-            <dd>{{ detail.attempt?.provider_recipient || 'No registrado' }}</dd>
-          </div>
-        </dl>
-      </div>
-
-      <div class="detail-section">
-        <h3>Provider response</h3>
-        <pre>{{ providerResponseJson(detail) }}</pre>
+        Exportar CSV
+      </button>
+    </header>
+    <section class="filter-card" aria-label="Filtros">
+      <div class="filters-grid">
+        <label class="filter-field">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input
+            type="text"
+            name="searchTerm"
+            placeholder="Buscar por número o mensaje..."
+            [(ngModel)]="searchTerm"
+            />
+        </label>
+        <label class="filter-field">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z"></path>
+          </svg>
+          <select name="statusFilter" [(ngModel)]="statusFilter">
+            <option value="all">Todos los estados</option>
+            <option value="delivered">Aceptados</option>
+            <option value="sent">Aceptados</option>
+            <option value="pending">Pendientes</option>
+            <option value="failed">Fallidos</option>
+          </select>
+        </label>
+        <label class="filter-field filter-field--plain">
+          <span>Desde</span>
+          <input type="date" name="dateFrom" [(ngModel)]="dateFrom" />
+        </label>
+        <label class="filter-field filter-field--plain">
+          <span>Hasta</span>
+          <input type="date" name="dateTo" [(ngModel)]="dateTo" />
+        </label>
       </div>
     </section>
+    <section class="messages-card">
+      <div class="messages-card__summary">
+        <p>Mostrando {{ filteredMessages.length }} de {{ messages.length }} mensajes</p>
+      </div>
+      <div class="message-list">
+        @if (filteredMessages.length === 0) {
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m22 2-7 20-4-9-9-4Z"></path>
+              <path d="M22 2 11 13"></path>
+            </svg>
+            <p>No se encontraron mensajes</p>
+          </div>
+        }
+        @for (message of filteredMessages; track message) {
+          <article class="message-row">
+            <div class="message-row__main">
+              <div class="status-icon" [ngClass]="statusIconClass(message.status)">
+                @switch (message.status) {
+                  @case ('delivered') {
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9 12l2 2 4-4"></path>
+                      <circle cx="12" cy="12" r="10"></circle>
+                    </svg>
+                  }
+                  @case ('failed') {
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="m15 9-6 6"></path>
+                      <path d="m9 9 6 6"></path>
+                    </svg>
+                  }
+                  @case ('sent') {
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m22 2-7 20-4-9-9-4Z"></path>
+                      <path d="M22 2 11 13"></path>
+                    </svg>
+                  }
+                  @default {
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M12 6v6l4 2"></path>
+                    </svg>
+                  }
+                }
+              </div>
+              <div class="message-row__content">
+                <div class="message-row__headline">
+                  <span>{{ message.recipient }}</span>
+                  <strong [ngClass]="statusBadgeClass(message.status)">
+                    {{ statusText(message.status) }}
+                  </strong>
+                </div>
+                <p class="message-text">{{ message.message }}</p>
+                <div class="message-meta">
+                  <span>{{ formatDate(message.created_at) }}</span>
+                  @if (message.sent_at) {
+                    <span>
+                      Enviado: {{ formatTime(message.sent_at) }}
+                    </span>
+                  }
+                  <span>
+                    {{ message.segments }} SMS
+                  </span>
+                  <span>S/ {{ formatCurrency(message.cost) }}</span>
+                  <span>Proveedor: {{ provider(message) }}</span>
+                </div>
+                @if (message.error_message) {
+                  <p class="message-error">
+                    Error: {{ message.error_message }}
+                  </p>
+                }
+              </div>
+            </div>
+            <div class="message-actions">
+              <p>{{ modeLabel(message) }}</p>
+              <button type="button" (click)="openDetail(message)">Ver detalle</button>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+    @if (selectedMessage; as detail) {
+      <div class="modal-backdrop" (click)="closeDetail()">
+        <section class="detail-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Detalle de SMS">
+          <div class="detail-header">
+            <div>
+              <h2>Detalle de SMS</h2>
+              <p>{{ detail.id }}</p>
+            </div>
+            <button type="button" class="close-button" (click)="closeDetail()" aria-label="Cerrar">X</button>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <span>Destinatario</span>
+              <strong>{{ detail.recipient }}</strong>
+            </div>
+            <div class="detail-card">
+              <span>Estado</span>
+              <strong>{{ statusText(detail.status) }}</strong>
+              <small>{{ modeLabel(detail) }}</small>
+            </div>
+            <div class="detail-card">
+              <span>Consumo</span>
+              <strong>{{ detail.segments }} SMS</strong>
+              <small>S/ {{ formatCurrency(detail.cost) }}</small>
+            </div>
+            <div class="detail-card">
+              <span>Proveedor</span>
+              <strong>{{ provider(detail) }}</strong>
+              <small>{{ detail.provider_message_id || 'Sin provider id' }}</small>
+            </div>
+          </div>
+          <div class="detail-section">
+            <h3>Mensaje completo</h3>
+            <p class="full-message">{{ detail.message }}</p>
+          </div>
+          <div class="detail-section">
+            <h3>Trazabilidad</h3>
+            <dl class="definition-grid">
+              <div>
+                <dt>Creado</dt>
+                <dd>{{ formatDate(detail.created_at) }}</dd>
+              </div>
+              <div>
+                <dt>Enviado</dt>
+                <dd>{{ formatDate(detail.sent_at) }}</dd>
+              </div>
+              <div>
+                <dt>Aceptado</dt>
+                <dd>{{ formatDate(detail.delivered_at) }}</dd>
+              </div>
+              <div>
+                <dt>Error</dt>
+                <dd>{{ detail.error_message || detail.attempt?.error_message || 'Sin error' }}</dd>
+              </div>
+              <div>
+                <dt>Idempotency key</dt>
+                <dd>{{ detail.attempt?.idempotency_key || 'Sin intento asociado' }}</dd>
+              </div>
+              <div>
+                <dt>Destinatario proveedor</dt>
+                <dd>{{ detail.attempt?.provider_recipient || 'No registrado' }}</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="detail-section">
+            <h3>Provider response</h3>
+            <pre>{{ providerResponseJson(detail) }}</pre>
+          </div>
+        </section>
+      </div>
+    }
   </div>
-</div>
+}

@@ -16,11 +16,10 @@ interface TemplateCategoryOption {
 }
 
 @Component({
-  selector: 'sms-templates-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './templates-page.component.html',
-  styleUrl: './templates-page.component.scss'
+    selector: 'sms-templates-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './templates-page.component.html',
+    styleUrl: './templates-page.component.scss'
 })
 export class TemplatesPageComponent implements OnInit {
   private readonly router = inject(Router);

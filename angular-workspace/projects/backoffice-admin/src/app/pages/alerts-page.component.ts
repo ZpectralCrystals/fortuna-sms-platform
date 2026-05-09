@@ -68,11 +68,10 @@ interface InternalAlertsAccount {
 }
 
 @Component({
-  selector: 'bo-alerts-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent],
-  templateUrl: './alerts-page.component.html',
-  styleUrl: './alerts-page.component.scss'
+    selector: 'bo-alerts-page',
+    imports: [CommonModule, FormsModule, LoadingStateComponent],
+    templateUrl: './alerts-page.component.html',
+    styleUrl: './alerts-page.component.scss'
 })
 export class AlertsPageComponent implements OnInit {
   private readonly supabaseService = inject(SupabaseService);

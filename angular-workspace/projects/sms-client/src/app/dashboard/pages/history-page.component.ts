@@ -6,11 +6,10 @@ import { ClientSmsMessage, SmsMessageStatus, SmsService } from '@sms-fortuna/sha
 type StatusFilter = SmsMessageStatus | 'all';
 
 @Component({
-  selector: 'sms-history-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './history-page.component.html',
-  styleUrl: './history-page.component.scss'
+    selector: 'sms-history-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './history-page.component.html',
+    styleUrl: './history-page.component.scss'
 })
 export class HistoryPageComponent implements OnInit {
   private readonly smsService = inject(SmsService);

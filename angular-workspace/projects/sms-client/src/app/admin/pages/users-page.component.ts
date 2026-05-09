@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BackofficeClientProfile, BackofficeService } from '@sms-fortuna/shared';
@@ -14,11 +14,10 @@ interface BackofficeUserRow {
 }
 
 @Component({
-  selector: 'bo-users-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './users-page.component.html',
-  styleUrl: './users-page.component.scss'
+    selector: 'bo-users-page',
+    imports: [FormsModule],
+    templateUrl: './users-page.component.html',
+    styleUrl: './users-page.component.scss'
 })
 export class UsersPageComponent implements OnInit {
   private readonly backofficeService = inject(BackofficeService);

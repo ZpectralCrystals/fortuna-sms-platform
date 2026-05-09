@@ -6,11 +6,10 @@ import { ApiKeysService, BackofficeApiKey } from '@sms-fortuna/shared';
 type ApiKeyStatusFilter = 'all' | 'active' | 'revoked' | 'expired';
 
 @Component({
-  selector: 'bo-api-keys-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './api-keys-page.component.html',
-  styleUrl: './api-keys-page.component.scss'
+    selector: 'bo-api-keys-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './api-keys-page.component.html',
+    styleUrl: './api-keys-page.component.scss'
 })
 export class ApiKeysPageComponent implements OnInit {
   private readonly apiKeysService = inject(ApiKeysService);

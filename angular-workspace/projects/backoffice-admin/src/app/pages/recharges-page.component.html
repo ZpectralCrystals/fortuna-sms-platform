@@ -1,325 +1,332 @@
-<div *ngIf="loading" class="loading-state">
-  <div class="spinner"></div>
-</div>
+@if (loading) {
+  <div class="loading-state">
+    <div class="spinner"></div>
+  </div>
+}
 
-<div *ngIf="!loading" class="recharges-page">
-  <p *ngIf="message" class="message-box">
-    {{ message }}
-  </p>
-
-  <section class="toolbar">
-    <div class="filter-group">
-      <svg
-        class="filter-icon"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-      </svg>
-      <div class="filter-buttons">
-        <button
-          *ngFor="let item of filterOptions"
-          type="button"
-          class="filter-button"
-          [class.active]="filter === item.value"
-          (click)="filter = item.value"
-        >
-          {{ item.label }}
-        </button>
+@if (!loading) {
+  <div class="recharges-page">
+    @if (message) {
+      <p class="message-box">
+        {{ message }}
+      </p>
+    }
+    <section class="toolbar">
+      <div class="filter-group">
+        <svg
+          class="filter-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          >
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </svg>
+        <div class="filter-buttons">
+          @for (item of filterOptions; track item) {
+            <button
+              type="button"
+              class="filter-button"
+              [class.active]="filter === item.value"
+              (click)="filter = item.value"
+              >
+              {{ item.label }}
+            </button>
+          }
+        </div>
       </div>
-    </div>
-
-    <button
-      type="button"
-      class="new-recharge-button"
-      (click)="openCreateModal()"
-    >
-      <svg
-        class="button-icon"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M5 12h14" />
-        <path d="M12 5v14" />
-      </svg>
-      <span>Nueva Recarga</span>
-    </button>
-  </section>
-
-  <section class="table-card">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Usuario</th>
-            <th>Paquete</th>
-            <th>Cantidad</th>
-            <th>Monto</th>
-            <th>Método Pago</th>
-            <th>Fecha</th>
-            <th>Estado</th>
-            <th>Cód. Operación</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let recharge of filteredRecharges">
-            <td>
-              <div>
-                <div class="user-name">{{ clientName(recharge) }}</div>
-                <div class="user-email">{{ clientEmail(recharge) }}</div>
-                <div *ngIf="clientCompany(recharge) as company" class="user-company">
-                  {{ company }}
-                </div>
+      <button
+        type="button"
+        class="new-recharge-button"
+        (click)="openCreateModal()"
+        >
+        <svg
+          class="button-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          >
+          <path d="M5 12h14" />
+          <path d="M12 5v14" />
+        </svg>
+        <span>Nueva Recarga</span>
+      </button>
+    </section>
+    <section class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Paquete</th>
+              <th>Cantidad</th>
+              <th>Monto</th>
+              <th>Método Pago</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+              <th>Cód. Operación</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (recharge of filteredRecharges; track recharge) {
+              <tr>
+                <td>
+                  <div>
+                    <div class="user-name">{{ clientName(recharge) }}</div>
+                    <div class="user-email">{{ clientEmail(recharge) }}</div>
+                    @if (clientCompany(recharge); as company) {
+                      <div class="user-company">
+                        {{ company }}
+                      </div>
+                    }
+                  </div>
+                </td>
+                <td class="package-cell">{{ recharge.package?.name || '-' }}</td>
+                <td class="quantity-cell">{{ formatNumber(recharge.sms_credits) }} SMS</td>
+                <td class="amount-cell">S/ {{ formatCurrency(recharge.amount) }}</td>
+                <td class="payment-cell">{{ recharge.payment_method || '-' }}</td>
+                <td class="date-cell">{{ formatDate(recharge.created_at) }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="recharge.status">
+                    {{ statusLabel(recharge.status) }}
+                  </span>
+                </td>
+                <td>
+                  @if (recharge.operation_code) {
+                    <span class="operation-badge">
+                      {{ recharge.operation_code }}
+                    </span>
+                  } @else {
+                    <span class="muted-italic">No registrado</span>
+                  }
+                </td>
+                <td>
+                  @if (recharge.status === 'pending') {
+                    <div class="action-group">
+                      <button
+                        type="button"
+                        class="approve-button"
+                        (click)="openApprovalModal(recharge)"
+                        >
+                        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                        <span>Aprobar</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="reject-button"
+                        (click)="openRejectModal(recharge)"
+                        >
+                        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M18 6 6 18" />
+                          <path d="m6 6 12 12" />
+                        </svg>
+                        <span>Rechazar</span>
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="processed-label">
+                      <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span>Procesado</span>
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    @if (filteredRecharges.length === 0) {
+      <div class="empty-state">
+        <svg
+          class="empty-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          >
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <p>No hay recargas para mostrar</p>
+      </div>
+    }
+    @if (showApprovalModal && selectedRecharge) {
+      <div class="modal-backdrop">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Aprobar Recarga</h3>
+            <button
+              type="button"
+              class="modal-close"
+              aria-label="Cerrar"
+              (click)="closeApprovalModal()"
+              >
+              <span>&times;</span>
+            </button>
+          </div>
+          <div class="approval-info">
+            <h4>Información de la Recarga</h4>
+            <div class="info-list">
+              <div class="info-row">
+                <span>Cliente:</span>
+                <strong>{{ clientName(selectedRecharge) }}</strong>
               </div>
-            </td>
-            <td class="package-cell">{{ recharge.package?.name || '-' }}</td>
-            <td class="quantity-cell">{{ formatNumber(recharge.sms_credits) }} SMS</td>
-            <td class="amount-cell">S/ {{ formatCurrency(recharge.amount) }}</td>
-            <td class="payment-cell">{{ recharge.payment_method || '-' }}</td>
-            <td class="date-cell">{{ formatDate(recharge.created_at) }}</td>
-            <td>
-              <span class="status-badge" [ngClass]="recharge.status">
-                {{ statusLabel(recharge.status) }}
-              </span>
-            </td>
-            <td>
-              <span *ngIf="recharge.operation_code; else noOperation" class="operation-badge">
-                {{ recharge.operation_code }}
-              </span>
-              <ng-template #noOperation>
-                <span class="muted-italic">No registrado</span>
-              </ng-template>
-            </td>
-            <td>
-              <div *ngIf="recharge.status === 'pending'; else processedState" class="action-group">
-                <button
-                  type="button"
-                  class="approve-button"
-                  (click)="openApprovalModal(recharge)"
-                >
-                  <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  <span>Aprobar</span>
-                </button>
-                <button
-                  type="button"
-                  class="reject-button"
-                  (click)="openRejectModal(recharge)"
-                >
-                  <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
-                  </svg>
-                  <span>Rechazar</span>
-                </button>
+              <div class="info-row">
+                <span>Paquete:</span>
+                <strong>{{ selectedRecharge.package?.name || '-' }}</strong>
               </div>
-              <ng-template #processedState>
-                <span class="processed-label">
-                  <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>Procesado</span>
-                </span>
-              </ng-template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <div *ngIf="filteredRecharges.length === 0" class="empty-state">
-    <svg
-      class="empty-icon"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-    <p>No hay recargas para mostrar</p>
+              <div class="info-row">
+                <span>Cantidad SMS:</span>
+                <strong>{{ formatNumber(selectedRecharge.sms_credits) }}</strong>
+              </div>
+              <div class="info-row">
+                <span>Monto:</span>
+                <strong>S/ {{ formatCurrency(selectedRecharge.amount) }}</strong>
+              </div>
+              <div class="info-row">
+                <span>Método de Pago:</span>
+                <strong>{{ selectedRecharge.payment_method }}</strong>
+              </div>
+            </div>
+          </div>
+          <form class="modal-form" (ngSubmit)="handleApprove()">
+            <div>
+              <label>Código de Operación Bancaria *</label>
+              <input
+                type="text"
+                required
+                name="operationCode"
+                [(ngModel)]="operationCode"
+                class="approval-input"
+                placeholder="Ej: OP-123456789"
+                />
+              <p class="field-help">Requerido si la recarga no tiene código registrado.</p>
+            </div>
+            @if (approvalError) {
+              <p class="modal-error">
+                {{ approvalError }}
+              </p>
+            }
+            <div class="note-box amber-note">
+              <p>
+                <strong>Importante:</strong> La aprobación se ejecutará con RPC atómica. Angular no actualizará tablas directamente.
+              </p>
+            </div>
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="cancel-button"
+                (click)="closeApprovalModal()"
+                >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="approve-submit-button"
+                [disabled]="submitting"
+                >
+                {{ submitting ? 'Aprobando...' : 'Aprobar Recarga' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+    @if (showRejectModal && selectedRecharge) {
+      <div class="modal-backdrop">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Rechazar Recarga</h3>
+            <button
+              type="button"
+              class="modal-close"
+              aria-label="Cerrar"
+              (click)="closeRejectModal()"
+              >
+              <span>&times;</span>
+            </button>
+          </div>
+          <div class="approval-info">
+            <h4>Información de la Recarga</h4>
+            <div class="info-list">
+              <div class="info-row">
+                <span>Cliente:</span>
+                <strong>{{ clientName(selectedRecharge) }}</strong>
+              </div>
+              <div class="info-row">
+                <span>Paquete:</span>
+                <strong>{{ selectedRecharge.package?.name || '-' }}</strong>
+              </div>
+              <div class="info-row">
+                <span>Cantidad SMS:</span>
+                <strong>{{ formatNumber(selectedRecharge.sms_credits) }}</strong>
+              </div>
+              <div class="info-row">
+                <span>Monto:</span>
+                <strong>S/ {{ formatCurrency(selectedRecharge.amount) }}</strong>
+              </div>
+            </div>
+          </div>
+          <form class="modal-form" (ngSubmit)="handleReject()">
+            <div>
+              <label>Motivo de rechazo *</label>
+              <input
+                type="text"
+                required
+                name="rejectionReason"
+                [(ngModel)]="rejectionReason"
+                placeholder="Ej: Pago no identificado"
+                />
+            </div>
+            @if (rejectError) {
+              <p class="modal-error">
+                {{ rejectError }}
+              </p>
+            }
+            <div class="note-box amber-note">
+              <p>
+                <strong>Importante:</strong> El rechazo se ejecutará con RPC atómica. Angular no actualizará tablas directamente.
+              </p>
+            </div>
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="cancel-button"
+                (click)="closeRejectModal()"
+                >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="approve-submit-button"
+                [disabled]="submitting"
+                >
+                {{ submitting ? 'Rechazando...' : 'Rechazar Recarga' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
   </div>
-
-  <div *ngIf="showApprovalModal && selectedRecharge" class="modal-backdrop">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Aprobar Recarga</h3>
-        <button
-          type="button"
-          class="modal-close"
-          aria-label="Cerrar"
-          (click)="closeApprovalModal()"
-        >
-          <span>&times;</span>
-        </button>
-      </div>
-
-      <div class="approval-info">
-        <h4>Información de la Recarga</h4>
-        <div class="info-list">
-          <div class="info-row">
-            <span>Cliente:</span>
-            <strong>{{ clientName(selectedRecharge) }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Paquete:</span>
-            <strong>{{ selectedRecharge.package?.name || '-' }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Cantidad SMS:</span>
-            <strong>{{ formatNumber(selectedRecharge.sms_credits) }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Monto:</span>
-            <strong>S/ {{ formatCurrency(selectedRecharge.amount) }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Método de Pago:</span>
-            <strong>{{ selectedRecharge.payment_method }}</strong>
-          </div>
-        </div>
-      </div>
-
-      <form class="modal-form" (ngSubmit)="handleApprove()">
-        <div>
-          <label>Código de Operación Bancaria *</label>
-          <input
-            type="text"
-            required
-            name="operationCode"
-            [(ngModel)]="operationCode"
-            class="approval-input"
-            placeholder="Ej: OP-123456789"
-          />
-          <p class="field-help">Requerido si la recarga no tiene código registrado.</p>
-        </div>
-
-        <p *ngIf="approvalError" class="modal-error">
-          {{ approvalError }}
-        </p>
-
-        <div class="note-box amber-note">
-          <p>
-            <strong>Importante:</strong> La aprobación se ejecutará con RPC atómica. Angular no actualizará tablas directamente.
-          </p>
-        </div>
-
-        <div class="modal-actions">
-          <button
-            type="button"
-            class="cancel-button"
-            (click)="closeApprovalModal()"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="approve-submit-button"
-            [disabled]="submitting"
-          >
-            {{ submitting ? 'Aprobando...' : 'Aprobar Recarga' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div *ngIf="showRejectModal && selectedRecharge" class="modal-backdrop">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Rechazar Recarga</h3>
-        <button
-          type="button"
-          class="modal-close"
-          aria-label="Cerrar"
-          (click)="closeRejectModal()"
-        >
-          <span>&times;</span>
-        </button>
-      </div>
-
-      <div class="approval-info">
-        <h4>Información de la Recarga</h4>
-        <div class="info-list">
-          <div class="info-row">
-            <span>Cliente:</span>
-            <strong>{{ clientName(selectedRecharge) }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Paquete:</span>
-            <strong>{{ selectedRecharge.package?.name || '-' }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Cantidad SMS:</span>
-            <strong>{{ formatNumber(selectedRecharge.sms_credits) }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Monto:</span>
-            <strong>S/ {{ formatCurrency(selectedRecharge.amount) }}</strong>
-          </div>
-        </div>
-      </div>
-
-      <form class="modal-form" (ngSubmit)="handleReject()">
-        <div>
-          <label>Motivo de rechazo *</label>
-          <input
-            type="text"
-            required
-            name="rejectionReason"
-            [(ngModel)]="rejectionReason"
-            placeholder="Ej: Pago no identificado"
-          />
-        </div>
-
-        <p *ngIf="rejectError" class="modal-error">
-          {{ rejectError }}
-        </p>
-
-        <div class="note-box amber-note">
-          <p>
-            <strong>Importante:</strong> El rechazo se ejecutará con RPC atómica. Angular no actualizará tablas directamente.
-          </p>
-        </div>
-
-        <div class="modal-actions">
-          <button
-            type="button"
-            class="cancel-button"
-            (click)="closeRejectModal()"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="approve-submit-button"
-            [disabled]="submitting"
-          >
-            {{ submitting ? 'Rechazando...' : 'Rechazar Recarga' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+}

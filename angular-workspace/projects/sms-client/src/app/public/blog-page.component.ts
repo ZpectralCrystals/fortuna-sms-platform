@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -24,11 +24,10 @@ interface BlogCategory {
 }
 
 @Component({
-  selector: 'sms-blog-page',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
-  templateUrl: './blog-page.component.html',
-  styleUrl: './blog-page.component.scss'
+    selector: 'sms-blog-page',
+    imports: [RouterLink],
+    templateUrl: './blog-page.component.html',
+    styleUrl: './blog-page.component.scss'
 })
 export class BlogPageComponent {
   readonly posts: BlogPost[] = [];

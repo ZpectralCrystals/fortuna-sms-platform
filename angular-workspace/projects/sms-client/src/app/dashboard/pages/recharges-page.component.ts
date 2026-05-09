@@ -18,11 +18,10 @@ interface ProfileBalance {
 }
 
 @Component({
-  selector: 'sms-recharges-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './recharges-page.component.html',
-  styleUrl: './recharges-page.component.scss'
+    selector: 'sms-recharges-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './recharges-page.component.html',
+    styleUrl: './recharges-page.component.scss'
 })
 export class RechargesPageComponent implements OnInit {
   private readonly supabase = inject(SupabaseService);

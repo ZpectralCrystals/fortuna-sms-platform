@@ -6,11 +6,10 @@ import { AdminSmsMessage, SmsMessageStatus, SmsService } from '@sms-fortuna/shar
 type StatusFilter = SmsMessageStatus | 'all';
 
 @Component({
-  selector: 'bo-messages-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './messages-page.component.html',
-  styleUrl: './messages-page.component.scss'
+    selector: 'bo-messages-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './messages-page.component.html',
+    styleUrl: './messages-page.component.scss'
 })
 export class MessagesPageComponent implements OnInit {
   private readonly smsService = inject(SmsService);

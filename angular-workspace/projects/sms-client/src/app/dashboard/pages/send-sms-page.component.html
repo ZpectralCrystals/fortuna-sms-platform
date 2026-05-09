@@ -4,29 +4,35 @@
     <p class="page-subtitle">Envía mensajes individuales o campañas masivas</p>
   </div>
 
-  <div *ngIf="success" class="alert alert--success">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M9 12l2 2 4-4"></path>
-      <circle cx="12" cy="12" r="10"></circle>
-    </svg>
-    <div>
-      <p>{{ multipleResult ? mode === 'file' ? 'Envío desde fichero procesado' : 'Envío múltiple procesado' : successTitle }}</p>
-      <span>{{ multipleResult ? multipleSuccessDetail : successDetail }}</span>
-      <a routerLink="/dashboard/history" class="alert-link">Ver historial</a>
-      <button *ngIf="multipleResult" type="button" class="alert-action" (click)="multipleResult = null; success = false">
-        {{ mode === 'file' ? 'Enviar otro fichero' : 'Enviar otro múltiple' }}
-      </button>
+  @if (success) {
+    <div class="alert alert--success">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 12l2 2 4-4"></path>
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+      <div>
+        <p>{{ multipleResult ? mode === 'file' ? 'Envío desde fichero procesado' : 'Envío múltiple procesado' : successTitle }}</p>
+        <span>{{ multipleResult ? multipleSuccessDetail : successDetail }}</span>
+        <a routerLink="/dashboard/history" class="alert-link">Ver historial</a>
+        @if (multipleResult) {
+          <button type="button" class="alert-action" (click)="multipleResult = null; success = false">
+            {{ mode === 'file' ? 'Enviar otro fichero' : 'Enviar otro múltiple' }}
+          </button>
+        }
+      </div>
     </div>
-  </div>
+  }
 
-  <div *ngIf="error" class="alert alert--error">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"></circle>
-      <path d="M12 8v4"></path>
-      <path d="M12 16h.01"></path>
-    </svg>
-    <p>{{ error }}</p>
-  </div>
+  @if (error) {
+    <div class="alert alert--error">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 8v4"></path>
+        <path d="M12 16h.01"></path>
+      </svg>
+      <p>{{ error }}</p>
+    </div>
+  }
 
   <section class="send-card">
     <div class="tabs">
@@ -59,7 +65,7 @@
     </div>
 
     <form class="send-form" (ngSubmit)="handleSend()">
-      <ng-container *ngIf="mode === 'file'">
+      @if (mode === 'file') {
         <div class="field">
           <label for="campaignName">Nombre de la campaña</label>
           <input
@@ -68,9 +74,8 @@
             name="campaignName"
             [(ngModel)]="campaignName"
             placeholder="Ej: Promoción Primavera 2026"
-          />
+            />
         </div>
-
         <div class="upload-box">
           <div class="upload-box__header">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -80,7 +85,6 @@
             </svg>
             <h3>Cargar archivo con mensajes personalizados</h3>
             <p>Sube un archivo Excel (.xlsx, .xls) o CSV con dos columnas: Teléfono y Mensaje</p>
-
             <div class="upload-actions">
               <label class="btn btn--blue">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -91,7 +95,6 @@
                 Seleccionar archivo
                 <input type="file" accept=".xlsx,.xls,.csv,.txt" (change)="handleExcelUpload($event)" hidden />
               </label>
-
               <button type="button" class="btn btn--green" (click)="downloadTemplate()">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -102,7 +105,6 @@
               </button>
             </div>
           </div>
-
           <div class="format-info">
             <p>Información del formato:</p>
             <ul>
@@ -116,73 +118,87 @@
             </ul>
           </div>
         </div>
-
-        <p *ngIf="fileParseError" class="multiple-warning">
-          {{ fileParseError }}
-        </p>
-
-        <div *ngIf="fileName" class="preview-card">
-          <div class="preview-card__header">
-            <div>
-              <h3>Preview de archivo</h3>
-              <p>{{ fileName }} <span *ngIf="fileType">· {{ fileType }}</span></p>
-            </div>
-            <button type="button" (click)="clearFileMessages()" title="Limpiar archivo" aria-label="Limpiar archivo">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M18 6 6 18"></path>
-                <path d="m6 6 12 12"></path>
-              </svg>
-            </button>
-          </div>
-
-          <div class="file-stats-grid">
-            <div>
-              <span>Filas leídas</span>
-              <strong>{{ fileEntryCount }}</strong>
-            </div>
-            <div>
-              <span>Números válidos</span>
-              <strong>{{ fileMessages.length }}</strong>
-            </div>
-            <div>
-              <span>Inválidos</span>
-              <strong>{{ fileInvalidRecipients.length }}</strong>
-            </div>
-            <div>
-              <span>Duplicados removidos</span>
-              <strong>{{ fileDuplicatesRemoved.length }}</strong>
-            </div>
-          </div>
-
-          <p *ngIf="fileMessages.length > 0" class="file-mode-badge">
-            {{ fileMessageModeLabel }}
+        @if (fileParseError) {
+          <p class="multiple-warning">
+            {{ fileParseError }}
           </p>
-
-          <div *ngIf="fileMessages.length > 0" class="preview-list">
-            <div *ngFor="let fileMessage of previewMessages" class="preview-row">
-              <div class="preview-row__phone">{{ fileMessage.phone }}</div>
-              <div class="preview-row__message">
-                <p>{{ getFileMessageToSend(fileMessage) || 'Usará el mensaje general' }}</p>
-                <span>{{ smsSegments(getFileMessageToSend(fileMessage)) }} SMS • {{ getFileMessageToSend(fileMessage).length }} caracteres</span>
+        }
+        @if (fileName) {
+          <div class="preview-card">
+            <div class="preview-card__header">
+              <div>
+                <h3>Preview de archivo</h3>
+                <p>{{ fileName }} @if (fileType) {
+                  <span>· {{ fileType }}</span>
+                }</p>
+              </div>
+              <button type="button" (click)="clearFileMessages()" title="Limpiar archivo" aria-label="Limpiar archivo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="file-stats-grid">
+              <div>
+                <span>Filas leídas</span>
+                <strong>{{ fileEntryCount }}</strong>
+              </div>
+              <div>
+                <span>Números válidos</span>
+                <strong>{{ fileMessages.length }}</strong>
+              </div>
+              <div>
+                <span>Inválidos</span>
+                <strong>{{ fileInvalidRecipients.length }}</strong>
+              </div>
+              <div>
+                <span>Duplicados removidos</span>
+                <strong>{{ fileDuplicatesRemoved.length }}</strong>
               </div>
             </div>
-            <div *ngIf="fileMessages.length > 10" class="preview-more">
-              ... y {{ fileMessages.length - 10 }} mensajes más
-            </div>
+            @if (fileMessages.length > 0) {
+              <p class="file-mode-badge">
+                {{ fileMessageModeLabel }}
+              </p>
+            }
+            @if (fileMessages.length > 0) {
+              <div class="preview-list">
+                @for (fileMessage of previewMessages; track fileMessage) {
+                  <div class="preview-row">
+                    <div class="preview-row__phone">{{ fileMessage.phone }}</div>
+                    <div class="preview-row__message">
+                      <p>{{ getFileMessageToSend(fileMessage) || 'Usará el mensaje general' }}</p>
+                      <span>{{ smsSegments(getFileMessageToSend(fileMessage)) }} SMS • {{ getFileMessageToSend(fileMessage).length }} caracteres</span>
+                    </div>
+                  </div>
+                }
+                @if (fileMessages.length > 10) {
+                  <div class="preview-more">
+                    ... y {{ fileMessages.length - 10 }} mensajes más
+                  </div>
+                }
+              </div>
+            }
+            @if (fileInvalidRecipients.length > 0 || fileDuplicatesRemoved.length > 0) {
+              <div class="multiple-warning multiple-warning--in-card">
+                @if (fileInvalidRecipients.length > 0) {
+                  <p>
+                    Inválidos: {{ fileInvalidRecipients.join(', ') }}
+                  </p>
+                }
+                @if (fileDuplicatesRemoved.length > 0) {
+                  <p>
+                    Duplicados removidos: {{ fileDuplicatesRemoved.join(', ') }}
+                  </p>
+                }
+              </div>
+            }
           </div>
+        }
+      }
 
-          <div *ngIf="fileInvalidRecipients.length > 0 || fileDuplicatesRemoved.length > 0" class="multiple-warning multiple-warning--in-card">
-            <p *ngIf="fileInvalidRecipients.length > 0">
-              Inválidos: {{ fileInvalidRecipients.join(', ') }}
-            </p>
-            <p *ngIf="fileDuplicatesRemoved.length > 0">
-              Duplicados removidos: {{ fileDuplicatesRemoved.join(', ') }}
-            </p>
-          </div>
-        </div>
-      </ng-container>
-
-      <ng-container *ngIf="mode === 'single'">
+      @if (mode === 'single') {
         <div class="field">
           <label for="recipient">Número de teléfono</label>
           <input
@@ -192,10 +208,9 @@
             required
             [(ngModel)]="recipient"
             placeholder="+51987654321"
-          />
+            />
           <small>Formato: +51987654321</small>
         </div>
-
         <div class="example-card example-card--blue">
           <h4><span>💡</span>Ejemplo de mensaje</h4>
           <div>
@@ -203,9 +218,9 @@
             <small>130 caracteres • 1 SMS</small>
           </div>
         </div>
-      </ng-container>
+      }
 
-      <ng-container *ngIf="mode === 'multiple'">
+      @if (mode === 'multiple') {
         <div class="field">
           <label for="multiplePhones">Números de teléfono</label>
           <textarea
@@ -219,7 +234,6 @@
           ></textarea>
           <small>Separadores permitidos: salto de línea, coma, punto y coma o espacio.</small>
         </div>
-
         <div class="multiple-validation-card">
           <div>
             <span>Destinatarios válidos</span>
@@ -234,23 +248,30 @@
             <strong>{{ parsedMultipleRecipients.duplicatesRemoved.length }}</strong>
           </div>
         </div>
-
-        <div *ngIf="parsedMultipleRecipients.validRecipients.length > 0" class="recipient-preview">
-          <span>Normalizados</span>
-          <div>
-            <small *ngFor="let phone of parsedMultipleRecipients.validRecipients">{{ phone }}</small>
+        @if (parsedMultipleRecipients.validRecipients.length > 0) {
+          <div class="recipient-preview">
+            <span>Normalizados</span>
+            <div>
+              @for (phone of parsedMultipleRecipients.validRecipients; track phone) {
+                <small>{{ phone }}</small>
+              }
+            </div>
           </div>
-        </div>
-
-        <div *ngIf="parsedMultipleRecipients.invalidRecipients.length > 0 || parsedMultipleRecipients.duplicatesRemoved.length > 0" class="multiple-warning">
-          <p *ngIf="parsedMultipleRecipients.invalidRecipients.length > 0">
-            Inválidos: {{ parsedMultipleRecipients.invalidRecipients.join(', ') }}
-          </p>
-          <p *ngIf="parsedMultipleRecipients.duplicatesRemoved.length > 0">
-            Duplicados removidos: {{ parsedMultipleRecipients.duplicatesRemoved.join(', ') }}
-          </p>
-        </div>
-
+        }
+        @if (parsedMultipleRecipients.invalidRecipients.length > 0 || parsedMultipleRecipients.duplicatesRemoved.length > 0) {
+          <div class="multiple-warning">
+            @if (parsedMultipleRecipients.invalidRecipients.length > 0) {
+              <p>
+                Inválidos: {{ parsedMultipleRecipients.invalidRecipients.join(', ') }}
+              </p>
+            }
+            @if (parsedMultipleRecipients.duplicatesRemoved.length > 0) {
+              <p>
+                Duplicados removidos: {{ parsedMultipleRecipients.duplicatesRemoved.join(', ') }}
+              </p>
+            }
+          </div>
+        }
         <div class="example-card example-card--green">
           <h4><span>💡</span>Ejemplo de mensaje para múltiples destinatarios</h4>
           <div>
@@ -258,78 +279,94 @@
             <small>154 caracteres • 1 SMS • Se enviará el mismo mensaje a todos los números</small>
           </div>
         </div>
-      </ng-container>
+      }
 
-      <div *ngIf="templates.length > 0 && mode !== 'file'" class="field">
-        <label for="selectedTemplate">Usar plantilla (opcional)</label>
-        <select id="selectedTemplate" name="selectedTemplate" [(ngModel)]="selectedTemplateId" (ngModelChange)="handleTemplateSelect($event)">
-          <option value="">Selecciona una plantilla</option>
-          <option *ngFor="let template of templates" [value]="template.id">{{ template.name }}</option>
-        </select>
-      </div>
+      @if (templates.length > 0 && mode !== 'file') {
+        <div class="field">
+          <label for="selectedTemplate">Usar plantilla (opcional)</label>
+          <select id="selectedTemplate" name="selectedTemplate" [(ngModel)]="selectedTemplateId" (ngModelChange)="handleTemplateSelect($event)">
+            <option value="">Selecciona una plantilla</option>
+            @for (template of templates; track template) {
+              <option [value]="template.id">{{ template.name }}</option>
+            }
+          </select>
+        </div>
+      }
 
-      <section *ngIf="isTemplateMode && mode !== 'file'" class="template-base-card">
-        <div class="template-base-card__header">
-          <div>
-            <span>Plantilla cargada</span>
-            <h3>{{ selectedTemplate?.name }}</h3>
+      @if (isTemplateMode && mode !== 'file') {
+        <section class="template-base-card">
+          <div class="template-base-card__header">
+            <div>
+              <span>Plantilla cargada</span>
+              <h3>{{ selectedTemplate?.name }}</h3>
+            </div>
+            <button type="button" class="link-button" (click)="removeTemplate()">
+              Quitar plantilla
+            </button>
           </div>
-          <button type="button" class="link-button" (click)="removeTemplate()">
-            Quitar plantilla
-          </button>
-        </div>
-        <p class="template-base-card__content">{{ templateBaseContent }}</p>
-        <small *ngIf="hasTemplateVariables">Edita solo las variables de la plantilla. El texto base queda protegido.</small>
-        <small *ngIf="!hasTemplateVariables">Plantilla sin variables. Puedes editar el mensaje como texto normal.</small>
-      </section>
+          <p class="template-base-card__content">{{ templateBaseContent }}</p>
+          @if (hasTemplateVariables) {
+            <small>Edita solo las variables de la plantilla. El texto base queda protegido.</small>
+          }
+          @if (!hasTemplateVariables) {
+            <small>Plantilla sin variables. Puedes editar el mensaje como texto normal.</small>
+          }
+        </section>
+      }
 
-      <div *ngIf="(mode !== 'file' && !hasTemplateVariables) || (mode === 'file' && fileName && !fileUsesCustomMessages)" class="field">
-        <label for="message">Mensaje</label>
-        <textarea
-          id="message"
-          name="message"
-          [required]="mode !== 'file'"
-          rows="5"
-          [(ngModel)]="manualMessage"
-          (ngModelChange)="handleMessageChange()"
-          placeholder="Escribe tu mensaje aquí..."
-        ></textarea>
-        <div class="field-meta">
-          <small>{{ manualMessage.length }} caracteres</small>
-          <small>{{ smsCount }} SMS {{ messageLength > 160 ? '(mensaje largo)' : '' }}</small>
-        </div>
-        <small *ngIf="mode === 'file'">Se usará como mensaje general para las filas sin columna Mensaje.</small>
-      </div>
-
-      <section *ngIf="hasTemplateVariables && mode !== 'file'" class="variables-card">
-        <div class="variables-card__header">
-          <h3>Variables de plantilla</h3>
-          <p>Completa cada valor para generar el mensaje final.</p>
-        </div>
-
-        <div class="template-variable-grid">
-          <div *ngFor="let variable of templateVariables" class="field">
-            <label [for]="'template-variable-' + variable">{{ variable }}</label>
-            <input
-              [id]="'template-variable-' + variable"
-              type="text"
-              [name]="'templateVariable_' + variable"
-              [(ngModel)]="templateVariableValues[variable]"
-              [placeholder]="variable"
-              required
-            />
-          </div>
-        </div>
-
-        <div class="template-preview-card">
-          <span>Vista previa del mensaje</span>
-          <p>{{ renderedFinalMessage }}</p>
+      @if ((mode !== 'file' && !hasTemplateVariables) || (mode === 'file' && fileName && !fileUsesCustomMessages)) {
+        <div class="field">
+          <label for="message">Mensaje</label>
+          <textarea
+            id="message"
+            name="message"
+            [required]="mode !== 'file'"
+            rows="5"
+            [(ngModel)]="manualMessage"
+            (ngModelChange)="handleMessageChange()"
+            placeholder="Escribe tu mensaje aquí..."
+          ></textarea>
           <div class="field-meta">
-            <small>{{ renderedFinalMessage.length }} caracteres</small>
+            <small>{{ manualMessage.length }} caracteres</small>
             <small>{{ smsCount }} SMS {{ messageLength > 160 ? '(mensaje largo)' : '' }}</small>
           </div>
+          @if (mode === 'file') {
+            <small>Se usará como mensaje general para las filas sin columna Mensaje.</small>
+          }
         </div>
-      </section>
+      }
+
+      @if (hasTemplateVariables && mode !== 'file') {
+        <section class="variables-card">
+          <div class="variables-card__header">
+            <h3>Variables de plantilla</h3>
+            <p>Completa cada valor para generar el mensaje final.</p>
+          </div>
+          <div class="template-variable-grid">
+            @for (variable of templateVariables; track variable) {
+              <div class="field">
+                <label [for]="'template-variable-' + variable">{{ variable }}</label>
+                <input
+                  [id]="'template-variable-' + variable"
+                  type="text"
+                  [name]="'templateVariable_' + variable"
+                  [(ngModel)]="templateVariableValues[variable]"
+                  [placeholder]="variable"
+                  required
+                  />
+              </div>
+            }
+          </div>
+          <div class="template-preview-card">
+            <span>Vista previa del mensaje</span>
+            <p>{{ renderedFinalMessage }}</p>
+            <div class="field-meta">
+              <small>{{ renderedFinalMessage.length }} caracteres</small>
+              <small>{{ smsCount }} SMS {{ messageLength > 160 ? '(mensaje largo)' : '' }}</small>
+            </div>
+          </div>
+        </section>
+      }
 
       <div class="summary-card">
         <div class="summary-card__top">
@@ -342,14 +379,18 @@
             <p>Destinatarios</p>
             <strong>{{ phoneCount }}</strong>
           </div>
-          <div *ngIf="mode !== 'file'">
-            <p>SMS requeridos</p>
-            <strong>{{ smsCount }}</strong>
-          </div>
-          <div *ngIf="mode === 'file'">
-            <p>Total SMS</p>
-            <strong>{{ totalFileSms }}</strong>
-          </div>
+          @if (mode !== 'file') {
+            <div>
+              <p>SMS requeridos</p>
+              <strong>{{ smsCount }}</strong>
+            </div>
+          }
+          @if (mode === 'file') {
+            <div>
+              <p>Total SMS</p>
+              <strong>{{ totalFileSms }}</strong>
+            </div>
+          }
           <div>
             <p>Créditos disponibles</p>
             <strong>{{ credits.toFixed(0) }}</strong>
@@ -361,57 +402,67 @@
         </div>
       </div>
 
-      <p *ngIf="(mode === 'multiple' || mode === 'file') && credits < requiredCredits && phoneCount > 0" class="credit-warning">
-        Tus créditos podrían ser insuficientes para este envío.
-      </p>
+      @if ((mode === 'multiple' || mode === 'file') && credits < requiredCredits && phoneCount > 0) {
+        <p class="credit-warning">
+          Tus créditos podrían ser insuficientes para este envío.
+        </p>
+      }
 
       <button
         type="submit"
         class="submit-button"
         [disabled]="sending || !!sendDisabledReason"
-      >
-        <ng-container *ngIf="sending; else sendLabel">
+        >
+        @if (sending) {
           <span class="small-spinner"></span>
           Enviando...
-        </ng-container>
-        <ng-template #sendLabel>
+        } @else {
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m22 2-7 20-4-9-9-4Z"></path>
             <path d="M22 2 11 13"></path>
           </svg>
           {{ mode === 'single' ? 'Enviar 1 SMS' : mode === 'multiple' ? 'Enviar a ' + phoneCount + ' destinatarios' : 'Enviar ' + requiredCredits + ' SMS' }}
-        </ng-template>
+        }
       </button>
-      <p *ngIf="sendDisabledReason && !sending" class="disabled-reason">
-        {{ sendDisabledReason }}
-      </p>
+      @if (sendDisabledReason && !sending) {
+        <p class="disabled-reason">
+          {{ sendDisabledReason }}
+        </p>
+      }
     </form>
   </section>
 
-  <section *ngIf="multipleResult" class="batch-results-card">
-    <div class="batch-results-card__header">
-      <div>
-        <h3>Resultados del envío múltiple</h3>
-        <p>{{ multipleResult.total }} procesados · {{ multipleResult.sent }} enviados · {{ multipleResult.failed }} fallidos</p>
-      </div>
-      <a routerLink="/dashboard/history">Ver historial</a>
-    </div>
-
-    <div class="batch-results-list">
-      <div *ngFor="let result of multipleResult.results" class="batch-result-row" [ngClass]="{ 'batch-result-row--failed': !result.success }">
+  @if (multipleResult) {
+    <section class="batch-results-card">
+      <div class="batch-results-card__header">
         <div>
-          <strong>{{ result.recipient }}</strong>
-          <span>{{ result.success ? statusLabel(result.status) : 'fallido' }}</span>
+          <h3>Resultados del envío múltiple</h3>
+          <p>{{ multipleResult.total }} procesados · {{ multipleResult.sent }} enviados · {{ multipleResult.failed }} fallidos</p>
         </div>
-        <p *ngIf="result.success">
-          {{ result.segments || 0 }} SMS · S/ {{ formatCurrency(result.cost || 0) }}
-        </p>
-        <p *ngIf="!result.success" class="result-error">
-          {{ result.error || 'No se pudo enviar.' }}
-        </p>
+        <a routerLink="/dashboard/history">Ver historial</a>
       </div>
-    </div>
-  </section>
+      <div class="batch-results-list">
+        @for (result of multipleResult.results; track result) {
+          <div class="batch-result-row" [ngClass]="{ 'batch-result-row--failed': !result.success }">
+            <div>
+              <strong>{{ result.recipient }}</strong>
+              <span>{{ result.success ? statusLabel(result.status) : 'fallido' }}</span>
+            </div>
+            @if (result.success) {
+              <p>
+                {{ result.segments || 0 }} SMS · S/ {{ formatCurrency(result.cost || 0) }}
+              </p>
+            }
+            @if (!result.success) {
+              <p class="result-error">
+                {{ result.error || 'No se pudo enviar.' }}
+              </p>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
 
   <section class="info-card">
     <h3>Información importante</h3>

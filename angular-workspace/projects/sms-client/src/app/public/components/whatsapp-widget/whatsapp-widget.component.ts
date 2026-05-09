@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component } from '@angular/core';
 
 type WidgetView = 'menu' | 'plans';
@@ -22,11 +22,10 @@ const WHATSAPP_MESSAGES = {
 } as const;
 
 @Component({
-  selector: 'app-whatsapp-widget',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './whatsapp-widget.component.html',
-  styleUrl: './whatsapp-widget.component.scss'
+    selector: 'app-whatsapp-widget',
+    imports: [],
+    templateUrl: './whatsapp-widget.component.html',
+    styleUrl: './whatsapp-widget.component.scss'
 })
 export class WhatsappWidgetComponent {
   isOpen = false;

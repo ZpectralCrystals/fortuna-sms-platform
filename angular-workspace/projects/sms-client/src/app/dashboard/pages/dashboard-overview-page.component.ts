@@ -58,11 +58,10 @@ interface StatCard {
 }
 
 @Component({
-  selector: 'sms-dashboard-overview-page',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
-  templateUrl: './dashboard-overview-page.component.html',
-  styleUrl: './dashboard-overview-page.component.scss'
+    selector: 'sms-dashboard-overview-page',
+    imports: [CommonModule, RouterLink],
+    templateUrl: './dashboard-overview-page.component.html',
+    styleUrl: './dashboard-overview-page.component.scss'
 })
 export class DashboardOverviewPageComponent implements OnInit {
   private readonly authService = inject(AuthService);

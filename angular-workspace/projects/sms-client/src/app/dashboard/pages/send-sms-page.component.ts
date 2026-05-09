@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import * as XLSX from 'xlsx';
 import { SmsFileRow, SmsMultipleSimpleResult, SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
 
 type SendMode = 'single' | 'multiple' | 'file';
@@ -33,11 +32,10 @@ interface FileParseResult {
 }
 
 @Component({
-  selector: 'sms-send-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './send-sms-page.component.html',
-  styleUrl: './send-sms-page.component.scss'
+    selector: 'sms-send-page',
+    imports: [CommonModule, FormsModule, RouterLink],
+    templateUrl: './send-sms-page.component.html',
+    styleUrl: './send-sms-page.component.scss'
 })
 export class SendSmsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -372,24 +370,23 @@ export class SendSmsPageComponent implements OnInit {
 
   private readExcelFile(file: File): void {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        const data = new Uint8Array(reader.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(reader.result as ArrayBuffer);
+        const worksheet = workbook.worksheets[0];
 
-        if (!sheetName) {
+        if (!worksheet) {
           this.fileParseError = 'Archivo Excel vacío.';
           return;
         }
 
-        const worksheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
-          header: 1,
-          defval: '',
-          blankrows: false,
-          raw: false
-        }) as unknown[][];
+        const rows: unknown[][] = [];
+        worksheet.eachRow({ includeEmpty: false }, (row) => {
+          const values = row.values as unknown[];
+          rows.push(values.slice(1).map((v) => (v == null ? '' : String(v))));
+        });
 
         if (rows.length === 0) {
           this.fileParseError = 'Archivo Excel vacío.';
@@ -424,7 +421,8 @@ export class SendSmsPageComponent implements OnInit {
     reader.readAsArrayBuffer(file);
   }
 
-  downloadTemplate(): void {
+  async downloadTemplate(): Promise<void> {
+    const ExcelJS = await import('exceljs');
     const template = [
       ['Teléfono', 'Mensaje'],
       ['956062256', 'Hola Juan, este es un SMS de prueba personalizado.'],
@@ -432,11 +430,21 @@ export class SendSmsPageComponent implements OnInit {
       ['+51987654321', 'Hola Carlos, este mensaje viene desde archivo.']
     ];
 
-    const worksheet = XLSX.utils.aoa_to_sheet(template);
-    worksheet['!cols'] = [{ wch: 18 }, { wch: 64 }];
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla SMS');
-    XLSX.writeFile(workbook, 'plantilla_sms.xlsx');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Plantilla SMS');
+    worksheet.addRows(template);
+    worksheet.columns = [{ width: 18 }, { width: 64 }];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'plantilla_sms.xlsx';
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   clearFileMessages(): void {

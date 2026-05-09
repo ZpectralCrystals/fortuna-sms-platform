@@ -1,321 +1,333 @@
-<div *ngIf="loading" class="loading-state">
-  <div class="loading-text">Cargando mensajes...</div>
-</div>
-
-<div *ngIf="!loading" class="messages-page">
-  <div *ngIf="errorMessage" class="error-box">
-    {{ errorMessage }}
+@if (loading) {
+  <div class="loading-state">
+    <div class="loading-text">Cargando mensajes...</div>
   </div>
+}
 
-  <div class="page-header">
-    <div class="title-group">
-      <div class="title-icon">
-        <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
+@if (!loading) {
+  <div class="messages-page">
+    @if (errorMessage) {
+      <div class="error-box">
+        {{ errorMessage }}
       </div>
-      <div>
-        <h1>Mensajes SMS</h1>
-        <p>Auditoría de mensajes enviados, fallidos y pendientes</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="stats-grid">
-    <div class="stat-card total">
-      <div class="stat-label">Total</div>
-      <div class="stat-value">{{ stats.total }}</div>
-    </div>
-    <div class="stat-card sent">
-      <div class="stat-label">Enviados</div>
-      <div class="stat-value">{{ stats.sent }}</div>
-    </div>
-    <div class="stat-card failed">
-      <div class="stat-label">Fallidos</div>
-      <div class="stat-value">{{ stats.failed }}</div>
-    </div>
-    <div class="stat-card sms">
-      <div class="stat-label">SMS consumidos</div>
-      <div class="stat-value">{{ formatNumber(stats.consumedSms) }}</div>
-    </div>
-    <div class="stat-card cost">
-      <div class="stat-label">Costo total</div>
-      <div class="stat-value">S/ {{ formatCost(stats.totalCost) }}</div>
-    </div>
-  </div>
-
-  <div class="table-card">
-    <div class="filters-panel">
-      <div class="filters-grid">
-        <label class="filter-field filter-field--search">
-          <span>Buscar</span>
-          <div class="search-wrapper">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              type="text"
-              [(ngModel)]="searchTerm"
-              (ngModelChange)="applyFilters()"
-              placeholder="Buscar por cliente, email, destinatario o mensaje..."
-            />
-          </div>
-        </label>
-
-        <label class="filter-field">
-          <span>Estado</span>
-          <div class="select-wrapper status-select">
-            <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
-            <select [(ngModel)]="statusFilter" (ngModelChange)="onStatusFilterChange()">
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendiente</option>
-              <option value="sent">Aceptado</option>
-              <option value="delivered">Aceptado</option>
-              <option value="failed">Fallido</option>
-            </select>
-          </div>
-        </label>
-
-        <label class="filter-field">
-          <span>Desde</span>
-          <div class="date-wrapper">
-            <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M8 2v4" />
-              <path d="M16 2v4" />
-              <rect width="18" height="18" x="3" y="4" rx="2" />
-              <path d="M3 10h18" />
-            </svg>
-            <input
-              class="date-select"
-              type="date"
-              [(ngModel)]="dateFrom"
-              (ngModelChange)="onDateFilterChange()"
-              aria-label="Fecha desde"
-            />
-          </div>
-        </label>
-
-        <label class="filter-field">
-          <span>Hasta</span>
-          <div class="date-wrapper">
-            <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M8 2v4" />
-              <path d="M16 2v4" />
-              <rect width="18" height="18" x="3" y="4" rx="2" />
-              <path d="M3 10h18" />
-            </svg>
-            <input
-              class="date-select"
-              type="date"
-              [(ngModel)]="dateTo"
-              (ngModelChange)="onDateFilterChange()"
-              aria-label="Fecha hasta"
-            />
-          </div>
-        </label>
-      </div>
-      <div class="limit-note">
-        Mostrando últimos {{ messageLimit }} mensajes según los filtros activos.
-      </div>
-    </div>
-
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Email</th>
-            <th>Destinatario</th>
-            <th>Mensaje</th>
-            <th>Segmentos</th>
-            <th>Costo</th>
-            <th>Estado</th>
-            <th>Proveedor</th>
-            <th>Error</th>
-            <th>Creado</th>
-            <th>Enviado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngIf="filteredMessages.length === 0">
-            <td class="empty-cell" colspan="12">Aún no hay mensajes enviados.</td>
-          </tr>
-
-          <tr *ngFor="let item of filteredMessages" class="message-row">
-            <td>
-              <div class="client-name">{{ clientName(item) }}</div>
-              <div *ngIf="clientCompany(item) as company" class="client-company">{{ company }}</div>
-            </td>
-            <td class="email-cell">{{ clientEmail(item) }}</td>
-            <td>
-              <div class="recipient">{{ item.recipient }}</div>
-            </td>
-            <td>
-              <div class="message-text" [title]="item.message">{{ item.message }}</div>
-              <div *ngIf="item.error_message" class="error-text">{{ item.error_message }}</div>
-            </td>
-            <td class="number-cell">{{ formatNumber(item.segments) }}</td>
-            <td class="number-cell">S/ {{ formatCost(item.cost) }}</td>
-            <td>
-              <span class="status-badge" [ngClass]="item.status">
-                <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <ng-container [ngSwitch]="item.status">
-                    <ng-container *ngSwitchCase="'pending'">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'sent'">
-                      <path d="m22 2-7 20-4-9-9-4Z" />
-                      <path d="M22 2 11 13" />
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'delivered'">
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                      <path d="m9 11 3 3L22 4" />
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'failed'">
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="m15 9-6 6" />
-                      <path d="m9 9 6 6" />
-                    </ng-container>
-                  </ng-container>
-                </svg>
-                {{ statusLabel(item.status) }}
-              </span>
-            </td>
-            <td>
-              <div class="provider-stack">
-                <span class="provider-cell">{{ provider(item) }}</span>
-              </div>
-            </td>
-            <td class="error-cell">
-              <span [title]="errorLabel(item)">{{ errorLabel(item) }}</span>
-            </td>
-            <td class="date-cell">{{ formatDate(item.created_at) }}</td>
-            <td class="date-cell">{{ formatDate(item.sent_at) }}</td>
-            <td>
-              <button class="detail-button" type="button" (click)="openDetail(item)">
-                Ver detalle
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div *ngIf="selectedMessage as detail" class="modal-backdrop" (click)="closeDetail()">
-    <section class="detail-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Detalle de mensaje SMS">
-      <div class="detail-header">
+    }
+    <div class="page-header">
+      <div class="title-group">
+        <div class="title-icon">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
         <div>
-          <h2>Detalle de mensaje</h2>
-          <p>{{ detail.id }}</p>
-        </div>
-        <button class="close-button" type="button" (click)="closeDetail()" aria-label="Cerrar detalle">
-          X
-        </button>
-      </div>
-
-      <div class="detail-grid">
-        <div class="detail-card">
-          <span>Cliente</span>
-          <strong>{{ clientName(detail) }}</strong>
-          <small>{{ clientEmail(detail) }}</small>
-        </div>
-        <div class="detail-card">
-          <span>Destino</span>
-          <strong>{{ detail.recipient }}</strong>
-          <small>Proveedor: {{ provider(detail) }}</small>
-        </div>
-        <div class="detail-card">
-          <span>Estado</span>
-          <strong>{{ statusLabel(detail.status) }}</strong>
-        </div>
-        <div class="detail-card">
-          <span>Consumo</span>
-          <strong>{{ formatNumber(detail.segments) }} SMS</strong>
-          <small>S/ {{ formatCost(detail.cost) }}</small>
+          <h1>Mensajes SMS</h1>
+          <p>Auditoría de mensajes enviados, fallidos y pendientes</p>
         </div>
       </div>
-
-      <div class="detail-section">
-        <h3>Mensaje completo</h3>
-        <p class="full-message">{{ detail.message }}</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-label">Total</div>
+        <div class="stat-value">{{ stats.total }}</div>
       </div>
-
-      <div class="detail-section">
-        <h3>Datos técnicos</h3>
-        <dl class="definition-grid">
-          <div>
-            <dt>Provider message id</dt>
-            <dd>{{ detail.provider_message_id || 'No registrado' }}</dd>
-          </div>
-          <div>
-            <dt>Error</dt>
-            <dd>{{ errorLabel(detail) }}</dd>
-          </div>
-          <div>
-            <dt>Creado</dt>
-            <dd>{{ formatDate(detail.created_at) }}</dd>
-          </div>
-          <div>
-            <dt>Enviado</dt>
-            <dd>{{ formatDate(detail.sent_at) }}</dd>
-          </div>
-          <div>
-            <dt>Aceptado</dt>
-            <dd>{{ formatDate(detail.delivered_at) }}</dd>
-          </div>
-        </dl>
+      <div class="stat-card sent">
+        <div class="stat-label">Enviados</div>
+        <div class="stat-value">{{ stats.sent }}</div>
       </div>
-
-      <div class="detail-section">
-        <h3>Intento de envío</h3>
-        <ng-container *ngIf="detail.attempt; else noAttempt">
-          <dl class="definition-grid">
-            <div>
-              <dt>Idempotency key</dt>
-              <dd>{{ detail.attempt.idempotency_key }}</dd>
-            </div>
-            <div>
-              <dt>Destinatario proveedor</dt>
-              <dd>{{ detail.attempt.provider_recipient || 'No registrado' }}</dd>
-            </div>
-            <div>
-              <dt>Estado intento</dt>
-              <dd>{{ detail.attempt.status }}</dd>
-            </div>
-            <div>
-              <dt>Inicio</dt>
-              <dd>{{ formatDate(detail.attempt.started_at) }}</dd>
-            </div>
-            <div>
-              <dt>Finalizado</dt>
-              <dd>{{ formatDate(detail.attempt.completed_at) }}</dd>
-            </div>
-            <div>
-              <dt>Expira</dt>
-              <dd>{{ formatDate(detail.attempt.expires_at) }}</dd>
-            </div>
-          </dl>
-        </ng-container>
-        <ng-template #noAttempt>
-          <p class="empty-detail">Sin intento asociado.</p>
-        </ng-template>
+      <div class="stat-card failed">
+        <div class="stat-label">Fallidos</div>
+        <div class="stat-value">{{ stats.failed }}</div>
       </div>
-
-      <div class="detail-section">
-        <h3>Provider response</h3>
-        <pre>{{ providerResponseJson(detail) }}</pre>
+      <div class="stat-card sms">
+        <div class="stat-label">SMS consumidos</div>
+        <div class="stat-value">{{ formatNumber(stats.consumedSms) }}</div>
       </div>
-
-      <div class="detail-section" *ngIf="detail.attempt">
-        <h3>Attempt provider response</h3>
-        <pre>{{ attemptResponseJson(detail) }}</pre>
+      <div class="stat-card cost">
+        <div class="stat-label">Costo total</div>
+        <div class="stat-value">S/ {{ formatCost(stats.totalCost) }}</div>
       </div>
-    </section>
+    </div>
+    <div class="table-card">
+      <div class="filters-panel">
+        <div class="filters-grid">
+          <label class="filter-field filter-field--search">
+            <span>Buscar</span>
+            <div class="search-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                type="text"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="applyFilters()"
+                placeholder="Buscar por cliente, email, destinatario o mensaje..."
+                />
+            </div>
+          </label>
+          <label class="filter-field">
+            <span>Estado</span>
+            <div class="select-wrapper status-select">
+              <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              <select [(ngModel)]="statusFilter" (ngModelChange)="onStatusFilterChange()">
+                <option value="all">Todos los estados</option>
+                <option value="pending">Pendiente</option>
+                <option value="sent">Aceptado</option>
+                <option value="delivered">Aceptado</option>
+                <option value="failed">Fallido</option>
+              </select>
+            </div>
+          </label>
+          <label class="filter-field">
+            <span>Desde</span>
+            <div class="date-wrapper">
+              <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 2v4" />
+                <path d="M16 2v4" />
+                <rect width="18" height="18" x="3" y="4" rx="2" />
+                <path d="M3 10h18" />
+              </svg>
+              <input
+                class="date-select"
+                type="date"
+                [(ngModel)]="dateFrom"
+                (ngModelChange)="onDateFilterChange()"
+                aria-label="Fecha desde"
+                />
+            </div>
+          </label>
+          <label class="filter-field">
+            <span>Hasta</span>
+            <div class="date-wrapper">
+              <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 2v4" />
+                <path d="M16 2v4" />
+                <rect width="18" height="18" x="3" y="4" rx="2" />
+                <path d="M3 10h18" />
+              </svg>
+              <input
+                class="date-select"
+                type="date"
+                [(ngModel)]="dateTo"
+                (ngModelChange)="onDateFilterChange()"
+                aria-label="Fecha hasta"
+                />
+            </div>
+          </label>
+        </div>
+        <div class="limit-note">
+          Mostrando últimos {{ messageLimit }} mensajes según los filtros activos.
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Email</th>
+              <th>Destinatario</th>
+              <th>Mensaje</th>
+              <th>Segmentos</th>
+              <th>Costo</th>
+              <th>Estado</th>
+              <th>Proveedor</th>
+              <th>Error</th>
+              <th>Creado</th>
+              <th>Enviado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (filteredMessages.length === 0) {
+              <tr>
+                <td class="empty-cell" colspan="12">Aún no hay mensajes enviados.</td>
+              </tr>
+            }
+            @for (item of filteredMessages; track item) {
+              <tr class="message-row">
+                <td>
+                  <div class="client-name">{{ clientName(item) }}</div>
+                  @if (clientCompany(item); as company) {
+                    <div class="client-company">{{ company }}</div>
+                  }
+                </td>
+                <td class="email-cell">{{ clientEmail(item) }}</td>
+                <td>
+                  <div class="recipient">{{ item.recipient }}</div>
+                </td>
+                <td>
+                  <div class="message-text" [title]="item.message">{{ item.message }}</div>
+                  @if (item.error_message) {
+                    <div class="error-text">{{ item.error_message }}</div>
+                  }
+                </td>
+                <td class="number-cell">{{ formatNumber(item.segments) }}</td>
+                <td class="number-cell">S/ {{ formatCost(item.cost) }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="item.status">
+                    <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <ng-container>
+                        @switch (item.status) {
+                          @case ('pending') {
+                            <ng-container>
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </ng-container>
+                          }
+                          @case ('sent') {
+                            <ng-container>
+                              <path d="m22 2-7 20-4-9-9-4Z" />
+                              <path d="M22 2 11 13" />
+                            </ng-container>
+                          }
+                          @case ('delivered') {
+                            <ng-container>
+                              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                              <path d="m9 11 3 3L22 4" />
+                            </ng-container>
+                          }
+                          @case ('failed') {
+                            <ng-container>
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="m15 9-6 6" />
+                              <path d="m9 9 6 6" />
+                            </ng-container>
+                          }
+                        }
+                      </ng-container>
+                    </svg>
+                    {{ statusLabel(item.status) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="provider-stack">
+                    <span class="provider-cell">{{ provider(item) }}</span>
+                  </div>
+                </td>
+                <td class="error-cell">
+                  <span [title]="errorLabel(item)">{{ errorLabel(item) }}</span>
+                </td>
+                <td class="date-cell">{{ formatDate(item.created_at) }}</td>
+                <td class="date-cell">{{ formatDate(item.sent_at) }}</td>
+                <td>
+                  <button class="detail-button" type="button" (click)="openDetail(item)">
+                    Ver detalle
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    @if (selectedMessage; as detail) {
+      <div class="modal-backdrop" (click)="closeDetail()">
+        <section class="detail-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Detalle de mensaje SMS">
+          <div class="detail-header">
+            <div>
+              <h2>Detalle de mensaje</h2>
+              <p>{{ detail.id }}</p>
+            </div>
+            <button class="close-button" type="button" (click)="closeDetail()" aria-label="Cerrar detalle">
+              X
+            </button>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <span>Cliente</span>
+              <strong>{{ clientName(detail) }}</strong>
+              <small>{{ clientEmail(detail) }}</small>
+            </div>
+            <div class="detail-card">
+              <span>Destino</span>
+              <strong>{{ detail.recipient }}</strong>
+              <small>Proveedor: {{ provider(detail) }}</small>
+            </div>
+            <div class="detail-card">
+              <span>Estado</span>
+              <strong>{{ statusLabel(detail.status) }}</strong>
+            </div>
+            <div class="detail-card">
+              <span>Consumo</span>
+              <strong>{{ formatNumber(detail.segments) }} SMS</strong>
+              <small>S/ {{ formatCost(detail.cost) }}</small>
+            </div>
+          </div>
+          <div class="detail-section">
+            <h3>Mensaje completo</h3>
+            <p class="full-message">{{ detail.message }}</p>
+          </div>
+          <div class="detail-section">
+            <h3>Datos técnicos</h3>
+            <dl class="definition-grid">
+              <div>
+                <dt>Provider message id</dt>
+                <dd>{{ detail.provider_message_id || 'No registrado' }}</dd>
+              </div>
+              <div>
+                <dt>Error</dt>
+                <dd>{{ errorLabel(detail) }}</dd>
+              </div>
+              <div>
+                <dt>Creado</dt>
+                <dd>{{ formatDate(detail.created_at) }}</dd>
+              </div>
+              <div>
+                <dt>Enviado</dt>
+                <dd>{{ formatDate(detail.sent_at) }}</dd>
+              </div>
+              <div>
+                <dt>Aceptado</dt>
+                <dd>{{ formatDate(detail.delivered_at) }}</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="detail-section">
+            <h3>Intento de envío</h3>
+            @if (detail.attempt) {
+              <dl class="definition-grid">
+                <div>
+                  <dt>Idempotency key</dt>
+                  <dd>{{ detail.attempt.idempotency_key }}</dd>
+                </div>
+                <div>
+                  <dt>Destinatario proveedor</dt>
+                  <dd>{{ detail.attempt.provider_recipient || 'No registrado' }}</dd>
+                </div>
+                <div>
+                  <dt>Estado intento</dt>
+                  <dd>{{ detail.attempt.status }}</dd>
+                </div>
+                <div>
+                  <dt>Inicio</dt>
+                  <dd>{{ formatDate(detail.attempt.started_at) }}</dd>
+                </div>
+                <div>
+                  <dt>Finalizado</dt>
+                  <dd>{{ formatDate(detail.attempt.completed_at) }}</dd>
+                </div>
+                <div>
+                  <dt>Expira</dt>
+                  <dd>{{ formatDate(detail.attempt.expires_at) }}</dd>
+                </div>
+              </dl>
+            } @else {
+              <p class="empty-detail">Sin intento asociado.</p>
+            }
+          </div>
+          <div class="detail-section">
+            <h3>Provider response</h3>
+            <pre>{{ providerResponseJson(detail) }}</pre>
+          </div>
+          @if (detail.attempt) {
+            <div class="detail-section">
+              <h3>Attempt provider response</h3>
+              <pre>{{ attemptResponseJson(detail) }}</pre>
+            </div>
+          }
+        </section>
+      </div>
+    }
   </div>
-</div>
+}

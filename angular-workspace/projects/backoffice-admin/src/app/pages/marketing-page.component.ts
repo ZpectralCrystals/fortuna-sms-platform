@@ -67,11 +67,10 @@ interface MarketingRecommendation {
 }
 
 @Component({
-  selector: 'bo-marketing-page',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './marketing-page.component.html',
-  styleUrl: './marketing-page.component.scss'
+    selector: 'bo-marketing-page',
+    imports: [CommonModule],
+    templateUrl: './marketing-page.component.html',
+    styleUrl: './marketing-page.component.scss'
 })
 export class MarketingPageComponent implements OnInit {
   private readonly rechargesService = inject(RechargesService);

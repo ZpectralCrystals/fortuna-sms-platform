@@ -13,9 +13,11 @@
     </button>
   </header>
 
-  <p *ngIf="noticeMessage" class="notice-message">
-    {{ noticeMessage }}
-  </p>
+  @if (noticeMessage) {
+    <p class="notice-message">
+      {{ noticeMessage }}
+    </p>
+  }
 
   <section class="filters-card" aria-label="Filtros de plantillas">
     <label>
@@ -25,210 +27,217 @@
         name="searchTerm"
         [(ngModel)]="searchTerm"
         placeholder="Nombre, contenido o categoría"
-      />
+        />
     </label>
 
     <label>
       <span>Categoría</span>
       <select name="categoryFilter" [(ngModel)]="categoryFilter">
-        <option *ngFor="let category of categories" [value]="category.value">
-          {{ category.label }}
-        </option>
+        @for (category of categories; track category) {
+          <option [value]="category.value">
+            {{ category.label }}
+          </option>
+        }
       </select>
     </label>
   </section>
 
   <section class="templates-grid" aria-label="Plantillas guardadas">
-    <div *ngIf="loading" class="state-card">
-      <span class="spinner"></span>
-      <p>Cargando plantillas...</p>
-    </div>
-
-    <div *ngIf="!loading && templates.length === 0" class="state-card">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <path d="M14 2v6h6"></path>
-        <path d="M16 13H8"></path>
-        <path d="M16 17H8"></path>
-        <path d="M10 9H8"></path>
-      </svg>
-      <p>No tienes plantillas aún.</p>
-      <button type="button" class="primary-button" (click)="openCreateModal()">
-        Crear primera plantilla
-      </button>
-    </div>
-
-    <div *ngIf="!loading && templates.length > 0 && filteredTemplates.length === 0" class="state-card">
-      <p>No hay plantillas que coincidan con los filtros.</p>
-    </div>
-
-    <article *ngFor="let template of filteredTemplates" class="template-card">
-      <div class="template-card__header">
-        <div class="template-card__title">
-          <h3>{{ template.name }}</h3>
-          <span [ngClass]="categoryClass(template.category)">
-            {{ categoryLabel(template.category) }}
-          </span>
-        </div>
-
-        <div class="template-actions">
-          <button
-            type="button"
-            class="icon-button icon-button--edit"
-            title="Editar"
-            aria-label="Editar plantilla"
-            (click)="openEditModal(template)"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="icon-button icon-button--delete"
-            title="Eliminar"
-            aria-label="Eliminar plantilla"
-            (click)="deleteTemplate(template)"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 6h18"></path>
-              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-              <path d="M10 11v6"></path>
-              <path d="M14 11v6"></path>
-            </svg>
-          </button>
-        </div>
+    @if (loading) {
+      <div class="state-card">
+        <span class="spinner"></span>
+        <p>Cargando plantillas...</p>
       </div>
+    }
 
-      <div class="template-content">
-        <p>{{ template.content }}</p>
-      </div>
-
-      <div class="variables-block">
-        <span class="variables-block__label">Variables</span>
-        <div *ngIf="templateVariables(template).length > 0; else noCardVariables" class="chips-row">
-          <span *ngFor="let variable of templateVariables(template)" class="variable-chip">
-            {{ variable }}
-          </span>
-        </div>
-        <ng-template #noCardVariables>
-          <span class="muted-text">Sin variables</span>
-        </ng-template>
-      </div>
-
-      <div class="preview-box">
-        <span>Vista previa</span>
-        <p>{{ previewTemplateContent(template.content) }}</p>
-      </div>
-
-      <div class="template-meta">
-        <span>{{ template.content.length }} caracteres</span>
-        <span>{{ smsSegments(template.content) }} segmento(s)</span>
-      </div>
-
-      <div class="template-dates">
-        <span>Creada: {{ formatDate(template.created_at) }}</span>
-        <span>Actualizada: {{ formatDate(template.updated_at) }}</span>
-      </div>
-
-      <button type="button" class="use-button" (click)="useTemplate(template)">
+    @if (!loading && templates.length === 0) {
+      <div class="state-card">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m22 2-7 20-4-9-9-4Z"></path>
-          <path d="M22 2 11 13"></path>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <path d="M14 2v6h6"></path>
+          <path d="M16 13H8"></path>
+          <path d="M16 17H8"></path>
+          <path d="M10 9H8"></path>
         </svg>
-        Usar en envío
-      </button>
-    </article>
-  </section>
-
-  <div *ngIf="showModal" class="modal-backdrop" role="dialog" aria-modal="true">
-    <section class="modal-card">
-      <div class="modal-card__header">
-        <h2>{{ editingTemplate ? 'Editar plantilla' : 'Nueva plantilla' }}</h2>
-        <button type="button" class="icon-button" title="Cerrar" aria-label="Cerrar" (click)="closeModal()">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 6 6 18"></path>
-            <path d="m6 6 12 12"></path>
-          </svg>
+        <p>No tienes plantillas aún.</p>
+        <button type="button" class="primary-button" (click)="openCreateModal()">
+          Crear primera plantilla
         </button>
       </div>
+    }
 
-      <form class="template-form" (ngSubmit)="saveTemplate()">
-        <label>
-          <span>Nombre</span>
-          <input
-            type="text"
-            name="templateName"
-            [(ngModel)]="formData.name"
-            required
-            placeholder="Ej: Recordatorio de cita"
-          />
-        </label>
+    @if (!loading && templates.length > 0 && filteredTemplates.length === 0) {
+      <div class="state-card">
+        <p>No hay plantillas que coincidan con los filtros.</p>
+      </div>
+    }
 
-        <label>
-          <span>Categoría</span>
-          <select name="templateCategory" [(ngModel)]="formData.category" required>
-            <option *ngFor="let category of categories" [value]="category.value" [disabled]="category.value === 'all'">
-              {{ category.label }}
-            </option>
-          </select>
-        </label>
-
-        <label>
-          <span>Contenido</span>
-          <textarea
-            name="templateContent"
-            [(ngModel)]="formData.content"
-            required
-            rows="7"
-            maxlength="480"
-            placeholder="Escribe el contenido de tu plantilla..."
-          ></textarea>
-          <small>
-            {{ formData.content.length }}/480 caracteres -
-            {{ smsSegments(formData.content) }} segmento(s)
-          </small>
-        </label>
-
-        <div class="variables-block variables-block--form">
-          <span class="variables-block__label">Variables detectadas</span>
-          <div *ngIf="formVariables.length > 0; else noFormVariables" class="chips-row">
-            <span *ngFor="let variable of formVariables" class="variable-chip">
-              {{ variable }}
+    @for (template of filteredTemplates; track template) {
+      <article class="template-card">
+        <div class="template-card__header">
+          <div class="template-card__title">
+            <h3>{{ template.name }}</h3>
+            <span [ngClass]="categoryClass(template.category)">
+              {{ categoryLabel(template.category) }}
             </span>
           </div>
-          <ng-template #noFormVariables>
-            <span class="muted-text">Sin variables</span>
-          </ng-template>
+          <div class="template-actions">
+            <button
+              type="button"
+              class="icon-button icon-button--edit"
+              title="Editar"
+              aria-label="Editar plantilla"
+              (click)="openEditModal(template)"
+              >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="icon-button icon-button--delete"
+              title="Eliminar"
+              aria-label="Eliminar plantilla"
+              (click)="deleteTemplate(template)"
+              >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 6h18"></path>
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+              </svg>
+            </button>
+          </div>
         </div>
-
+        <div class="template-content">
+          <p>{{ template.content }}</p>
+        </div>
+        <div class="variables-block">
+          <span class="variables-block__label">Variables</span>
+          @if (templateVariables(template).length > 0) {
+            <div class="chips-row">
+              @for (variable of templateVariables(template); track variable) {
+                <span class="variable-chip">
+                  {{ variable }}
+                </span>
+              }
+            </div>
+          } @else {
+            <span class="muted-text">Sin variables</span>
+          }
+        </div>
         <div class="preview-box">
           <span>Vista previa</span>
-          <p>{{ formPreview || 'Escribe contenido para ver la vista previa.' }}</p>
+          <p>{{ previewTemplateContent(template.content) }}</p>
         </div>
-
-        <div class="tip-box">
-          <p>
-            Variables como {{ '{nombre}' }} o {{ '{codigo}' }} se detectan automáticamente y se
-            llenan antes de enviar.
-          </p>
+        <div class="template-meta">
+          <span>{{ template.content.length }} caracteres</span>
+          <span>{{ smsSegments(template.content) }} segmento(s)</span>
         </div>
+        <div class="template-dates">
+          <span>Creada: {{ formatDate(template.created_at) }}</span>
+          <span>Actualizada: {{ formatDate(template.updated_at) }}</span>
+        </div>
+        <button type="button" class="use-button" (click)="useTemplate(template)">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m22 2-7 20-4-9-9-4Z"></path>
+            <path d="M22 2 11 13"></path>
+          </svg>
+          Usar en envío
+        </button>
+      </article>
+    }
+  </section>
 
-        <p *ngIf="formError" class="form-error">
-          {{ formError }}
-        </p>
-
-        <div class="modal-actions">
-          <button type="button" class="secondary-button" (click)="closeModal()">
-            Cancelar
+  @if (showModal) {
+    <div class="modal-backdrop" role="dialog" aria-modal="true">
+      <section class="modal-card">
+        <div class="modal-card__header">
+          <h2>{{ editingTemplate ? 'Editar plantilla' : 'Nueva plantilla' }}</h2>
+          <button type="button" class="icon-button" title="Cerrar" aria-label="Cerrar" (click)="closeModal()">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
           </button>
-          <button type="submit" class="primary-submit" [disabled]="saving">
-            {{ saving ? 'Guardando...' : editingTemplate ? 'Actualizar' : 'Crear' }}
-          </button>
         </div>
-      </form>
-    </section>
-  </div>
+        <form class="template-form" (ngSubmit)="saveTemplate()">
+          <label>
+            <span>Nombre</span>
+            <input
+              type="text"
+              name="templateName"
+              [(ngModel)]="formData.name"
+              required
+              placeholder="Ej: Recordatorio de cita"
+              />
+          </label>
+          <label>
+            <span>Categoría</span>
+            <select name="templateCategory" [(ngModel)]="formData.category" required>
+              @for (category of categories; track category) {
+                <option [value]="category.value" [disabled]="category.value === 'all'">
+                  {{ category.label }}
+                </option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>Contenido</span>
+            <textarea
+              name="templateContent"
+              [(ngModel)]="formData.content"
+              required
+              rows="7"
+              maxlength="480"
+              placeholder="Escribe el contenido de tu plantilla..."
+            ></textarea>
+            <small>
+              {{ formData.content.length }}/480 caracteres -
+              {{ smsSegments(formData.content) }} segmento(s)
+            </small>
+          </label>
+          <div class="variables-block variables-block--form">
+            <span class="variables-block__label">Variables detectadas</span>
+            @if (formVariables.length > 0) {
+              <div class="chips-row">
+                @for (variable of formVariables; track variable) {
+                  <span class="variable-chip">
+                    {{ variable }}
+                  </span>
+                }
+              </div>
+            } @else {
+              <span class="muted-text">Sin variables</span>
+            }
+          </div>
+          <div class="preview-box">
+            <span>Vista previa</span>
+            <p>{{ formPreview || 'Escribe contenido para ver la vista previa.' }}</p>
+          </div>
+          <div class="tip-box">
+            <p>
+              Variables como {{ '{nombre}' }} o {{ '{codigo}' }} se detectan automáticamente y se
+              llenan antes de enviar.
+            </p>
+          </div>
+          @if (formError) {
+            <p class="form-error">
+              {{ formError }}
+            </p>
+          }
+          <div class="modal-actions">
+            <button type="button" class="secondary-button" (click)="closeModal()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : editingTemplate ? 'Actualizar' : 'Crear' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
 </div>

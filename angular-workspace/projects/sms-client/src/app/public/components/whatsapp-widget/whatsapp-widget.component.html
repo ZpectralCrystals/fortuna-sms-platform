@@ -1,79 +1,77 @@
 <section class="whatsapp-widget" aria-label="WhatsApp SMS Fortuna">
-  <div *ngIf="isOpen" class="whatsapp-panel" role="dialog" aria-label="Chat WhatsApp SMS Fortuna">
-    <header class="whatsapp-panel__header">
-      <div class="whatsapp-avatar" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.296-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.999-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.889-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.887 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
-        </svg>
-      </div>
-      <div>
-        <h2>SMS Fortuna</h2>
-        <p>Normalmente responde en minutos</p>
-      </div>
-      <button type="button" class="whatsapp-panel__close" aria-label="Cerrar WhatsApp" (click)="closeWidget()">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M18 6 6 18"></path>
-          <path d="m6 6 12 12"></path>
-        </svg>
-      </button>
-    </header>
-
-    <div class="whatsapp-panel__body">
-      <div class="chat-message">
-        <p>Hola! Bienvenido a SMS Fortuna. Selecciona una opción para ayudarte rápidamente.</p>
-        <span>Ahora</span>
-      </div>
-
-      <ng-container *ngIf="view === 'menu'; else plansView">
-        <div class="option-list">
-          <button type="button" class="option-card" (click)="showPlans()">
-            <strong>Planes de recarga</strong>
-            <span>Ver paquetes de SMS disponibles</span>
-          </button>
-          <button type="button" class="option-card" (click)="openCustomConsultation()">
-            <strong>Consulta personalizada</strong>
-            <span>Habla con un asesor</span>
-          </button>
-          <button type="button" class="option-card" (click)="openSupport()">
-            <strong>Soporte técnico</strong>
-            <span>Necesito ayuda con mi cuenta</span>
-          </button>
-        </div>
-      </ng-container>
-
-      <ng-template #plansView>
-        <button type="button" class="back-button" (click)="showMenu()">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19 12H5"></path>
-            <path d="m12 19-7-7 7-7"></path>
+  @if (isOpen) {
+    <div class="whatsapp-panel" role="dialog" aria-label="Chat WhatsApp SMS Fortuna">
+      <header class="whatsapp-panel__header">
+        <div class="whatsapp-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.296-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.999-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.889-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.887 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
           </svg>
-          Volver
+        </div>
+        <div>
+          <h2>SMS Fortuna</h2>
+          <p>Normalmente responde en minutos</p>
+        </div>
+        <button type="button" class="whatsapp-panel__close" aria-label="Cerrar WhatsApp" (click)="closeWidget()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
         </button>
-
-        <div class="plans-heading">
-          <h3>Paquetes de recarga SMS</h3>
-          <p>Selecciona un plan y te atenderemos por WhatsApp</p>
+      </header>
+      <div class="whatsapp-panel__body">
+        <div class="chat-message">
+          <p>Hola! Bienvenido a SMS Fortuna. Selecciona una opción para ayudarte rápidamente.</p>
+          <span>Ahora</span>
         </div>
-
-        <div class="plan-list">
-          <button type="button" class="plan-card" *ngFor="let plan of plans" (click)="openWhatsApp(plan.message)">
-            <span class="plan-card__price">{{ plan.label }}</span>
-            <span class="plan-card__sms">{{ plan.sms }}</span>
-            <span *ngIf="plan.popular" class="plan-card__badge">POPULAR</span>
+        @if (view === 'menu') {
+          <div class="option-list">
+            <button type="button" class="option-card" (click)="showPlans()">
+              <strong>Planes de recarga</strong>
+              <span>Ver paquetes de SMS disponibles</span>
+            </button>
+            <button type="button" class="option-card" (click)="openCustomConsultation()">
+              <strong>Consulta personalizada</strong>
+              <span>Habla con un asesor</span>
+            </button>
+            <button type="button" class="option-card" (click)="openSupport()">
+              <strong>Soporte técnico</strong>
+              <span>Necesito ayuda con mi cuenta</span>
+            </button>
+          </div>
+        } @else {
+          <button type="button" class="back-button" (click)="showMenu()">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19 12H5"></path>
+              <path d="m12 19-7-7 7-7"></path>
+            </svg>
+            Volver
           </button>
-        </div>
-
-        <div class="plans-footnote">
-          <p>Todos los precios incluyen IGV.</p>
-          <p>Para volúmenes mayores, contacta a ventas</p>
-        </div>
-      </ng-template>
+          <div class="plans-heading">
+            <h3>Paquetes de recarga SMS</h3>
+            <p>Selecciona un plan y te atenderemos por WhatsApp</p>
+          </div>
+          <div class="plan-list">
+            @for (plan of plans; track plan) {
+              <button type="button" class="plan-card" (click)="openWhatsApp(plan.message)">
+                <span class="plan-card__price">{{ plan.label }}</span>
+                <span class="plan-card__sms">{{ plan.sms }}</span>
+                @if (plan.popular) {
+                  <span class="plan-card__badge">POPULAR</span>
+                }
+              </button>
+            }
+          </div>
+          <div class="plans-footnote">
+            <p>Todos los precios incluyen IGV.</p>
+            <p>Para volúmenes mayores, contacta a ventas</p>
+          </div>
+        }
+      </div>
+      <footer class="whatsapp-panel__footer">
+        Al contactarnos aceptas nuestra política de privacidad
+      </footer>
     </div>
-
-    <footer class="whatsapp-panel__footer">
-      Al contactarnos aceptas nuestra política de privacidad
-    </footer>
-  </div>
+  }
 
   <button
     type="button"
@@ -81,15 +79,16 @@
     [class.whatsapp-toggle--open]="isOpen"
     [attr.aria-label]="isOpen ? 'Cerrar WhatsApp' : 'Abrir WhatsApp'"
     (click)="toggleWidget()"
-  >
-    <svg *ngIf="!isOpen; else closeIcon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.296-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.999-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.889-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.887 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
-    </svg>
-    <ng-template #closeIcon>
+    >
+    @if (!isOpen) {
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.296-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.273.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.999-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.889-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.887 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"></path>
+      </svg>
+    } @else {
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M18 6 6 18"></path>
         <path d="m6 6 12 12"></path>
       </svg>
-    </ng-template>
+    }
   </button>
 </section>

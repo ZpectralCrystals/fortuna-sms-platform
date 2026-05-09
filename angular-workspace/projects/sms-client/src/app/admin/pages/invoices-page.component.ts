@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminRecharge, RechargesService, formatCurrency, formatNumber } from '@sms-fortuna/shared';
@@ -28,11 +28,10 @@ interface MonthOption {
 }
 
 @Component({
-  selector: 'bo-invoices-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent],
-  templateUrl: './invoices-page.component.html',
-  styleUrl: './invoices-page.component.scss'
+    selector: 'bo-invoices-page',
+    imports: [FormsModule, LoadingStateComponent],
+    templateUrl: './invoices-page.component.html',
+    styleUrl: './invoices-page.component.scss'
 })
 export class InvoicesPageComponent implements OnInit {
   private readonly rechargesService = inject(RechargesService);

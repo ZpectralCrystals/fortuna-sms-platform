@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -6,11 +6,10 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '@sms-fortuna/shared';
 
 @Component({
-  selector: 'sms-register-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './register-page.component.html',
-  styleUrl: './register-page.component.scss'
+    selector: 'sms-register-page',
+    imports: [FormsModule, RouterLink],
+    templateUrl: './register-page.component.html',
+    styleUrl: './register-page.component.scss'
 })
 export class RegisterPageComponent {
   private readonly authService = inject(AuthService);

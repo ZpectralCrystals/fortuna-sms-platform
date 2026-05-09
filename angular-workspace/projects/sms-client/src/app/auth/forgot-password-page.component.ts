@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -6,11 +6,10 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '@sms-fortuna/shared';
 
 @Component({
-  selector: 'sms-forgot-password-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './forgot-password-page.component.html',
-  styleUrl: './forgot-password-page.component.scss'
+    selector: 'sms-forgot-password-page',
+    imports: [FormsModule, RouterLink],
+    templateUrl: './forgot-password-page.component.html',
+    styleUrl: './forgot-password-page.component.scss'
 })
 export class ForgotPasswordPageComponent {
   private readonly authService = inject(AuthService);

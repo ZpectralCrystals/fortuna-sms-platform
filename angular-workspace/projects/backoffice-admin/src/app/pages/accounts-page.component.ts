@@ -26,11 +26,10 @@ interface AccountCardClient extends BackofficeClientProfile {
 }
 
 @Component({
-  selector: 'bo-accounts-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './accounts-page.component.html',
-  styleUrl: './accounts-page.component.scss'
+    selector: 'bo-accounts-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './accounts-page.component.html',
+    styleUrl: './accounts-page.component.scss'
 })
 export class AccountsPageComponent implements OnInit {
   private readonly backofficeService = inject(BackofficeService);

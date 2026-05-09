@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService, SupabaseService } from '@sms-fortuna/shared';
@@ -28,11 +28,10 @@ const NAVIGATION: NavigationItem[] = [
 ];
 
 @Component({
-  selector: 'sms-dashboard-layout',
-  standalone: true,
-  imports: [CommonModule, RouterLink, RouterOutlet],
-  templateUrl: './dashboard-layout.component.html',
-  styleUrl: './dashboard-layout.component.scss'
+    selector: 'sms-dashboard-layout',
+    imports: [RouterLink, RouterOutlet],
+    templateUrl: './dashboard-layout.component.html',
+    styleUrl: './dashboard-layout.component.scss'
 })
 export class DashboardLayoutComponent implements OnInit {
   private readonly authService = inject(AuthService);

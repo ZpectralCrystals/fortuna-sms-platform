@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,11 +6,10 @@ import { Router } from '@angular/router';
 import { AuthService } from '@sms-fortuna/shared';
 
 @Component({
-  selector: 'bo-login-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './login-page.component.html',
-  styleUrl: './login-page.component.scss'
+    selector: 'bo-login-page',
+    imports: [FormsModule],
+    templateUrl: './login-page.component.html',
+    styleUrl: './login-page.component.scss'
 })
 export class LoginPageComponent {
   private readonly authService = inject(AuthService);

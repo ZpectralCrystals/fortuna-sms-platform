@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnInit, inject } from '@angular/core';
 import { SupabaseService } from '@sms-fortuna/shared';
 
@@ -57,11 +57,10 @@ interface MonthlyDataPoint {
 }
 
 @Component({
-  selector: 'sms-analytics-page',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './analytics-page.component.html',
-  styleUrl: './analytics-page.component.scss'
+    selector: 'sms-analytics-page',
+    imports: [],
+    templateUrl: './analytics-page.component.html',
+    styleUrl: './analytics-page.component.scss'
 })
 export class AnalyticsPageComponent implements OnInit {
   private readonly supabase = inject(SupabaseService);

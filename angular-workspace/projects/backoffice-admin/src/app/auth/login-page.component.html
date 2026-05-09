@@ -15,7 +15,7 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             aria-hidden="true"
-          >
+            >
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
         </div>
@@ -36,7 +36,7 @@
             required
             autocomplete="email"
             placeholder="admin@fortunasms.com"
-          />
+            />
         </div>
 
         <div class="field-group">
@@ -51,20 +51,21 @@
             required
             autocomplete="current-password"
             placeholder="••••••••"
-          />
+            />
         </div>
 
-        <p
-          *ngIf="errorMessage"
-          class="error-box"
-        >
-          {{ errorMessage }}
-        </p>
+        @if (errorMessage) {
+          <p
+            class="error-box"
+            >
+            {{ errorMessage }}
+          </p>
+        }
 
         <button
           type="submit"
           [disabled]="loading"
-        >
+          >
           {{ loading ? 'Ingresando...' : 'Ingresar' }}
         </button>
       </form>

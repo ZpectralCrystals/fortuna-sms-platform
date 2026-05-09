@@ -1,4 +1,4 @@
-import { APP_INITIALIZER } from '@angular/core';
+import { APP_INITIALIZER, provideZoneChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
@@ -19,7 +19,7 @@ function initSupabase(supabaseService: SupabaseService) {
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideRouter(backofficeAdminRoutes, withComponentInputBinding()),
+    provideZoneChangeDetection(),provideRouter(backofficeAdminRoutes, withComponentInputBinding()),
     {
       provide: APP_INITIALIZER,
       useFactory: initSupabase,

@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiKey, ApiKeysService, CreatedApiKey } from '@sms-fortuna/shared';
 
 @Component({
-  selector: 'sms-api-keys-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './api-keys-page.component.html',
-  styleUrl: './api-keys-page.component.scss'
+    selector: 'sms-api-keys-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './api-keys-page.component.html',
+    styleUrl: './api-keys-page.component.scss'
 })
 export class ApiKeysPageComponent implements OnInit {
   private readonly apiKeysService = inject(ApiKeysService);

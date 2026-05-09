@@ -36,11 +36,10 @@ interface StatCard {
 }
 
 @Component({
-  selector: 'bo-dashboard-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './dashboard-page.component.html',
-  styleUrl: './dashboard-page.component.scss'
+    selector: 'bo-dashboard-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './dashboard-page.component.html',
+    styleUrl: './dashboard-page.component.scss'
 })
 export class DashboardPageComponent implements OnInit {
   private readonly backofficeService = inject(BackofficeService);

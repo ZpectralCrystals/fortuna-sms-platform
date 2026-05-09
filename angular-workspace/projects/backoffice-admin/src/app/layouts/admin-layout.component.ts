@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
@@ -11,11 +11,10 @@ interface NavigationItem {
 }
 
 @Component({
-  selector: 'bo-admin-layout',
-  standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
-  templateUrl: './admin-layout.component.html',
-  styleUrl: './admin-layout.component.scss'
+    selector: 'bo-admin-layout',
+    imports: [RouterLink, RouterLinkActive, RouterOutlet],
+    templateUrl: './admin-layout.component.html',
+    styleUrl: './admin-layout.component.scss'
 })
 export class AdminLayoutComponent implements OnInit {
   private readonly authService = inject(AuthService);

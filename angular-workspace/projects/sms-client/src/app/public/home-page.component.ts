@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WhatsappWidgetComponent } from './components/whatsapp-widget/whatsapp-widget.component';
@@ -47,11 +47,10 @@ const WHATSAPP_MESSAGES = {
 } as const;
 
 @Component({
-  selector: 'sms-home-page',
-  standalone: true,
-  imports: [CommonModule, RouterLink, WhatsappWidgetComponent],
-  templateUrl: './home-page.component.html',
-  styleUrl: './home-page.component.scss'
+    selector: 'sms-home-page',
+    imports: [RouterLink, WhatsappWidgetComponent],
+    templateUrl: './home-page.component.html',
+    styleUrl: './home-page.component.scss'
 })
 export class HomePageComponent {
   readonly currentYear = new Date().getFullYear();

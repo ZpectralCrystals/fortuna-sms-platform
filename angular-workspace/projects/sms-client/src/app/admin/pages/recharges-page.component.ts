@@ -15,11 +15,10 @@ type RechargeFilter = 'all' | RechargeStatus;
 type ManualPaymentMethod = Extract<PaymentMethod, string>;
 
 @Component({
-  selector: 'bo-recharges-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './recharges-page.component.html',
-  styleUrl: './recharges-page.component.scss'
+    selector: 'bo-recharges-page',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './recharges-page.component.html',
+    styleUrl: './recharges-page.component.scss'
 })
 export class RechargesPageComponent implements OnInit {
   private readonly rechargesService = inject(RechargesService);

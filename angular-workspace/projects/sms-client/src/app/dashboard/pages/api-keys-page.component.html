@@ -14,80 +14,89 @@
     </button>
   </header>
 
-  <div *ngIf="message" class="notice-message" role="status">
-    <span>{{ message }}</span>
-    <button type="button" class="notice-close" (click)="message = ''" aria-label="Cerrar aviso">×</button>
-  </div>
-  <div *ngIf="errorMessage" class="error-message" role="alert">
-    <span>{{ errorMessage }}</span>
-    <button type="button" class="notice-close" (click)="errorMessage = ''" aria-label="Cerrar error">×</button>
-  </div>
+  @if (message) {
+    <div class="notice-message" role="status">
+      <span>{{ message }}</span>
+      <button type="button" class="notice-close" (click)="message = ''" aria-label="Cerrar aviso">×</button>
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="error-message" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" class="notice-close" (click)="errorMessage = ''" aria-label="Cerrar error">×</button>
+    </div>
+  }
 
   <section class="keys-panel">
     <div class="keys-panel__header">
       <h2>Mis API Keys</h2>
     </div>
 
-    <div *ngIf="loading" class="empty-state">
-      <p>Cargando API Keys...</p>
-    </div>
+    @if (loading) {
+      <div class="empty-state">
+        <p>Cargando API Keys...</p>
+      </div>
+    }
 
-    <div *ngIf="!loading && apiKeys.length === 0" class="empty-state">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M21 2l-2 2"></path>
-        <path d="M15.5 7.5l2 2"></path>
-        <path d="M11.7 11.3a6 6 0 1 1-2.99-2.99L21 20.59V22h-1.41Z"></path>
-      </svg>
-      <p>No tienes API Keys aún</p>
-      <button type="button" class="primary-button" (click)="openCreateModal()">
-        Crear primera API Key
-      </button>
-    </div>
+    @if (!loading && apiKeys.length === 0) {
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 2l-2 2"></path>
+          <path d="M15.5 7.5l2 2"></path>
+          <path d="M11.7 11.3a6 6 0 1 1-2.99-2.99L21 20.59V22h-1.41Z"></path>
+        </svg>
+        <p>No tienes API Keys aún</p>
+        <button type="button" class="primary-button" (click)="openCreateModal()">
+          Crear primera API Key
+        </button>
+      </div>
+    }
 
-    <div *ngIf="!loading && apiKeys.length > 0" class="keys-list">
-      <article *ngFor="let key of apiKeys" class="key-row">
-        <div class="key-row__content">
-          <div class="key-row__main">
-            <div class="key-title">
-              <h3>{{ key.name }}</h3>
-              <span class="status" [ngClass]="statusClass(key)">{{ statusLabel(key) }}</span>
+    @if (!loading && apiKeys.length > 0) {
+      <div class="keys-list">
+        @for (key of apiKeys; track key) {
+          <article class="key-row">
+            <div class="key-row__content">
+              <div class="key-row__main">
+                <div class="key-title">
+                  <h3>{{ key.name }}</h3>
+                  <span class="status" [ngClass]="statusClass(key)">{{ statusLabel(key) }}</span>
+                </div>
+                <div class="key-value-row">
+                  <code
+                    class="masked-key"
+                    title="La clave completa solo se muestra al crearla."
+                    aria-label="API Key enmascarada"
+                  >{{ key.keyPrefix }}•••••••••••••••••</code>
+                </div>
+                <p class="key-meta">
+                  Scope: {{ scopesText(key) }} · Último uso: {{ formatDate(key.lastUsedAt) }} · Creada: {{ formatDate(key.createdAt) }}
+                </p>
+                <p class="key-meta">
+                  Límite: {{ key.rateLimitPerMinute }}/min · {{ key.rateLimitPerDay }}/día
+                </p>
+              </div>
+              <button
+                type="button"
+                class="delete-button"
+                [disabled]="revokingId === key.id || statusLabel(key) !== 'Activa'"
+                (click)="revokeApiKey(key)"
+                aria-label="Revocar API Key"
+                title="Revocar API Key"
+                >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="m19 6-1 14H6L5 6"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                </svg>
+              </button>
             </div>
-
-            <div class="key-value-row">
-              <code
-                class="masked-key"
-                title="La clave completa solo se muestra al crearla."
-                aria-label="API Key enmascarada"
-              >{{ key.keyPrefix }}•••••••••••••••••</code>
-            </div>
-
-            <p class="key-meta">
-              Scope: {{ scopesText(key) }} · Último uso: {{ formatDate(key.lastUsedAt) }} · Creada: {{ formatDate(key.createdAt) }}
-            </p>
-            <p class="key-meta">
-              Límite: {{ key.rateLimitPerMinute }}/min · {{ key.rateLimitPerDay }}/día
-            </p>
-          </div>
-
-          <button
-            type="button"
-            class="delete-button"
-            [disabled]="revokingId === key.id || statusLabel(key) !== 'Activa'"
-            (click)="revokeApiKey(key)"
-            aria-label="Revocar API Key"
-            title="Revocar API Key"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 6h18"></path>
-              <path d="M8 6V4h8v2"></path>
-              <path d="m19 6-1 14H6L5 6"></path>
-              <path d="M10 11v6"></path>
-              <path d="M14 11v6"></path>
-            </svg>
-          </button>
-        </div>
-      </article>
-    </div>
+          </article>
+        }
+      </div>
+    }
   </section>
 
   <section class="usage-guide">
@@ -108,7 +117,7 @@
       <div class="usage-block">
         <span class="usage-label">Headers</span>
         <pre>X-API-Key: TU_API_KEY
-Content-Type: application/json</pre>
+        Content-Type: application/json</pre>
       </div>
 
       <div class="usage-block">
@@ -123,47 +132,47 @@ Content-Type: application/json</pre>
   </section>
 </div>
 
-<div *ngIf="showCreateModal" class="modal-backdrop">
-  <div class="modal-card">
-    <ng-container *ngIf="!createdKey; else createdKeyTemplate">
-      <h2>Nueva API Key</h2>
-      <div class="modal-field">
-        <label for="api-key-name">Nombre</label>
-        <input
-          id="api-key-name"
-          type="text"
-          [(ngModel)]="newKeyName"
-          maxlength="80"
-          placeholder="Producción"
-        />
-        <p>Usa un nombre que identifique la integración.</p>
-      </div>
-
-      <p *ngIf="errorMessage" class="modal-message modal-message--error">{{ errorMessage }}</p>
-
-      <div class="modal-actions">
-        <button type="button" class="secondary-button" (click)="closeCreateModal()">Cancelar</button>
-        <button type="button" class="primary-submit" [disabled]="creating" (click)="createApiKey()">
-          {{ creating ? 'Creando...' : 'Crear API Key' }}
-        </button>
-      </div>
-    </ng-container>
-
-    <ng-template #createdKeyTemplate>
-      <h2>API Key creada</h2>
-      <p class="created-copy">Cópiala ahora; no volveremos a mostrarla.</p>
-      <div class="secret-box">
-        <code>{{ createdKeyValue }}</code>
-        <button type="button" class="primary-submit" (click)="copyValue(createdKeyValue)">
-          {{ copiedValue === createdKeyValue ? 'Copiada' : 'Copiar' }}
-        </button>
-      </div>
-      <div class="warning-box">
-        <p>Guarda esta clave en un lugar seguro. Por seguridad, no podremos mostrarla nuevamente.</p>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="secondary-button" (click)="closeCreateModal()">Cerrar</button>
-      </div>
-    </ng-template>
+@if (showCreateModal) {
+  <div class="modal-backdrop">
+    <div class="modal-card">
+      @if (!createdKey) {
+        <h2>Nueva API Key</h2>
+        <div class="modal-field">
+          <label for="api-key-name">Nombre</label>
+          <input
+            id="api-key-name"
+            type="text"
+            [(ngModel)]="newKeyName"
+            maxlength="80"
+            placeholder="Producción"
+            />
+          <p>Usa un nombre que identifique la integración.</p>
+        </div>
+        @if (errorMessage) {
+          <p class="modal-message modal-message--error">{{ errorMessage }}</p>
+        }
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" (click)="closeCreateModal()">Cancelar</button>
+          <button type="button" class="primary-submit" [disabled]="creating" (click)="createApiKey()">
+            {{ creating ? 'Creando...' : 'Crear API Key' }}
+          </button>
+        </div>
+      } @else {
+        <h2>API Key creada</h2>
+        <p class="created-copy">Cópiala ahora; no volveremos a mostrarla.</p>
+        <div class="secret-box">
+          <code>{{ createdKeyValue }}</code>
+          <button type="button" class="primary-submit" (click)="copyValue(createdKeyValue)">
+            {{ copiedValue === createdKeyValue ? 'Copiada' : 'Copiar' }}
+          </button>
+        </div>
+        <div class="warning-box">
+          <p>Guarda esta clave en un lugar seguro. Por seguridad, no podremos mostrarla nuevamente.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" (click)="closeCreateModal()">Cerrar</button>
+        </div>
+      }
+    </div>
   </div>
-</div>
+}

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -10,11 +10,10 @@ const SUPPORT_WHATSAPP_URL = `https://wa.me/51982165728?text=${encodeURIComponen
 )}`;
 
 @Component({
-  selector: 'sms-login-page',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './login-page.component.html',
-  styleUrl: './login-page.component.scss'
+    selector: 'sms-login-page',
+    imports: [FormsModule, RouterLink],
+    templateUrl: './login-page.component.html',
+    styleUrl: './login-page.component.scss'
 })
 export class LoginPageComponent {
   private readonly authService = inject(AuthService);
