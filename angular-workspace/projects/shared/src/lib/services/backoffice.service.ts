@@ -344,7 +344,9 @@ export class BackofficeService {
   }
 
   async updateClientBasicInfo(profileId: string, payload: UpdateClientBasicInfoPayload): Promise<void> {
-    const { error } = await this.supabase.instance.rpc('admin_update_client_profile', {
+    const actorUserId = await this.getCurrentUserId();
+    const { error } = await this.supabase.instance.rpc('admin_update_profile_company_ruc', {
+      p_actor_user_id: actorUserId,
       p_profile_id: profileId,
       p_full_name: payload.full_name,
       p_razon_social: payload.razon_social,
@@ -465,6 +467,22 @@ export class BackofficeService {
       return `${fallback} Perfil no encontrado.`;
     }
 
+    if (message.includes('PROFILE_COMPANY_REQUIRED')) {
+      return `${fallback} El cliente no tiene empresa/RUC vinculada. Requiere revisión manual.`;
+    }
+
+    if (message.includes('COMPANY_NOT_FOUND')) {
+      return `${fallback} La empresa vinculada no existe. Requiere revisión manual.`;
+    }
+
+    if (message.includes('COMPANY_HAS_MULTIPLE_ACTIVE_USERS_REQUIRES_MANUAL_REVIEW')) {
+      return `${fallback} La empresa tiene más de un usuario activo. Cambiar RUC requiere revisión manual.`;
+    }
+
+    if (message.includes('RUC_ALREADY_ASSIGNED_TO_OTHER_COMPANY_REQUIRES_MANUAL_MERGE')) {
+      return `${fallback} El RUC ya pertenece a otra empresa. Requiere merge manual.`;
+    }
+
     if (message.includes('CANNOT_UPDATE_ADMIN_PROFILE')) {
       return `${fallback} No se puede editar un perfil administrador desde clientes.`;
     }
@@ -478,6 +496,16 @@ export class BackofficeService {
     }
 
     return `${fallback} ${message}`;
+  }
+
+  private async getCurrentUserId(): Promise<string> {
+    const { data, error } = await this.supabase.instance.auth.getUser();
+
+    if (error || !data.user?.id) {
+      throw new Error('No se pudo validar la sesión admin.');
+    }
+
+    return data.user.id;
   }
 
   private isCommercialProfile(
