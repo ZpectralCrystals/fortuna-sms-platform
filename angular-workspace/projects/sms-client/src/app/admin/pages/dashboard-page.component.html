@@ -21,18 +21,20 @@
           </svg>
           <span>Historial de Compras</span>
         </button>
-        <button
-          type="button"
-          class="action-button purchase-button"
-          (click)="openPurchaseModal()"
-          >
-          <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="8" cy="21" r="1" />
-            <circle cx="19" cy="21" r="1" />
-            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
-          </svg>
-          <span>Comprar SMS</span>
-        </button>
+        @if (showSmsPurchaseControls) {
+          <button
+            type="button"
+            class="action-button purchase-button"
+            (click)="openPurchaseModal()"
+            >
+            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="8" cy="21" r="1" />
+              <circle cx="19" cy="21" r="1" />
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+            </svg>
+            <span>Comprar SMS</span>
+          </button>
+        }
       </div>
     </div>
     @if (successMessage) {
@@ -46,51 +48,26 @@
       </p>
     }
     <div class="stats-grid">
-      @for (stat of statCards; track stat) {
-        <div
-          class="stat-card"
-          >
-          <div class="stat-icon-row">
-            <div class="stat-icon-box" [ngClass]="stat.bgColor">
-              @switch (stat.icon) {
-                @case ('package') {
-                  <svg class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m7.5 4.27 9 5.15" />
-                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                    <path d="m3.3 7 8.7 5 8.7-5" />
-                    <path d="M12 22V12" />
-                  </svg>
-                }
-                @case ('trendingUp') {
-                  <svg class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-                    <polyline points="16 7 22 7 22 13" />
-                  </svg>
-                }
-                @case ('creditCard') {
-                  <svg class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect width="20" height="14" x="2" y="5" rx="2" />
-                    <line x1="2" x2="22" y1="10" y2="10" />
-                  </svg>
-                }
-                @case ('users') {
-                  <svg class="stat-icon" [ngClass]="stat.textColor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                }
-              }
-            </div>
-          </div>
-          <div>
-            <p class="stat-title">{{ stat.title }}</p>
-            <p class="stat-value" [ngClass]="stat.textColor">{{ stat.value }}</p>
-            <p class="stat-subtitle">{{ stat.subtitle }}</p>
-          </div>
-        </div>
-      }
+      <div class="stat-card">
+        <p class="stat-title">Inventario Disponible</p>
+        <p class="stat-value text-blue-600">{{ formatNumber(inventoryAvailableSms) }}</p>
+        <p class="stat-subtitle">Total: {{ formatNumber(inventoryTotalSms) }} SMS</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-title">Ingresos</p>
+        <p class="stat-value text-green-600">S/ {{ formatCurrency(totalRevenue) }}</p>
+        <p class="stat-subtitle">{{ formatNumber(approvedSmsSold) }} SMS vendidos</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-title">Recargas Pendientes</p>
+        <p class="stat-value text-amber-600">{{ pendingRecharges }}</p>
+        <p class="stat-subtitle">{{ activeUsers }} usuarios activos</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-title">Total Usuarios</p>
+        <p class="stat-value text-slate-600">{{ totalUsers }}</p>
+        <p class="stat-subtitle">{{ activeUsers }} activos</p>
+      </div>
     </div>
     <div class="summary-grid">
       <section class="summary-card">
@@ -252,7 +229,7 @@
         }
       </section>
     }
-    @if (showPurchaseModal) {
+    @if (showSmsPurchaseControls && showPurchaseModal) {
       <div class="modal-backdrop">
         <div class="modal-card">
           <div class="modal-header">

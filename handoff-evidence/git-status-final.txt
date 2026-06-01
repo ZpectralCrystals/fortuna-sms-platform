@@ -1,0 +1,55 @@
+ M .gitignore
+ M angular-workspace/projects/backoffice-admin/src/app/layouts/admin-layout.component.ts
+ M angular-workspace/projects/backoffice-admin/src/app/pages/api-keys-page.component.html
+ M angular-workspace/projects/backoffice-admin/src/app/pages/api-keys-page.component.ts
+ M angular-workspace/projects/backoffice-admin/src/app/pages/dashboard-page.component.html
+ M angular-workspace/projects/backoffice-admin/src/app/pages/dashboard-page.component.ts
+ M angular-workspace/projects/shared/src/lib/services/api-keys.service.ts
+ M angular-workspace/projects/shared/src/lib/services/backoffice.service.ts
+ M angular-workspace/projects/sms-client/src/app/admin/layout/admin-layout.component.ts
+ M angular-workspace/projects/sms-client/src/app/admin/pages/api-keys-page.component.html
+ M angular-workspace/projects/sms-client/src/app/admin/pages/api-keys-page.component.ts
+ M angular-workspace/projects/sms-client/src/app/admin/pages/dashboard-page.component.html
+ M angular-workspace/projects/sms-client/src/app/admin/pages/dashboard-page.component.ts
+ M angular-workspace/projects/sms-client/src/app/dashboard/pages/api-keys-page.component.html
+ M angular-workspace/supabase/functions/_shared/sms-provider-current.ts
+ M angular-workspace/supabase/functions/api-send-sms/index.ts
+ M angular-workspace/supabase/functions/send-sms/index.ts
+?? angular-workspace/supabase/README-company-ruc-balance.md
+?? angular-workspace/supabase/functions/_shared/admin-edge.ts
+?? angular-workspace/supabase/functions/admin-consult-api-key/
+?? angular-workspace/supabase/functions/admin-delete-api-key/
+?? angular-workspace/supabase/functions/admin-list-api-keys/
+?? angular-workspace/supabase/functions/admin-register-api-key/
+?? angular-workspace/supabase/functions/admin-register-client-balance/
+?? angular-workspace/supabase/functions/admin-register-provider-balance/
+?? angular-workspace/supabase/functions/admin-sync-client-balance/
+?? angular-workspace/supabase/functions/admin-sync-provider-balance/
+?? angular-workspace/supabase/migrations/20260529143000_company_ruc_balance_model.sql
+?? angular-workspace/supabase/sql/
+?? fase-01-auditoria-supabase-actual.md
+?? fase-02-plan-implementacion-supabase-actual.md
+?? fase-03-a-implementacion-local.md
+?? fase-03-b-revision-tecnica-local.md
+?? fase-03-c-correcciones-locales.md
+?? fase-03-d-validacion-tecnica-local.md
+?? fase-03-e-runbook-ejecucion-controlada.md
+?? fase-03-f-deno-check-edge-functions.md
+?? fase-03-g-correccion-deno-check.md
+?? fase-03-h-schema-live-backup-precheck.md
+?? fase-03-i-admin-compat.md
+?? fase-04-a-cierre-backend-supabase-actual.md
+?? fase-04-b-entrega-transfer-project.md
+?? fase-04-d-fix-admin-dashboard.md
+?? fase-04-e-fix-cards-dashboard-admin.md
+?? fase-04-f-hide-alertas-sms-admin.md
+?? fase-04-g-endpoints-dashboard-compra-sms.md
+?? fase-04-h-fix-inventario-dashboard.md
+?? fase-04-i-auditoria-flujos-completa.md
+?? fase-04-j-fix-inventario-disponible-real.md
+?? fase-04-m-integracion-final-endpoints-proveedor.md
+?? graphify-out/
+?? graphify-service.sh
+?? graphify-watch.pid
+?? handoff-evidence/
+?? migration-audit-sms-fortuna.md

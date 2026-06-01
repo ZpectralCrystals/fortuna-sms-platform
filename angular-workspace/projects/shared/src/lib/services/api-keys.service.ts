@@ -75,6 +75,22 @@ export class ApiKeysService {
     }
   }
 
+  async providerRegister(ruc: string, nombre: string): Promise<ProviderApiKeyEdgeResult> {
+    return await this.invokeProviderApiKey('admin-register-api-key', { ruc, nombre });
+  }
+
+  async providerDelete(ruc: string, payload: { nombre?: string; id?: string }): Promise<ProviderApiKeyEdgeResult> {
+    return await this.invokeProviderApiKey('admin-delete-api-key', { ruc, ...payload });
+  }
+
+  async providerConsult(ruc: string): Promise<ProviderApiKeyEdgeResult> {
+    return await this.invokeProviderApiKey('admin-consult-api-key', { ruc });
+  }
+
+  async providerList(): Promise<ProviderApiKeyEdgeResult> {
+    return await this.invokeProviderApiKey('admin-list-api-keys', {});
+  }
+
   private mapBackofficeApiKey(value: unknown): BackofficeApiKey {
     const row = this.toRecord(value);
 
@@ -104,6 +120,27 @@ export class ApiKeysService {
       rateLimitPerMinute: Number(row['rate_limit_per_minute'] ?? 60),
       rateLimitPerDay: Number(row['rate_limit_per_day'] ?? 1000),
       description: this.toNullableString(row['description'])
+    };
+  }
+
+  private async invokeProviderApiKey(
+    functionName: string,
+    body: Record<string, unknown>
+  ): Promise<ProviderApiKeyEdgeResult> {
+    const { data, error } = await this.supabase.instance.functions.invoke(functionName, { body });
+    if (error) {
+      throw new Error(`No se pudo ejecutar ${functionName}: ${error.message}`);
+    }
+
+    const row = this.toRecord(data);
+    if (row['success'] !== true) {
+      throw new Error(this.toSafeString(row['error']) || 'Operación API Key proveedor fallida.');
+    }
+
+    return {
+      success: true,
+      provider: this.toSafeString(row['provider']),
+      result: this.toRecord(row['result'])
     };
   }
 
@@ -152,4 +189,10 @@ export class ApiKeysService {
 
     return value.filter((item): item is string => typeof item === 'string');
   }
+}
+
+export interface ProviderApiKeyEdgeResult {
+  success: boolean;
+  provider: string;
+  result: Record<string, unknown>;
 }

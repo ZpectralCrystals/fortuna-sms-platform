@@ -1,5 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { type AnySupabaseClient, rpcUntyped } from "../_shared/admin-edge.ts";
+import {
+  mapProviderError,
+  normalizeProviderErrorCode,
+  sanitizeProviderResponse,
+  sendIndividualSms,
+} from "../_shared/sms-provider-current.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,89 +20,34 @@ interface SendSmsBody {
   idempotency_key?: string;
 }
 
-interface RpcResult {
+interface BeginAttemptResult {
   success?: boolean;
   already_processed?: boolean;
   attempt_id?: string;
   message_id?: string;
-  sms_message_id?: string;
-  id?: string;
+  company_id?: string;
+  ruc?: string;
   recipient?: string;
   provider_recipient?: string;
   segments?: number;
   cost?: number;
+  balance_before?: number;
   status?: string;
-  test_mode?: boolean;
-  error_message?: string;
-  credits_before?: number;
 }
 
-interface ProviderResponse {
-  data?: Record<string, unknown>;
-  code?: string;
-  message?: string;
-}
-
-type SmsProviderMode = "test" | "prod";
-type SupabaseClientInstance = ReturnType<typeof createClient>;
-
-type SmsProviderRequest = {
-  userId: string;
-  recipient: string;
-  providerRecipient?: string;
-  message: string;
-  segments: number;
-  cost?: number;
-  idempotencyKey: string;
-};
-
-type SmsProviderResult = {
-  success: boolean;
-  provider: string;
-  providerMessageId?: string;
-  providerRecipient?: string;
-  providerResponse?: unknown;
-  errorMessage?: string;
-  rawStatus?: string;
-  messageId?: string;
-  attemptId?: string;
-  alreadyProcessed?: boolean;
+interface CompleteAttemptResult {
+  success?: boolean;
+  already_processed?: boolean;
+  message_id?: string;
+  company_id?: string;
+  ruc?: string;
   recipient?: string;
   segments?: number;
   cost?: number;
+  balance_after?: number;
   status?: string;
-  testMode?: boolean;
-};
-
-type RealProviderConfig = {
-  apiUrl: string | null;
-  apiKey: string | null;
-  username: string | null;
-  password: string | null;
-  senderId: string | null;
-  timeoutMs: number;
-};
-
-const errorMessages: Record<string, string> = {
-  INVALID_PHONE: "Número inválido. Usa formato peruano +51XXXXXXXXX.",
-  EMPTY_MESSAGE: "El mensaje no puede estar vacío.",
-  INSUFFICIENT_CREDITS: "Créditos insuficientes.",
-  PROFILE_INACTIVE: "Tu cuenta está inactiva.",
-  PROFILE_NOT_FOUND: "Perfil no encontrado.",
-  NOT_AUTHORIZED: "Sesión inválida.",
-  PROVIDER_NOT_CONFIGURED: "Proveedor SMS real aún no configurado.",
-  PROVIDER_AUTH_FAILED: "No se pudo autenticar con el proveedor SMS.",
-  PROVIDER_REQUEST_FAILED: "No se pudo conectar con el proveedor SMS.",
-  PROVIDER_ERROR: "No se pudo conectar con el proveedor SMS.",
-  PROVIDER_TIMEOUT: "El proveedor SMS no respondió a tiempo.",
-  PROVIDER_INVALID_RESPONSE: "Respuesta inválida del proveedor SMS.",
-  INVALID_IDEMPOTENCY_KEY: "No se pudo validar este envío. Intenta nuevamente.",
-  SMS_SEND_ALREADY_PROCESSING: "Este envío ya está en proceso. Espera unos segundos.",
-  SMS_SEND_ALREADY_FAILED_USE_NEW_KEY: "Este envío falló. Intenta nuevamente.",
-  RATE_LIMIT_EXCEEDED: "Has enviado demasiados SMS en poco tiempo. Intenta nuevamente en unos segundos.",
-  DUPLICATE_SEND_ATTEMPT: "Este envío ya fue procesado.",
-  SMS_SEND_ATTEMPT_NOT_FOUND: "No se pudo validar este envío. Intenta nuevamente.",
-};
+  error_message?: string;
+}
 
 Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID();
@@ -119,22 +71,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const token = getBearerToken(req.headers.get("Authorization"));
-
     if (!token) {
-      return jsonResponse({ success: false, error: errorMessages.NOT_AUTHORIZED }, 401);
+      return jsonResponse({ success: false, error: "Sesión inválida." }, 401);
     }
 
     const supabaseAuth = createClient(supabaseUrl, anonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+      auth: { autoRefreshToken: false, persistSession: false },
     });
-
     const { data: authData, error: authError } = await supabaseAuth.auth.getUser(token);
 
     if (authError || !authData.user) {
-      return jsonResponse({ success: false, error: errorMessages.NOT_AUTHORIZED }, 401);
+      return jsonResponse({ success: false, error: "Sesión inválida." }, 401);
     }
 
     const body = await readBody(req);
@@ -143,77 +90,232 @@ Deno.serve(async (req: Request) => {
     const idempotencyKey = resolveIdempotencyKey(req, body);
 
     if (!isValidIdempotencyKey(idempotencyKey)) {
-      return jsonResponse({ success: false, error: errorMessages.INVALID_IDEMPOTENCY_KEY }, 400);
+      return jsonResponse({ success: false, error: "No se pudo validar este envío. Intenta nuevamente." }, 409);
     }
 
     if (!recipient) {
-      return jsonResponse({ success: false, error: errorMessages.INVALID_PHONE }, 400);
+      return jsonResponse({ success: false, error: "Número inválido. Usa formato peruano +51XXXXXXXXX." }, 422);
     }
 
     if (!message) {
-      return jsonResponse({ success: false, error: errorMessages.EMPTY_MESSAGE }, 400);
+      return jsonResponse({ success: false, error: "El mensaje no puede estar vacío." }, 422);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const providerRequest: SmsProviderRequest = {
-      userId: authData.user.id,
+    const begin = await beginCompanyAttempt(
+      supabaseAdmin,
+      authData.user.id,
+      idempotencyKey,
       recipient,
       message,
-      segments: calculateSmsSegments(message),
-      idempotencyKey,
-    };
+    );
 
-    const providerMode = getProviderMode();
-    const providerResult = providerMode === "prod"
-      ? await sendWithRealProvider(supabaseAdmin, providerRequest, getRealProviderConfig())
-      : await sendWithTestProvider(supabaseAdmin, providerRequest);
+    if (!begin.success || !begin.attempt_id || !begin.ruc) {
+      return jsonResponse(
+        { success: false, error: "No se pudo preparar el envío." },
+        500,
+      );
+    }
+
+    if (begin.already_processed) {
+      return jsonResponse({
+        success: true,
+        message_id: begin.message_id ?? null,
+        company_id: begin.company_id ?? null,
+        ruc: begin.ruc,
+        recipient: begin.recipient ?? recipient,
+        segments: Number(begin.segments ?? 1),
+        cost: Number(begin.cost ?? begin.segments ?? 1),
+        status: begin.status ?? "sent",
+        test_mode: false,
+        already_processed: true,
+      });
+    }
+
+    const providerResult = await sendIndividualSms(
+      begin.ruc,
+      begin.provider_recipient ?? begin.recipient ?? recipient,
+      message,
+      begin.attempt_id,
+    );
 
     if (!providerResult.success) {
-      const errorCode = providerResult.errorMessage ?? providerResult.rawStatus ?? "";
-      const mappedError = mapProviderError(errorCode);
+      const errorCode = providerResult.error ?? "PROVIDER_REQUEST_FAILED";
+      let failed: CompleteAttemptResult = { status: "failed" };
+
+      try {
+        failed = await completeCompanyAttemptFailed(
+          supabaseAdmin,
+          begin.attempt_id,
+          providerResult.provider,
+          providerResult.provider_response,
+          errorCode,
+        );
+      } catch (completeError) {
+        logSafe("send-sms provider failed local completion failed", {
+          request_id: requestId,
+          user_id: authData.user.id,
+          company_id: begin.company_id,
+          ruc: begin.ruc,
+          attempt_id: begin.attempt_id,
+          provider: providerResult.provider,
+          error_code: normalizeProviderErrorCode(errorCode),
+          completion_error: completeError instanceof Error ? completeError.message : String(completeError),
+          reconciliation_required: true,
+          status: "provider_failed_local_completion_failed",
+          duration_ms: Date.now() - startedAt,
+        });
+
+        return jsonResponse({
+          success: false,
+          error: mapProviderError(errorCode),
+          reconciliation_required: true,
+          reconciliation_reason: "provider_failed_but_local_attempt_update_failed",
+        }, 502);
+      }
 
       logSafe("send-sms provider failed", {
         request_id: requestId,
         user_id: authData.user.id,
+        company_id: begin.company_id,
+        ruc: begin.ruc,
         provider: providerResult.provider,
-        mode: providerMode,
-        status: providerResult.status ?? "failed",
         error_code: normalizeProviderErrorCode(errorCode),
+        status: failed.status ?? "failed",
         duration_ms: Date.now() - startedAt,
       });
 
       return jsonResponse(
-        { success: false, error: mappedError },
+        { success: false, error: mapProviderError(errorCode) },
         getHttpStatusForError(errorCode),
       );
     }
 
+    let complete: CompleteAttemptResult;
+
+    try {
+      complete = await completeCompanyAttemptSuccess(
+        supabaseAdmin,
+        begin.attempt_id,
+        providerResult.provider,
+        providerResult.provider_message_id ?? null,
+        providerResult.provider_response,
+      );
+    } catch (completeError) {
+      logSafe("send-sms provider success local completion failed", {
+        request_id: requestId,
+        user_id: authData.user.id,
+        company_id: begin.company_id,
+        ruc: begin.ruc,
+        attempt_id: begin.attempt_id,
+        provider: providerResult.provider,
+        provider_message_id: providerResult.provider_message_id ?? null,
+        completion_error: completeError instanceof Error ? completeError.message : String(completeError),
+        reconciliation_required: true,
+        status: "provider_sent_local_completion_failed",
+        duration_ms: Date.now() - startedAt,
+      });
+
+      return jsonResponse({
+        success: false,
+        error: "SMS enviado por proveedor, pero requiere conciliación local.",
+        reconciliation_required: true,
+        reconciliation_reason: "provider_sent_local_completion_failed",
+      }, 502);
+    }
+
     return jsonResponse({
       success: true,
-      message_id: providerResult.messageId ?? providerResult.providerMessageId ?? null,
-      recipient: providerResult.recipient ?? recipient,
-      segments: Number(providerResult.segments ?? providerRequest.segments),
-      cost: Number(providerResult.cost ?? providerResult.segments ?? providerRequest.segments),
-      status: providerResult.status ?? "sent",
-      test_mode: providerResult.testMode ?? providerMode === "test",
+      message_id: complete.message_id ?? providerResult.provider_message_id ?? null,
+      company_id: complete.company_id ?? begin.company_id ?? null,
+      ruc: complete.ruc ?? begin.ruc,
+      recipient: complete.recipient ?? begin.recipient ?? recipient,
+      segments: Number(complete.segments ?? begin.segments ?? 1),
+      cost: Number(complete.cost ?? begin.cost ?? begin.segments ?? 1),
+      balance_after: complete.balance_after ?? null,
+      status: complete.status ?? "sent",
+      test_mode: providerResult.provider === "mock_fortuna_services",
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code = normalizeRpcError(message);
+
     logSafe("send-sms failed", {
       request_id: requestId,
       status: "failed",
-      error_code: error instanceof Error ? error.name : "UnknownError",
+      error_code: code,
       duration_ms: Date.now() - startedAt,
     });
 
-    return jsonResponse({ success: false, error: "No se pudo enviar el SMS." }, 500);
+    return jsonResponse({ success: false, error: publicErrorMessage(code) }, getHttpStatusForError(code));
   }
 });
+
+async function beginCompanyAttempt(
+  supabaseAdmin: AnySupabaseClient,
+  userId: string,
+  idempotencyKey: string,
+  recipient: string,
+  message: string,
+): Promise<BeginAttemptResult> {
+  const { data, error } = await rpcUntyped(supabaseAdmin, "internal_begin_company_sms_send_attempt", {
+    p_user_id: userId,
+    p_idempotency_key: idempotencyKey,
+    p_recipient: recipient,
+    p_message: message,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return normalizeRpcResult(data) as BeginAttemptResult;
+}
+
+async function completeCompanyAttemptSuccess(
+  supabaseAdmin: AnySupabaseClient,
+  attemptId: string,
+  provider: string,
+  providerMessageId: string | null,
+  providerResponse: unknown,
+): Promise<CompleteAttemptResult> {
+  const { data, error } = await rpcUntyped(supabaseAdmin, "internal_complete_company_sms_send_success", {
+    p_attempt_id: attemptId,
+    p_provider: provider,
+    p_provider_message_id: providerMessageId,
+    p_provider_response: sanitizeProviderResponse(providerResponse),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return normalizeRpcResult(data) as CompleteAttemptResult;
+}
+
+async function completeCompanyAttemptFailed(
+  supabaseAdmin: AnySupabaseClient,
+  attemptId: string,
+  provider: string,
+  providerResponse: unknown,
+  errorCode: string,
+): Promise<CompleteAttemptResult> {
+  const { data, error } = await rpcUntyped(supabaseAdmin, "internal_complete_company_sms_send_failed", {
+    p_attempt_id: attemptId,
+    p_provider: provider,
+    p_provider_response: sanitizeProviderResponse(providerResponse),
+    p_error_message: normalizeProviderErrorCode(errorCode),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return normalizeRpcResult(data) as CompleteAttemptResult;
+}
 
 function getBearerToken(authHeader: string | null): string | null {
   if (!authHeader?.startsWith("Bearer ")) {
@@ -241,689 +343,94 @@ function isValidIdempotencyKey(value: string): boolean {
   return /^[A-Za-z0-9_.-]{8,120}$/.test(value);
 }
 
-function normalizeRpcResult(data: unknown): RpcResult {
+function normalizeRpcResult(data: unknown): Record<string, unknown> {
   if (Array.isArray(data)) {
     return normalizeRpcResult(data[0]);
   }
 
   if (data && typeof data === "object") {
-    return data as RpcResult;
+    return data as Record<string, unknown>;
   }
 
   return {};
 }
 
-async function sendWithTestProvider(
-  supabaseAdmin: SupabaseClientInstance,
-  request: SmsProviderRequest,
-): Promise<SmsProviderResult> {
-  const { data, error } = await supabaseAdmin.rpc("internal_send_sms_test", {
-    p_user_id: request.userId,
-    p_recipient: request.recipient,
-    p_message: request.message,
-  });
+function normalizeRpcError(message: string): string {
+  const upper = message.toUpperCase();
+  const known = [
+    "NOT_AUTHORIZED",
+    "COMPANY_NOT_FOUND",
+    "COMPANY_INACTIVE",
+    "INSUFFICIENT_CREDITS",
+    "INVALID_IDEMPOTENCY_KEY",
+    "SMS_SEND_ALREADY_PROCESSING",
+    "SMS_SEND_ALREADY_FAILED_USE_NEW_KEY",
+    "RATE_LIMIT_EXCEEDED",
+    "INVALID_PHONE",
+    "EMPTY_MESSAGE",
+    "INVALID_RUC",
+    "PROVIDER_TIMEOUT",
+    "PROVIDER_REQUEST_FAILED",
+    "PROVIDER_AUTH_FAILED",
+    "PROVIDER_NOT_CONFIGURED",
+    "PROVIDER_INVALID_RESPONSE",
+  ];
 
-  if (error) {
-    return {
-      success: false,
-      provider: "internal_test",
-      errorMessage: error.message,
-      rawStatus: error.code,
-    };
-  }
-
-  const result = normalizeRpcResult(data);
-
-  return {
-    success: true,
-    provider: "internal_test",
-    providerMessageId: result.message_id ?? result.id,
-    providerResponse: { test_mode: result.test_mode ?? true },
-    messageId: result.message_id ?? result.id,
-    recipient: result.recipient ?? request.recipient,
-    segments: Number(result.segments ?? request.segments),
-    cost: Number(result.cost ?? result.segments ?? request.segments),
-    status: result.status ?? "sent",
-    testMode: result.test_mode ?? true,
-  };
+  return known.find((code) => upper.includes(code)) ?? "UNKNOWN_ERROR";
 }
 
-async function sendWithRealProvider(
-  supabaseAdmin: SupabaseClientInstance,
-  request: SmsProviderRequest,
-  config: RealProviderConfig,
-): Promise<SmsProviderResult> {
-  const attempt = await beginSmsSendAttempt(supabaseAdmin, request);
-
-  if (isHardeningUnavailable(attempt)) {
-    logSafe("send-sms hardening unavailable, using legacy flow", {
-      user_id: request.userId,
-      provider: "fortuna_services",
-      status: "legacy_fallback",
-      error_code: normalizeProviderErrorCode(attempt.errorMessage ?? attempt.rawStatus ?? ""),
-    });
-
-    return await sendWithLegacyRealProvider(supabaseAdmin, request, config);
-  }
-
-  if (!attempt.success || attempt.alreadyProcessed) {
-    return attempt;
-  }
-
-  if (!attempt.attemptId) {
-    return {
-      success: false,
-      provider: "fortuna_services",
-      errorMessage: "SMS_SEND_ATTEMPT_NOT_FOUND",
-      rawStatus: "SMS_SEND_ATTEMPT_NOT_FOUND",
-    };
-  }
-
-  const attemptedRequest: SmsProviderRequest = {
-    ...request,
-    recipient: attempt.recipient ?? request.recipient,
-    providerRecipient: attempt.providerRecipient,
-    segments: attempt.segments ?? request.segments,
-    cost: attempt.cost ?? request.cost ?? request.segments,
+function publicErrorMessage(code: string): string {
+  const messages: Record<string, string> = {
+    NOT_AUTHORIZED: "Sesión inválida.",
+    COMPANY_NOT_FOUND: "Usuario sin empresa activa.",
+    COMPANY_INACTIVE: "Empresa inactiva.",
+    INSUFFICIENT_CREDITS: "Saldo insuficiente.",
+    INVALID_IDEMPOTENCY_KEY: "No se pudo validar este envío. Intenta nuevamente.",
+    SMS_SEND_ALREADY_PROCESSING: "Este envío ya está en proceso. Espera unos segundos.",
+    SMS_SEND_ALREADY_FAILED_USE_NEW_KEY: "Este envío falló. Intenta nuevamente.",
+    RATE_LIMIT_EXCEEDED: "Has enviado demasiados SMS en poco tiempo.",
+    INVALID_PHONE: "Número inválido. Usa formato peruano +51XXXXXXXXX.",
+    EMPTY_MESSAGE: "El mensaje no puede estar vacío.",
+    INVALID_RUC: "RUC inválido.",
+    PROVIDER_TIMEOUT: "El proveedor SMS no respondió a tiempo.",
+    PROVIDER_REQUEST_FAILED: "No se pudo conectar con el proveedor SMS.",
+    PROVIDER_AUTH_FAILED: "No se pudo autenticar con el proveedor SMS.",
+    PROVIDER_NOT_CONFIGURED: "Proveedor SMS real aún no configurado.",
+    PROVIDER_INVALID_RESPONSE: "Respuesta inválida del proveedor SMS.",
   };
 
-  if (!config.apiUrl || !config.username || !config.password) {
-    return await completeSmsSendFailed(
-      supabaseAdmin,
-      attempt.attemptId,
-      "fortuna_services",
-      { code: "PROVIDER_NOT_CONFIGURED" },
-      "PROVIDER_NOT_CONFIGURED",
-    );
-  }
-
-  const loginResult = await loginRealProvider(config);
-  if (!loginResult.success || !loginResult.token) {
-    return await completeSmsSendFailed(
-      supabaseAdmin,
-      attempt.attemptId,
-      "fortuna_services",
-      loginResult.providerResponse,
-      loginResult.errorMessage ?? "PROVIDER_AUTH_FAILED",
-    );
-  }
-
-  const smsResult = await sendRealProviderSms(attemptedRequest, config, loginResult.token);
-
-  if (!smsResult.success) {
-    return await completeSmsSendFailed(
-      supabaseAdmin,
-      attempt.attemptId,
-      smsResult.provider,
-      smsResult.providerResponse,
-      smsResult.errorMessage ?? smsResult.rawStatus ?? "PROVIDER_REQUEST_FAILED",
-    );
-  }
-
-  return await completeSmsSendSuccess(supabaseAdmin, attempt.attemptId, smsResult);
+  return messages[code] ?? "No se pudo enviar el SMS.";
 }
 
-async function sendWithLegacyRealProvider(
-  supabaseAdmin: SupabaseClientInstance,
-  request: SmsProviderRequest,
-  config: RealProviderConfig,
-): Promise<SmsProviderResult> {
-  if (!config.apiUrl || !config.username || !config.password) {
-    return {
-      success: false,
-      provider: "fortuna_services",
-      errorMessage: "PROVIDER_NOT_CONFIGURED",
-      rawStatus: "PROVIDER_NOT_CONFIGURED",
-    };
-  }
+function getHttpStatusForError(code: string): number {
+  const normalized = normalizeRpcError(code);
 
-  const validation = await validateSmsSendLegacy(supabaseAdmin, request);
-  if (!validation.success) {
-    return validation;
-  }
-
-  const validatedRequest: SmsProviderRequest = {
-    ...request,
-    recipient: validation.recipient ?? request.recipient,
-    providerRecipient: validation.providerRecipient,
-    segments: validation.segments ?? request.segments,
-    cost: validation.cost ?? request.cost ?? request.segments,
-  };
-
-  const loginResult = await loginRealProvider(config);
-  if (!loginResult.success || !loginResult.token) {
-    return {
-      success: false,
-      provider: "fortuna_services",
-      providerResponse: loginResult.providerResponse,
-      errorMessage: loginResult.errorMessage ?? "PROVIDER_AUTH_FAILED",
-      rawStatus: loginResult.rawStatus ?? "PROVIDER_AUTH_FAILED",
-    };
-  }
-
-  const smsResult = await sendRealProviderSms(validatedRequest, config, loginResult.token);
-
-  if (!smsResult.success) {
-    await registerFailedSmsLegacy(supabaseAdmin, validatedRequest, smsResult);
-    return smsResult;
-  }
-
-  return await registerSuccessfulSmsLegacy(supabaseAdmin, validatedRequest, smsResult);
-}
-
-async function validateSmsSendLegacy(
-  supabaseAdmin: SupabaseClientInstance,
-  request: SmsProviderRequest,
-): Promise<SmsProviderResult> {
-  const { data, error } = await supabaseAdmin.rpc("internal_validate_sms_send", {
-    p_user_id: request.userId,
-    p_recipient: request.recipient,
-    p_message: request.message,
-  });
-
-  if (error) {
-    return {
-      success: false,
-      provider: "fortuna_services",
-      errorMessage: error.message,
-      rawStatus: error.code,
-    };
-  }
-
-  const result = normalizeRpcResult(data);
-
-  return {
-    success: true,
-    provider: "fortuna_services",
-    recipient: typeof result.recipient === "string" ? result.recipient : request.recipient,
-    providerResponse: { legacy_flow: true },
-    rawStatus: "PREVALIDATED_LEGACY",
-    segments: Number(result.segments ?? request.segments),
-    cost: Number(result.cost ?? request.cost ?? request.segments),
-    providerRecipient: typeof result.provider_recipient === "string" ? result.provider_recipient : undefined,
-  };
-}
-
-async function registerSuccessfulSmsLegacy(
-  supabaseAdmin: SupabaseClientInstance,
-  request: SmsProviderRequest,
-  providerResult: SmsProviderResult,
-): Promise<SmsProviderResult> {
-  const { data, error } = await supabaseAdmin.rpc("internal_send_sms_provider_success", {
-    p_user_id: request.userId,
-    p_recipient: request.recipient,
-    p_message: request.message,
-    p_segments: request.segments,
-    p_cost: request.cost ?? request.segments,
-    p_provider: providerResult.provider,
-    p_provider_message_id: providerResult.providerMessageId ?? null,
-    p_provider_response: sanitizeProviderResponse({
-      ...sanitizeProviderResponse(providerResult.providerResponse),
-      legacy_flow: true,
-    }),
-  });
-
-  if (error) {
-    return {
-      success: false,
-      provider: providerResult.provider,
-      providerResponse: providerResult.providerResponse,
-      errorMessage: error.message,
-      rawStatus: error.code,
-    };
-  }
-
-  const result = normalizeRpcResult(data);
-
-  return {
-    success: true,
-    provider: providerResult.provider,
-    providerMessageId: providerResult.providerMessageId,
-    providerResponse: providerResult.providerResponse,
-    messageId: result.message_id ?? result.id,
-    recipient: result.recipient ?? request.recipient,
-    segments: Number(result.segments ?? request.segments),
-    cost: Number(result.cost ?? request.cost ?? request.segments),
-    status: result.status ?? "sent",
-    testMode: false,
-  };
-}
-
-async function registerFailedSmsLegacy(
-  supabaseAdmin: SupabaseClientInstance,
-  request: SmsProviderRequest,
-  providerResult: SmsProviderResult,
-): Promise<void> {
-  const { error } = await supabaseAdmin.rpc("internal_register_sms_failed", {
-    p_user_id: request.userId,
-    p_recipient: request.recipient,
-    p_message: request.message,
-    p_segments: request.segments,
-    p_cost: request.cost ?? request.segments,
-    p_provider: providerResult.provider,
-    p_provider_response: sanitizeProviderResponse({
-      ...sanitizeProviderResponse(providerResult.providerResponse),
-      legacy_flow: true,
-    }),
-    p_error_message: mapProviderError(providerResult.errorMessage ?? providerResult.rawStatus ?? ""),
-  });
-
-  if (error) {
-    logSafe("send-sms legacy failed registration failed", {
-      provider: providerResult.provider,
-      status: "failed",
-      error_code: error.code,
-    });
-  }
-}
-
-async function beginSmsSendAttempt(
-  supabaseAdmin: SupabaseClientInstance,
-  request: SmsProviderRequest,
-): Promise<SmsProviderResult> {
-  const { data, error } = await supabaseAdmin.rpc("internal_begin_sms_send_attempt", {
-    p_user_id: request.userId,
-    p_idempotency_key: request.idempotencyKey,
-    p_recipient: request.recipient,
-    p_message: request.message,
-  });
-
-  if (error) {
-    return {
-      success: false,
-      provider: "fortuna_services",
-      errorMessage: error.message,
-      rawStatus: error.code,
-    };
-  }
-
-  const result = normalizeRpcResult(data);
-
-  return {
-    success: true,
-    provider: "fortuna_services",
-    attemptId: result.attempt_id,
-    alreadyProcessed: result.already_processed ?? false,
-    messageId: result.message_id ?? result.sms_message_id ?? result.id,
-    recipient: result.recipient ?? request.recipient,
-    providerRecipient: result.provider_recipient,
-    segments: Number(result.segments ?? request.segments),
-    cost: Number(result.cost ?? request.cost ?? request.segments),
-    status: result.status ?? (result.already_processed ? "sent" : "processing"),
-    testMode: result.test_mode ?? false,
-    rawStatus: result.already_processed ? "DUPLICATE_SEND_ATTEMPT" : "ATTEMPT_STARTED",
-    providerResponse: sanitizeProviderResponse(result),
-  };
-}
-
-function isHardeningUnavailable(result: SmsProviderResult): boolean {
-  if (result.success) {
-    return false;
-  }
-
-  const raw = `${result.rawStatus ?? ""} ${result.errorMessage ?? ""}`.toLowerCase();
-
-  return raw.includes("pgrst202")
-    || raw.includes("schema cache")
-    || raw.includes("could not find the function")
-    || raw.includes("internal_begin_sms_send_attempt")
-    || raw.includes("sms_send_attempts")
-    || raw.includes("does not exist");
-}
-
-async function completeSmsSendSuccess(
-  supabaseAdmin: SupabaseClientInstance,
-  attemptId: string,
-  providerResult: SmsProviderResult,
-): Promise<SmsProviderResult> {
-  const { data, error } = await supabaseAdmin.rpc("internal_complete_sms_send_success", {
-    p_attempt_id: attemptId,
-    p_provider: providerResult.provider,
-    p_provider_message_id: providerResult.providerMessageId ?? null,
-    p_provider_response: sanitizeProviderResponse(providerResult.providerResponse),
-  });
-
-  if (error) {
-    return {
-      success: false,
-      provider: providerResult.provider,
-      providerResponse: providerResult.providerResponse,
-      errorMessage: error.message,
-      rawStatus: error.code,
-    };
-  }
-
-  const result = normalizeRpcResult(data);
-
-  return {
-    success: true,
-    provider: providerResult.provider,
-    providerMessageId: providerResult.providerMessageId,
-    providerResponse: providerResult.providerResponse,
-    messageId: result.message_id ?? result.id,
-    recipient: result.recipient,
-    segments: Number(result.segments ?? providerResult.segments ?? 1),
-    cost: Number(result.cost ?? providerResult.cost ?? providerResult.segments ?? 1),
-    status: result.status ?? "sent",
-    testMode: false,
-    alreadyProcessed: result.already_processed ?? false,
-  };
-}
-
-async function completeSmsSendFailed(
-  supabaseAdmin: SupabaseClientInstance,
-  attemptId: string,
-  provider: string,
-  providerResponse: unknown,
-  errorCode: string,
-): Promise<SmsProviderResult> {
-  const safeErrorCode = normalizeProviderErrorCode(errorCode);
-  const { data, error } = await supabaseAdmin.rpc("internal_complete_sms_send_failed", {
-    p_attempt_id: attemptId,
-    p_provider: provider,
-    p_provider_response: sanitizeProviderResponse(providerResponse),
-    p_error_message: mapProviderError(safeErrorCode),
-  });
-
-  if (error) {
-    return {
-      success: false,
-      provider,
-      providerResponse,
-      errorMessage: error.message,
-      rawStatus: error.code,
-    };
-  }
-
-  const result = normalizeRpcResult(data);
-  const completedAsSent = result.success === true || result.status === "sent";
-
-  return {
-    success: completedAsSent,
-    provider,
-    providerResponse,
-    messageId: result.message_id ?? result.id,
-    recipient: result.recipient,
-    segments: Number(result.segments ?? 0),
-    cost: Number(result.cost ?? 0),
-    status: result.status ?? "failed",
-    testMode: false,
-    errorMessage: completedAsSent ? undefined : safeErrorCode,
-    rawStatus: completedAsSent ? "DUPLICATE_SEND_ATTEMPT" : safeErrorCode,
-  };
-}
-
-function getProviderMode(): SmsProviderMode {
-  return Deno.env.get("SMS_PROVIDER_MODE") === "prod" ? "prod" : "test";
-}
-
-function getRealProviderConfig(): RealProviderConfig {
-  return {
-    apiUrl: normalizeBaseUrl(getEnv("SMS_PROVIDER_API_URL")),
-    apiKey: getEnv("SMS_PROVIDER_API_KEY"),
-    username: getEnv("SMS_PROVIDER_USERNAME"),
-    password: getEnv("SMS_PROVIDER_PASSWORD"),
-    senderId: getEnv("SMS_PROVIDER_SENDER_ID"),
-    timeoutMs: Number(Deno.env.get("SMS_PROVIDER_TIMEOUT_MS") ?? 10000),
-  };
-}
-
-function getEnv(name: string): string | null {
-  const value = Deno.env.get(name)?.trim();
-  return value || null;
-}
-
-function calculateSmsSegments(message: string): number {
-  return Math.ceil(message.length / 160) || 1;
-}
-
-async function loginRealProvider(config: RealProviderConfig): Promise<{
-  success: boolean;
-  token?: string;
-  providerResponse?: unknown;
-  errorMessage?: string;
-  rawStatus?: string;
-}> {
-  const form = new URLSearchParams();
-  form.set("usuario", config.username ?? "");
-  form.set("password", config.password ?? "");
-
-  try {
-    const response = await fetchWithTimeout(`${config.apiUrl}/v1/api/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: form,
-    }, config.timeoutMs);
-
-    const payload = await readProviderJson(response);
-
-    if (!response.ok) {
-      return {
-        success: false,
-        providerResponse: sanitizeProviderResponse(payload),
-        errorMessage: "PROVIDER_AUTH_FAILED",
-        rawStatus: String(response.status),
-      };
-    }
-
-    const token = typeof payload.data?.["token"] === "string"
-      ? normalizeProviderToken(payload.data["token"])
-      : null;
-
-    if (payload.code !== "0" || payload.message !== "OK" || !token) {
-      return {
-        success: false,
-        providerResponse: sanitizeProviderResponse(payload),
-        errorMessage: token ? "PROVIDER_AUTH_FAILED" : "PROVIDER_INVALID_RESPONSE",
-        rawStatus: payload.code ?? "PROVIDER_AUTH_FAILED",
-      };
-    }
-
-    return {
-      success: true,
-      token,
-      providerResponse: { code: payload.code, message: payload.message },
-      rawStatus: payload.code,
-    };
-  } catch (error) {
-    return providerFetchError(error);
-  }
-}
-
-async function sendRealProviderSms(
-  request: SmsProviderRequest,
-  config: RealProviderConfig,
-  token: string,
-): Promise<SmsProviderResult> {
-  try {
-    const response = await fetchWithTimeout(`${config.apiUrl}/v1/api/sms/individual`, {
-      method: "POST",
-      headers: {
-        "Authorization": token,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        telefono: request.providerRecipient ?? normalizeProviderRecipient(request.recipient),
-        mensaje: request.message,
-      }),
-    }, config.timeoutMs);
-
-    const payload = await readProviderJson(response);
-    const providerCode = typeof payload.data?.["codigo"] === "string" ? payload.data["codigo"] : null;
-    const isSuccess = response.ok && payload.code === "0" && payload.message === "OK" && providerCode === "OK";
-
-    if (!isSuccess) {
-      return {
-        success: false,
-        provider: "fortuna_services",
-        providerResponse: sanitizeProviderResponse(payload),
-        errorMessage: "PROVIDER_REQUEST_FAILED",
-        rawStatus: payload.code ?? String(response.status),
-        recipient: request.recipient,
-        segments: request.segments,
-        cost: request.cost ?? request.segments,
-        status: "failed",
-        testMode: false,
-      };
-    }
-
-    return {
-      success: true,
-      provider: "fortuna_services",
-      providerResponse: sanitizeProviderResponse(payload),
-      rawStatus: providerCode,
-      recipient: request.recipient,
-      segments: request.segments,
-      cost: request.cost ?? request.segments,
-      status: "sent",
-      testMode: false,
-    };
-  } catch (error) {
-    return {
-      ...providerFetchError(error),
-      provider: "fortuna_services",
-      recipient: request.recipient,
-      segments: request.segments,
-      cost: request.cost ?? request.segments,
-      status: "failed",
-      testMode: false,
-    };
-  }
-}
-
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function readProviderJson(response: Response): Promise<ProviderResponse> {
-  try {
-    const value = await response.json();
-    return value && typeof value === "object" ? value as ProviderResponse : {};
-  } catch {
-    return {};
-  }
-}
-
-function normalizeProviderToken(value: string): string {
-  const token = value.trim();
-  return token.toLowerCase().startsWith("bearer ") ? token : `Bearer ${token}`;
-}
-
-function normalizeProviderRecipient(value: string): string {
-  return value.trim().replace(/^\+/, "");
-}
-
-function normalizeBaseUrl(value: string | null): string | null {
-  return value ? value.replace(/\/+$/, "") : null;
-}
-
-function sanitizeProviderResponse(value: unknown): Record<string, unknown> {
-  const sanitized = sanitizeProviderValue(value);
-  return sanitized && typeof sanitized === "object" && !Array.isArray(sanitized)
-    ? sanitized as Record<string, unknown>
-    : {};
-}
-
-function sanitizeProviderValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeProviderValue(item));
-  }
-
-  if (!value || typeof value !== "object") {
-    return value;
-  }
-
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([key, item]) => {
-      const normalized = key.toLowerCase();
-      if (
-        normalized.includes("token")
-        || normalized.includes("password")
-        || normalized.includes("authorization")
-        || normalized.includes("api_key")
-        || normalized.includes("apikey")
-        || normalized.includes("secret")
-      ) {
-        return [key, "[redacted]"];
-      }
-
-      return [key, sanitizeProviderValue(item)];
-    }),
-  );
-}
-
-function providerFetchError(error: unknown): {
-  success: false;
-  provider: string;
-  providerResponse?: unknown;
-  errorMessage: string;
-  rawStatus: string;
-} {
-  const isTimeout = error instanceof DOMException && error.name === "AbortError";
-
-  return {
-    success: false,
-    provider: "fortuna_services",
-    errorMessage: isTimeout ? "PROVIDER_TIMEOUT" : "PROVIDER_REQUEST_FAILED",
-    rawStatus: isTimeout ? "PROVIDER_TIMEOUT" : "PROVIDER_REQUEST_FAILED",
-  };
-}
-
-function normalizeProviderErrorCode(message: string): string {
-  const upperMessage = message.toUpperCase();
-  const key = Object.keys(errorMessages).find((item) => upperMessage.includes(item));
-  return key ?? upperMessage;
-}
-
-function mapProviderError(message: string): string {
-  const key = normalizeProviderErrorCode(message);
-  return errorMessages[key] ?? "No se pudo enviar el SMS.";
-}
-
-function getHttpStatusForError(message: string): number {
-  const key = normalizeProviderErrorCode(message);
-
-  if (key === "NOT_AUTHORIZED") return 401;
-  if (key === "RATE_LIMIT_EXCEEDED") return 429;
+  if (normalized === "NOT_AUTHORIZED") return 401;
+  if (normalized === "COMPANY_NOT_FOUND" || normalized === "COMPANY_INACTIVE") return 403;
   if (
-    key === "SMS_SEND_ALREADY_PROCESSING"
-    || key === "DUPLICATE_SEND_ATTEMPT"
-    || key === "SMS_SEND_ALREADY_FAILED_USE_NEW_KEY"
-  ) {
-    return 409;
-  }
-  if (key === "PROVIDER_TIMEOUT") return 504;
-  if (key.startsWith("PROVIDER_")) return 502;
+    normalized === "INSUFFICIENT_CREDITS"
+    || normalized === "INVALID_IDEMPOTENCY_KEY"
+    || normalized === "SMS_SEND_ALREADY_PROCESSING"
+    || normalized === "SMS_SEND_ALREADY_FAILED_USE_NEW_KEY"
+    || normalized === "RATE_LIMIT_EXCEEDED"
+  ) return 409;
+  if (normalized === "INVALID_PHONE" || normalized === "EMPTY_MESSAGE" || normalized === "INVALID_RUC") return 422;
+  if (normalized === "PROVIDER_TIMEOUT") return 504;
+  if (normalized.startsWith("PROVIDER_")) return 502;
 
-  return 400;
+  return 500;
 }
 
-function logSafe(message: string, payload: Record<string, unknown>): void {
-  console.error(message, payload);
-}
-
-function jsonResponse(payload: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(payload), {
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
     status,
     headers: {
       ...corsHeaders,
       "Content-Type": "application/json",
     },
   });
+}
+
+function logSafe(message: string, payload: Record<string, unknown>): void {
+  console.log(message, JSON.stringify(sanitizeProviderResponse(payload)));
 }

@@ -14,6 +14,7 @@ export interface InventoryState {
   sold_sms: number;
   total_sms: number;
   updated_at: string | null;
+  source?: 'local_inventory' | 'unavailable';
 }
 
 export interface InventoryPurchaseRecord {
@@ -71,6 +72,7 @@ export interface BackofficeDashboardStats {
 const INTERNAL_ALERTS_EMAIL = 'alerts@smsfortuna.internal';
 const REVENUE_RECHARGE_STATUS = 'approved';
 const SENT_OR_ACCEPTED_MESSAGE_STATUSES = new Set(['sent', 'accepted']);
+const INVENTORY_QUERY_PAGE_SIZE = 1000;
 
 @Injectable({ providedIn: 'root' })
 export class BackofficeService {
@@ -82,7 +84,6 @@ export class BackofficeService {
       internalAccountsResult,
       adminsResult,
       rechargesResult,
-      inventoryResult,
       messagesResult
     ] = await Promise.all([
       this.supabase.instance
@@ -97,10 +98,6 @@ export class BackofficeService {
       this.supabase.instance
         .from('recharges')
         .select('user_id,status,amount,sms_credits'),
-      this.supabase.instance
-        .from('sms_inventory')
-        .select('available_sms,sold_sms,total_sms')
-        .maybeSingle(),
       this.supabase.instance
         .from('sms_messages')
         .select('status')
@@ -120,10 +117,6 @@ export class BackofficeService {
 
     if (rechargesResult.error) {
       throw new Error(`No se pudieron cargar las recargas: ${rechargesResult.error.message}`);
-    }
-
-    if (inventoryResult.error) {
-      throw new Error(`No se pudo cargar el inventario: ${inventoryResult.error.message}`);
     }
 
     if (messagesResult.error) {
@@ -159,7 +152,7 @@ export class BackofficeService {
       .length;
     const messages = ((messagesResult.data as unknown[]) ?? [])
       .map((message) => this.toSafeString((message as Record<string, unknown>)['status']).toLowerCase());
-    const inventory = inventoryResult.data as Record<string, unknown> | null;
+    const inventory = await this.getInventoryState();
 
     return {
       users: {
@@ -173,9 +166,9 @@ export class BackofficeService {
         total_revenue: revenueRecharges.reduce((sum, recharge) => sum + Number(recharge['amount'] ?? 0), 0)
       },
       inventory: {
-        available_sms: Number(inventory?.['available_sms'] ?? 0),
-        sold_sms: Number(inventory?.['sold_sms'] ?? 0),
-        total_sms: Number(inventory?.['total_sms'] ?? 0)
+        available_sms: inventory.available_sms,
+        sold_sms: inventory.sold_sms,
+        total_sms: inventory.total_sms
       },
       messages: {
         total_messages: messages.length,
@@ -188,21 +181,31 @@ export class BackofficeService {
   }
 
   async getInventoryState(): Promise<InventoryState> {
-    const { data, error } = await this.supabase.instance
-      .from('sms_inventory')
-      .select('available_sms,sold_sms,total_sms,updated_at')
-      .maybeSingle();
+    try {
+      const [purchases, recharges] = await Promise.all([
+        this.listAllRows('inventory_purchases', 'quantity,created_at'),
+        this.listAllRows('recharges', 'status,sms_credits')
+      ]);
 
-    if (error) {
-      throw new Error(`No se pudo cargar el inventario: ${error.message}`);
+      if (!purchases || !recharges) {
+        return this.emptyInventoryState();
+      }
+
+      const totalSms = purchases.reduce((sum, purchase) => sum + this.toFiniteNumber(purchase['quantity']), 0);
+      const soldSms = recharges
+        .filter((recharge) => this.toSafeString(recharge['status']).toLowerCase() === REVENUE_RECHARGE_STATUS)
+        .reduce((sum, recharge) => sum + this.toFiniteNumber(recharge['sms_credits']), 0);
+      const latestPurchaseAt = purchases
+        .map((purchase) => this.toSafeString(purchase['created_at']))
+        .filter(Boolean)
+        .sort()
+        .at(-1) ?? null;
+
+      return this.localInventoryState(totalSms, soldSms, latestPurchaseAt);
+    } catch (error) {
+      console.warn('No se pudo calcular inventario local de compras SMS.', error);
+      return this.emptyInventoryState();
     }
-
-    return {
-      available_sms: Number(data?.available_sms ?? 0),
-      sold_sms: Number(data?.sold_sms ?? 0),
-      total_sms: Number(data?.total_sms ?? 0),
-      updated_at: typeof data?.updated_at === 'string' ? data.updated_at : null
-    };
   }
 
   async listInventoryPurchases(): Promise<InventoryPurchaseRecord[]> {
@@ -638,5 +641,62 @@ export class BackofficeService {
 
     const cleanValue = value.trim().replace(/\s+/g, '');
     return cleanValue ? cleanValue : null;
+  }
+
+  private async listAllRows(table: string, columns: string): Promise<Record<string, unknown>[] | null> {
+    const rows: Record<string, unknown>[] = [];
+
+    for (let from = 0; ; from += INVENTORY_QUERY_PAGE_SIZE) {
+      const to = from + INVENTORY_QUERY_PAGE_SIZE - 1;
+      const { data, error } = await this.supabase.instance
+        .from(table)
+        .select(columns)
+        .range(from, to);
+
+      if (error) {
+        console.warn(`No se pudo leer ${table} para inventario local.`, error.message);
+        return null;
+      }
+
+      const page = ((data as unknown[]) ?? [])
+        .map((row) => row as Record<string, unknown>);
+
+      rows.push(...page);
+
+      if (page.length < INVENTORY_QUERY_PAGE_SIZE) {
+        return rows;
+      }
+    }
+  }
+
+  private toFiniteNumber(value: unknown): number {
+    const normalized = typeof value === 'string'
+      ? value.replace(/,/g, '').trim()
+      : value;
+    const parsed = Number(normalized ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private localInventoryState(totalSms: number, soldSms: number, updatedAt: string | null): InventoryState {
+    const safeTotal = Math.max(0, Math.floor(Number.isFinite(totalSms) ? totalSms : 0));
+    const safeSold = Math.max(0, Math.floor(Number.isFinite(soldSms) ? soldSms : 0));
+
+    return {
+      available_sms: Math.max(safeTotal - safeSold, 0),
+      sold_sms: safeSold,
+      total_sms: safeTotal,
+      updated_at: updatedAt,
+      source: 'local_inventory'
+    };
+  }
+
+  private emptyInventoryState(): InventoryState {
+    return {
+      available_sms: 0,
+      sold_sms: 0,
+      total_sms: 0,
+      updated_at: null,
+      source: 'unavailable'
+    };
   }
 }

@@ -1,0 +1,23 @@
+HTTP/2 503 
+date: Sat, 30 May 2026 11:39:48 GMT
+content-type: application/json
+cf-ray: a03d75d90c36c2bc-LIM
+cf-cache-status: DYNAMIC
+access-control-allow-origin: *
+set-cookie: __cf_bm=NweieLohJCF1KdguFPrXJAJohZyZkWidu.8kBux3Rmk-1780141188.0010796-1.0.1.1-g9eJEGZsbAabDS5rmRHbS6I9ilQUzUB9IftU6cVdAnfyozOcMem2CIus4ooj.D6_OMuot3s1GOXqvhO1of0nGqWNJNqNa.OtNt4bYxhRnk2M6PXMo1daoZXEQCmes8ZL; HttpOnly; SameSite=None; Secure; Path=/; Domain=supabase.co; Expires=Sat, 30 May 2026 12:09:48 GMT
+server: cloudflare
+vary: Accept-Encoding
+access-control-allow-headers: Content-Type, Authorization, X-API-Key, Idempotency-Key
+access-control-allow-methods: POST, OPTIONS
+endpoint-load-metrics: application_utilization:5,named_metrics.queue_depth:5
+sb-error-code: EDGE_FUNCTION_ERROR
+sb-gateway-version: 1
+sb-project-ref: ewltnrfqwkhimnyqfrrw
+sb-request-id: 019e78ae-e3a5-70f3-b866-8bac8dea8177
+x-deno-execution-id: c1e58ac3-5c9e-4239-83d1-484b9f6cb139
+x-sb-edge-region: sa-east-1
+x-served-by: supabase-edge-runtime
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+alt-svc: h3=":443"; ma=86400
+
+{"success":false,"error":"API pública congelada temporalmente durante migración empresa/RUC.","error_code":"FEATURE_FROZEN"}

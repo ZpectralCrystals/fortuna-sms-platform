@@ -8,7 +8,10 @@ interface NavigationItem {
   name: string;
   path: string;
   icon: string;
+  visible?: boolean;
 }
+
+const SHOW_SMS_ALERTS_NAV = false;
 
 @Component({
     selector: 'bo-admin-layout',
@@ -20,17 +23,18 @@ export class AdminLayoutComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
-  readonly navigation: NavigationItem[] = [
+  private readonly allNavigation: NavigationItem[] = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
     { name: 'Usuarios', path: '/admin/users', icon: 'users' },
     { name: 'Recargas', path: '/admin/recharges', icon: 'recharges' },
     { name: 'Cuentas', path: '/admin/accounts', icon: 'accounts' },
     { name: 'Mensajes', path: '/admin/messages', icon: 'messages' },
     { name: 'API Keys', path: '/admin/api-keys', icon: 'apiKeys' },
-    { name: 'Alertas SMS', path: '/admin/alerts', icon: 'alerts' },
+    { name: 'Alertas SMS', path: '/admin/alerts', icon: 'alerts', visible: SHOW_SMS_ALERTS_NAV },
     { name: 'Facturas', path: '/admin/invoices', icon: 'invoices' },
     { name: 'Marketing', path: '/admin/marketing', icon: 'marketing' }
   ];
+  readonly navigation: NavigationItem[] = this.allNavigation.filter((item) => item.visible !== false);
 
   loading = false;
   errorMessage = '';
@@ -40,7 +44,7 @@ export class AdminLayoutComponent implements OnInit {
 
   get pageTitle(): string {
     const path = this.router.url.split('?')[0].split('#')[0];
-    return this.navigation.find((item) => item.path === path)?.name ?? 'Dashboard';
+    return this.allNavigation.find((item) => item.path === path)?.name ?? 'Dashboard';
   }
 
   async ngOnInit(): Promise<void> {

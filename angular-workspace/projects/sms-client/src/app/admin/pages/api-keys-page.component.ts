@@ -21,6 +21,7 @@ export class ApiKeysPageComponent implements OnInit {
   searchTerm = '';
   statusFilter: ApiKeyStatusFilter = 'all';
   revokingId = '';
+  providerStatus = 'No consultado';
 
   async ngOnInit(): Promise<void> {
     await this.loadApiKeys();
@@ -61,6 +62,7 @@ export class ApiKeysPageComponent implements OnInit {
 
     try {
       this.apiKeys = await this.apiKeysService.listBackoffice();
+      await this.loadProviderApiKeysStatus();
     } catch (error) {
       this.errorMessage = error instanceof Error
         ? error.message
@@ -68,6 +70,16 @@ export class ApiKeysPageComponent implements OnInit {
       this.apiKeys = [];
     } finally {
       this.loading = false;
+    }
+  }
+
+  async loadProviderApiKeysStatus(): Promise<void> {
+    try {
+      const result = await this.apiKeysService.providerList();
+      this.providerStatus = result.provider || 'Proveedor disponible';
+    } catch (error) {
+      console.warn('No se pudo consultar API Keys proveedor desde Edge Function.', error);
+      this.providerStatus = 'No disponible';
     }
   }
 
