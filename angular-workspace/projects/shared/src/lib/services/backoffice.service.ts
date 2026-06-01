@@ -39,6 +39,11 @@ export interface AddInventoryPurchaseRequest {
   notes?: string | null;
 }
 
+export interface ProviderBalanceSyncResult {
+  external_balance: number | null;
+  provider: string;
+}
+
 export interface BackofficeClientCardStats {
   approvedRecharges: number;
   totalSpent: number;
@@ -257,6 +262,25 @@ export class BackofficeService {
     if (error) {
       throw new Error(this.toFriendlyError(error.message));
     }
+  }
+
+  async syncProviderBalance(): Promise<ProviderBalanceSyncResult> {
+    const { data, error } = await this.supabase.instance.functions.invoke<ProviderBalanceSyncResult & { success?: boolean; error?: string }>('admin-sync-provider-balance', {
+      body: {}
+    });
+
+    if (error) {
+      throw new Error(`No se pudo consultar saldo proveedor: ${error.message}`);
+    }
+
+    if (!data?.success && (data as { success?: boolean } | null)?.success === false) {
+      throw new Error(data?.error || 'No se pudo consultar saldo proveedor.');
+    }
+
+    return {
+      external_balance: Number.isFinite(Number(data?.external_balance)) ? Number(data?.external_balance) : null,
+      provider: this.toSafeString(data?.provider) || 'proveedor'
+    };
   }
 
   async listClients(): Promise<BackofficeClientProfile[]> {

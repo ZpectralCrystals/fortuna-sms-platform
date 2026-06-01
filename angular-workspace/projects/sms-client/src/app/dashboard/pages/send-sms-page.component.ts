@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { SmsFileRow, SmsMultipleSimpleResult, SmsSendResult, SmsService, SmsTemplate, SupabaseService } from '@sms-fortuna/shared';
+import { SmsFileRow, SmsMultipleSimpleResult, SmsSendResult, SmsService, SmsTemplate } from '@sms-fortuna/shared';
 
 type SendMode = 'single' | 'multiple' | 'file';
 
@@ -31,6 +31,8 @@ interface FileParseResult {
   error?: string;
 }
 
+const MAX_SMS_MESSAGE_LENGTH = 918;
+
 @Component({
     selector: 'sms-send-page',
     imports: [CommonModule, FormsModule, RouterLink],
@@ -39,7 +41,6 @@ interface FileParseResult {
 })
 export class SendSmsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly supabase = inject(SupabaseService);
   private readonly smsService = inject(SmsService);
 
   mode: SendMode = 'single';
@@ -64,6 +65,7 @@ export class SendSmsPageComponent implements OnInit {
   success = false;
   error = '';
   profile: SendProfile | null = null;
+  balanceLoading = true;
   sendResult: SmsSendResult | null = null;
   multipleResult: SmsMultipleSimpleResult | null = null;
   currentIdempotencyKey = '';
@@ -98,7 +100,7 @@ export class SendSmsPageComponent implements OnInit {
 
   get totalFileSms(): number {
     return this.fileMessages.reduce((total, fileMessage) =>
-      total + this.smsSegments(this.getFileMessageToSend(fileMessage)), 0
+      total + this.smsSegments(this.getFileProviderSafeMessageToSend(fileMessage)), 0
     );
   }
 
@@ -541,6 +543,32 @@ export class SendSmsPageComponent implements OnInit {
     return (fileMessage.message || this.manualMessage).trim();
   }
 
+  getFileProviderSafeMessageToSend(fileMessage: FileMessage): string {
+    return this.providerSafeSmsText(this.getFileMessageToSend(fileMessage));
+  }
+
+  private sanitizeMessageForSend(value: string): string {
+    return value
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, MAX_SMS_MESSAGE_LENGTH);
+  }
+
+  providerSafeSmsText(text: string): string {
+    return this.sanitizeMessageForSend(text)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ñ/g, 'n')
+      .replace(/Ñ/g, 'N')
+      .replace(/[^A-Za-z0-9\s/-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, MAX_SMS_MESSAGE_LENGTH);
+  }
+
   private validatePhone(phone: string): boolean {
     return /^\+519\d{8}$/.test(phone.trim());
   }
@@ -833,7 +861,12 @@ export class SendSmsPageComponent implements OnInit {
         message
       });
       this.multipleResult = result;
-      this.success = true;
+      this.success = result.sent > 0;
+      if (result.sent === 0) {
+        this.error = result.failed > 0
+          ? 'No se pudo enviar ningún SMS del lote.'
+          : 'No se procesaron destinatarios.';
+      }
       await this.loadProfileCredits();
     } catch (error) {
       this.error = error instanceof Error
@@ -850,12 +883,17 @@ export class SendSmsPageComponent implements OnInit {
     try {
       const rows: SmsFileRow[] = this.fileMessages.map((fileMessage) => ({
         recipient: fileMessage.phone,
-        message: this.getFileMessageToSend(fileMessage),
+        message: this.getFileProviderSafeMessageToSend(fileMessage),
         sourceRow: fileMessage.sourceRow
       }));
 
-      this.multipleResult = await this.smsService.sendFileRowsSimple(rows);
-      this.success = true;
+      const result = await this.smsService.sendFileRowsSimple(rows);
+      this.multipleResult = result;
+      this.success = result.sent > 0;
+      if (result.sent === 0) {
+        const firstError = result.results.find((item) => !item.success)?.error;
+        this.error = firstError || 'No se pudo enviar ningún SMS del fichero.';
+      }
       await this.loadProfileCredits();
     } catch (error) {
       this.error = error instanceof Error
@@ -867,21 +905,14 @@ export class SendSmsPageComponent implements OnInit {
   }
 
   private async loadProfileCredits(): Promise<void> {
+    this.balanceLoading = true;
     try {
-      const { data: sessionData } = await this.supabase.instance.auth.getSession();
-      const user = sessionData.session?.user;
-
-      if (!user) return;
-
-      const { data } = await this.supabase.instance
-        .from('profiles')
-        .select('id, credits')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      this.profile = (data as SendProfile | null) ?? null;
+      const balance = await this.smsService.getCompanyBalance();
+      this.profile = { id: 'profile-balance', credits: balance };
     } catch {
       this.profile = null;
+    } finally {
+      this.balanceLoading = false;
     }
   }
 
@@ -962,6 +993,10 @@ export class SendSmsPageComponent implements OnInit {
       return 'Ingresa al menos un número válido.';
     }
 
+    if (this.mode === 'multiple' && this.parsedMultipleRecipients.validRecipients.length > 50) {
+      return 'Máximo 50 destinatarios por lote.';
+    }
+
     if (this.mode === 'file') {
       if (this.fileParseError) {
         return this.fileParseError;
@@ -975,11 +1010,15 @@ export class SendSmsPageComponent implements OnInit {
         return 'No se encontraron números válidos.';
       }
 
-      if (this.fileMessages.some((fileMessage) => !this.getFileMessageToSend(fileMessage))) {
+      if (this.fileMessages.length > 50) {
+        return 'Máximo 50 destinatarios por lote.';
+      }
+
+      if (this.fileMessages.some((fileMessage) => !this.getFileProviderSafeMessageToSend(fileMessage))) {
         return 'Cada fila debe tener mensaje o escribe un mensaje general.';
       }
 
-      if (this.fileMessages.some((fileMessage) => this.hasUnresolvedPlaceholders(this.getFileMessageToSend(fileMessage)))) {
+      if (this.fileMessages.some((fileMessage) => this.hasUnresolvedPlaceholders(this.getFileProviderSafeMessageToSend(fileMessage)))) {
         return 'Completa las variables de la plantilla antes de enviar.';
       }
     }
@@ -994,6 +1033,10 @@ export class SendSmsPageComponent implements OnInit {
 
     if (this.mode !== 'file' && this.hasUnresolvedPlaceholders(message)) {
       return 'Completa las variables de la plantilla antes de enviar.';
+    }
+
+    if (this.balanceLoading) {
+      return 'Cargando saldo disponible.';
     }
 
     if (this.credits < this.requiredCredits) {

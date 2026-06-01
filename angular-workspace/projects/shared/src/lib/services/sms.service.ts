@@ -49,89 +49,76 @@ export class SmsService {
   async sendBulk(_request: SmsSendRequest): Promise<SmsSendResult> {
     return {
       success: false,
-      error: 'Envío múltiple se implementará en siguiente fase'
+      error: 'Usa sendMultipleSimple para envíos por lote.'
     };
   }
 
   async sendMultipleSimple(request: SmsMultipleSimpleRequest): Promise<SmsMultipleSimpleResult> {
-    const results: SmsMultipleSimpleResult['results'] = [];
-
-    for (const recipient of request.recipients) {
-      try {
-        const result = await this.sendSingle({
-          recipient,
-          message: request.message,
-          idempotency_key: this.createIdempotencyKey()
-        });
-
-        results.push({
-          recipient,
-          success: true,
-          message_id: result.message_id,
-          status: result.status,
-          segments: result.segments,
-          cost: result.cost
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'No se pudo enviar el SMS.';
-
-        if (this.isSessionError(message)) {
-          throw error;
-        }
-
-        results.push({
-          recipient,
-          success: false,
-          error: message
-        });
-      }
+    if (request.recipients.length > 50) {
+      throw new Error('Máximo 50 destinatarios por lote.');
     }
 
-    return {
-      total: request.recipients.length,
-      sent: results.filter((result) => result.success).length,
-      failed: results.filter((result) => !result.success).length,
-      results
-    };
+    const { data, error } = await this.supabase.instance.functions.invoke<SmsMultipleSimpleResult>('send-sms-batch', {
+      body: {
+        recipients: request.recipients,
+        message: request.message,
+        idempotency_key: this.createIdempotencyKey()
+      }
+    });
+
+    if (error) {
+      throw new Error(await this.getFunctionErrorMessage(error));
+    }
+
+    if (!data) {
+      throw new Error('No se recibió respuesta del envío múltiple.');
+    }
+
+    return data;
   }
 
   async sendFileRowsSimple(rows: SmsFileRow[]): Promise<SmsFileSendResult> {
-    const results: SmsFileSendResult['results'] = [];
-
-    for (const row of rows) {
-      try {
-        const result = await this.sendSingle({
-          recipient: row.recipient,
-          message: row.message,
-          idempotency_key: this.createIdempotencyKey()
-        });
-
-        results.push({
-          recipient: row.recipient,
-          message: row.message,
-          sourceRow: row.sourceRow,
-          success: true,
-          message_id: result.message_id,
-          status: result.status,
-          segments: result.segments,
-          cost: result.cost
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'No se pudo enviar el SMS.';
-
-        if (this.isSessionError(message)) {
-          throw error;
-        }
-
-        results.push({
-          recipient: row.recipient,
-          message: row.message,
-          sourceRow: row.sourceRow,
-          success: false,
-          error: message
-        });
-      }
+    if (rows.length > 50) {
+      throw new Error('Máximo 50 destinatarios por lote.');
     }
+
+    const { data, error } = await this.supabase.instance.functions.invoke<SmsMultipleSimpleResult>('send-sms-batch', {
+      body: {
+        messages: rows.map((row) => ({
+          recipient: row.recipient,
+          message: row.message
+        })),
+        idempotency_key: this.createIdempotencyKey()
+      }
+    });
+
+    if (error) {
+      throw new Error(await this.getFunctionErrorMessage(error));
+    }
+
+    if (!data) {
+      throw new Error('No se recibió respuesta del envío desde fichero.');
+    }
+
+    const sourceByRecipient = new Map(rows.map((row) => [row.recipient, row]));
+    const results: SmsFileSendResult['results'] = data.results.map((item) => {
+      const source = sourceByRecipient.get(item.recipient);
+
+      return {
+        recipient: item.recipient,
+        message: source?.message ?? '',
+        sourceRow: source?.sourceRow,
+        success: item.success,
+        message_id: item.message_id,
+        status: item.status,
+        segments: item.segments,
+        cost: item.cost,
+        error: item.error || item.error_message || item.provider_message || undefined,
+        error_code: item.error_code,
+        error_message: item.error_message,
+        provider_message: item.provider_message
+      };
+    });
 
     const successfulResults = results.filter((result) => result.success);
 
@@ -143,6 +130,23 @@ export class SmsService {
       totalCost: successfulResults.reduce((total, result) => total + Number(result.cost ?? 0), 0),
       results
     };
+  }
+
+  async getCompanyBalance(): Promise<number> {
+    const userId = await this.getCurrentUserId();
+    const { data, error } = await this.supabase.instance
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return 0;
+    }
+
+    const row = data as Record<string, unknown>;
+    const balance = Number(row['credits'] ?? 0);
+    return Number.isFinite(balance) ? balance : 0;
   }
 
   async listAdminMessages(filters: AdminSmsMessageFilters = {}): Promise<AdminSmsMessage[]> {

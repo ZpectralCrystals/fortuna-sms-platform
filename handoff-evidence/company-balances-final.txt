@@ -4,6 +4,6 @@
  11111111111 | Kuroki Services |          10 |           1
  12312312312 | MiBancot        |         110 |           1
  20151120020 | MiBanco         |         107 |           1
- 20558275678 | Kuroki Services |           5 |           6
+ 20558275678 | Kuroki Services |           2 |           9
 (5 rows)
 

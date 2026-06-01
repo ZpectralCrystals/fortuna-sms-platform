@@ -161,6 +161,9 @@
               <p class="file-mode-badge">
                 {{ fileMessageModeLabel }}
               </p>
+              <p class="file-safe-note">
+                El texto puede ajustarse para compatibilidad con proveedor SMS.
+              </p>
             }
             @if (fileMessages.length > 0) {
               <div class="preview-list">
@@ -169,7 +172,7 @@
                     <div class="preview-row__phone">{{ fileMessage.phone }}</div>
                     <div class="preview-row__message">
                       <p>{{ getFileMessageToSend(fileMessage) || 'Usará el mensaje general' }}</p>
-                      <span>{{ smsSegments(getFileMessageToSend(fileMessage)) }} SMS • {{ getFileMessageToSend(fileMessage).length }} caracteres</span>
+                      <span>{{ smsSegments(getFileProviderSafeMessageToSend(fileMessage)) }} SMS • {{ getFileProviderSafeMessageToSend(fileMessage).length }} caracteres enviados</span>
                     </div>
                   </div>
                 }
@@ -382,7 +385,7 @@
           @if (mode !== 'file') {
             <div>
               <p>SMS requeridos</p>
-              <strong>{{ smsCount }}</strong>
+              <strong>{{ requiredCredits }}</strong>
             </div>
           }
           @if (mode === 'file') {
@@ -393,7 +396,7 @@
           }
           <div>
             <p>Créditos disponibles</p>
-            <strong>{{ credits.toFixed(0) }}</strong>
+            <strong>{{ balanceLoading ? 'Cargando...' : credits.toFixed(0) }}</strong>
           </div>
           <div>
             <p>Créditos después</p>

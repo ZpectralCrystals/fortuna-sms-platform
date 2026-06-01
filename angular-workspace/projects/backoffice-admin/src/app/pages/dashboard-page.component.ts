@@ -56,10 +56,14 @@ export class DashboardPageComponent implements OnInit {
 
   loading = true;
   submitting = false;
+  syncingProviderBalance = false;
   showPurchaseModal = false;
   showPurchaseHistory = false;
   readonly showSmsPurchaseControls = SHOW_SMS_PURCHASE_CONTROLS;
   purchases: InventoryPurchaseRecord[] = [];
+  providerBalance: number | null = null;
+  providerBalanceProvider = '';
+  providerBalanceCheckedAt = '';
   errorMessage = '';
   successMessage = '';
   purchaseForm = {
@@ -260,6 +264,27 @@ export class DashboardPageComponent implements OnInit {
         : 'Error al agregar SMS al inventario.';
     } finally {
       this.submitting = false;
+    }
+  }
+
+  async handleProviderBalanceSync(): Promise<void> {
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.syncingProviderBalance = true;
+
+    try {
+      const result = await this.backofficeService.syncProviderBalance();
+      this.providerBalance = result.external_balance;
+      this.providerBalanceProvider = result.provider;
+      this.providerBalanceCheckedAt = new Date().toISOString();
+      this.successMessage = 'Saldo proveedor consultado y snapshot guardado.';
+    } catch (error) {
+      this.errorMessage = error instanceof Error
+        ? error.message
+        : 'No se pudo consultar saldo proveedor.';
+      this.providerBalance = null;
+    } finally {
+      this.syncingProviderBalance = false;
     }
   }
 

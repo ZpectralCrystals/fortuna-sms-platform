@@ -100,23 +100,24 @@
   </section>
 
   <section class="usage-guide">
-    <h2>API Keys externas</h2>
+    <h2>Cómo usar tu API Key</h2>
     <ol class="usage-steps">
-      <li>Las API keys se gestionan por RUC en el backend proveedor mediante Supabase.</li>
-      <li>No pongas credenciales directamente en JavaScript público del navegador.</li>
-      <li>El endpoint público api-send-sms está congelado temporalmente.</li>
-      <li>El envío operativo activo sigue siendo SMS individual desde la app.</li>
+      <li>Guarda tu API Key en el backend de tu aplicación.</li>
+      <li>No la pongas directamente en JavaScript público del navegador.</li>
+      <li>Envía SMS llamando al endpoint público de Supabase con el header <code>X-API-Key</code>.</li>
+      <li>Usa <code>Idempotency-Key</code> para evitar envíos duplicados.</li>
     </ol>
 
     <div class="usage-blocks">
       <div class="usage-block usage-block--full">
-        <span class="usage-label">Endpoint público</span>
-        <pre>FEATURE_FROZEN: api-send-sms no está activo para envíos.</pre>
+        <span class="usage-label">Endpoint</span>
+        <pre>POST https://ewltnrfqwkhimnyqfrrw.supabase.co/functions/v1/api-send-sms</pre>
       </div>
 
       <div class="usage-block">
         <span class="usage-label">Headers</span>
         <pre>X-API-Key: TU_API_KEY
+        Idempotency-Key: pedido-123
         Content-Type: application/json</pre>
       </div>
 
@@ -127,7 +128,7 @@
     </div>
 
     <p class="usage-warning">
-      No se debe prometer envío por API pública hasta reactivar api-send-sms con aprobación técnica.
+      Supabase valida API Key, empresa/RUC, saldo e idempotencia antes de llamar al proveedor.
     </p>
   </section>
 </div>

@@ -46,6 +46,9 @@ export interface SmsMultipleSimpleItemResult {
   segments?: number;
   cost?: number;
   error?: string;
+  error_code?: string;
+  error_message?: string;
+  provider_message?: string | null;
 }
 
 export interface SmsMultipleSimpleResult {
