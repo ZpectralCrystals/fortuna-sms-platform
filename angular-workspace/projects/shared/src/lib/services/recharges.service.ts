@@ -173,7 +173,7 @@ export class RechargesService {
         approved_at,
         rejected_at,
         rejection_reason,
-        profile:profiles(full_name, email, razon_social, ruc),
+        profile:profiles!recharges_user_id_fkey(id, email, full_name, razon_social, ruc, phone, credits),
         package:sms_packages(*)
       `)
       .order('created_at', { ascending: false });
