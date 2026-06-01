@@ -2,14 +2,14 @@
   
    ID                                   | NAME                            | SLUG                            | STATUS | VERSION | UPDATED_AT (UTC)    
   --------------------------------------|---------------------------------|---------------------------------|--------|---------|---------------------
-   44551049-7754-4478-ad95-1c49be8d22ef | send-sms                        | send-sms                        | ACTIVE | 40      | 2026-05-30 02:12:05 
-   b8eb618a-44a3-470b-9011-b913610ea2f8 | api-send-sms                    | api-send-sms                    | ACTIVE | 31      | 2026-05-30 02:36:17 
-   11adc3b7-04b0-464a-8ebd-3b5ce1e78520 | admin-register-provider-balance | admin-register-provider-balance | ACTIVE | 25      | 2026-05-30 02:12:11 
-   027eb08d-aac6-41df-a96c-90bb71b5a6d2 | admin-sync-provider-balance     | admin-sync-provider-balance     | ACTIVE | 25      | 2026-05-30 02:12:14 
-   ea3354ec-34d3-4916-9754-cb64554f83bd | admin-register-client-balance   | admin-register-client-balance   | ACTIVE | 25      | 2026-05-30 02:12:17 
-   5d03ab22-24d6-457f-b210-83a989344d49 | admin-sync-client-balance       | admin-sync-client-balance       | ACTIVE | 25      | 2026-05-30 02:12:20 
-   d7993bc2-3553-470b-9524-60f9aba790c5 | admin-register-api-key          | admin-register-api-key          | ACTIVE | 2       | 2026-06-01 04:32:17 
-   9eb01d91-55d3-409e-9580-009fe7515463 | admin-delete-api-key            | admin-delete-api-key            | ACTIVE | 2       | 2026-06-01 04:32:20 
-   0a4bab7c-c8a8-478c-8799-9fe4a0b4b555 | admin-consult-api-key           | admin-consult-api-key           | ACTIVE | 2       | 2026-06-01 04:32:23 
-   e2f07b93-a421-4600-874f-904803ff102d | admin-list-api-keys             | admin-list-api-keys             | ACTIVE | 2       | 2026-06-01 04:32:27 
+   44551049-7754-4478-ad95-1c49be8d22ef | send-sms                        | send-sms                        | ACTIVE | 42      | 2026-05-30 02:12:05 
+   b8eb618a-44a3-470b-9011-b913610ea2f8 | api-send-sms                    | api-send-sms                    | ACTIVE | 33      | 2026-05-30 02:36:17 
+   11adc3b7-04b0-464a-8ebd-3b5ce1e78520 | admin-register-provider-balance | admin-register-provider-balance | ACTIVE | 27      | 2026-05-30 02:12:11 
+   027eb08d-aac6-41df-a96c-90bb71b5a6d2 | admin-sync-provider-balance     | admin-sync-provider-balance     | ACTIVE | 27      | 2026-05-30 02:12:14 
+   ea3354ec-34d3-4916-9754-cb64554f83bd | admin-register-client-balance   | admin-register-client-balance   | ACTIVE | 27      | 2026-05-30 02:12:17 
+   5d03ab22-24d6-457f-b210-83a989344d49 | admin-sync-client-balance       | admin-sync-client-balance       | ACTIVE | 27      | 2026-05-30 02:12:20 
+   d7993bc2-3553-470b-9524-60f9aba790c5 | admin-register-api-key          | admin-register-api-key          | ACTIVE | 4       | 2026-06-01 04:32:17 
+   9eb01d91-55d3-409e-9580-009fe7515463 | admin-delete-api-key            | admin-delete-api-key            | ACTIVE | 4       | 2026-06-01 04:32:20 
+   0a4bab7c-c8a8-478c-8799-9fe4a0b4b555 | admin-consult-api-key           | admin-consult-api-key           | ACTIVE | 4       | 2026-06-01 04:32:23 
+   e2f07b93-a421-4600-874f-904803ff102d | admin-list-api-keys             | admin-list-api-keys             | ACTIVE | 4       | 2026-06-01 04:32:27 
 

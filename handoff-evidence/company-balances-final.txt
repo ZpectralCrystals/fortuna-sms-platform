@@ -1,0 +1,9 @@
+     ruc     |  razon_social   | balance_sms | ledger_rows 
+-------------+-----------------+-------------+-------------
+ 10761901911 | AqpHdd          |        1479 |           1
+ 11111111111 | Kuroki Services |          10 |           1
+ 12312312312 | MiBancot        |         110 |           1
+ 20151120020 | MiBanco         |         107 |           1
+ 20558275678 | Kuroki Services |           5 |           6
+(5 rows)
+
