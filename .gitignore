@@ -99,3 +99,5 @@ vercel.json
 # Claude local metadata
 .claude/
 **/.claude/
+sms-fortuna-backup/
+handoff-transfer/
