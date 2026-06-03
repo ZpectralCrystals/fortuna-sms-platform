@@ -30,6 +30,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.pid
 
 # Editores / IDE
 .idea/
@@ -46,6 +47,10 @@ pnpm-debug.log*
 # Supabase CLI temp
 supabase/.temp/
 **/supabase/.temp/
+supabase/.branches/
+**/supabase/.branches/
+.supabase/
+**/.supabase/
 
 # Backups locales (no subir al repo)
 old/
@@ -53,14 +58,23 @@ tmp/
 temp/
 *.tmp
 *.local
+*.dump
+*.backup
+*.bak
+*.sqlite
+*.db
 
 # Reportes / fases / docs internos no necesarios para build
+fase-*.md
+**/fase-*.md
 FASE_*.md
 **/FASE_*.md
 ESTRUCTURA_*.md
 **/ESTRUCTURA_*.md
 README_MIGRACION.md
 **/README_MIGRACION.md
+migration-audit-sms-fortuna.md
+**/migration-audit-sms-fortuna.md
 SUPABASE_FINAL_UNIFICADO.md
 **/SUPABASE_FINAL_UNIFICADO.md
 API_PUBLICA_SMS_FORTUNA.md
@@ -72,6 +86,10 @@ docs/private/
 # Postman / colecciones
 *.postman_collection.json
 *.postman_collection*.json
+postman/secret/
+postman/private/
+**/postman/secret/
+**/postman/private/
 
 # Proyectos antiguos (referencia local)
 sms/
@@ -101,3 +119,8 @@ vercel.json
 **/.claude/
 sms-fortuna-backup/
 handoff-transfer/
+handoff-evidence/
+graphify-out/
+graphify-watch.pid
+graphify-watch.log
+graphify-service.sh

@@ -7,7 +7,7 @@
     "start": "ng serve sms-client",
     "start:sms": "ng serve sms-client",
     "start:backoffice": "ng serve backoffice-admin",
-    "build": "ng build sms-client && ng build backoffice-admin",
+    "build": "ng build sms-client",
     "build:client": "ng build sms-client",
     "build:admin": "ng build backoffice-admin",
     "build:all": "ng build sms-client && ng build backoffice-admin",

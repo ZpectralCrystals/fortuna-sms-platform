@@ -1,0 +1,17 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd angular-workspace
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: angular-workspace/dist/sms-client
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - angular-workspace/node_modules/**/*

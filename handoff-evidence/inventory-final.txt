@@ -1,5 +1,0 @@
- total_inventory_sms | approved_sms_sold | inventory_available_sms 
----------------------+-------------------+-------------------------
-               31904 |              3300 |                   28604
-(1 row)
-

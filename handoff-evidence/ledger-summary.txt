@@ -1,6 +1,0 @@
-       type       | rows | total_sms 
-------------------+------+-----------
- legacy_migration |    5 |      1716
- sms_send         |    1 |        -1
-(2 rows)
-
